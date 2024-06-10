@@ -48,7 +48,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     setCookie(kDarkModeCookieName, themeMode.name);
     if (data.username != null && data.password != null) {
-      connection.send('login\x00${data.username}\x00${data.password}\x00');
+      connection.send(['login', data.username!, data.password!]);
       connection.readItem().then((List<String> message) {
         if (message[0] == 'F') {
           if (message[1] == 'unrecognized credentials') {
@@ -106,7 +106,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   if (data.username == null || data.password == null) ...[
                     OutlinedButton(
                       onPressed: () {
-                        connection.send('new\x00');
+                        connection.send(['new']);
                         connection.readItem().then((List<String> message) {
                           if (message[0] == 'T') {
                             data.setCredentials(message[1], message[2]);
@@ -149,12 +149,20 @@ class _MyHomePageState extends State<MyHomePage> {
                             obscureText: false,
                             onSubmit: (String newUsername) {
                               connection.send(
-                                'change-username\x00${data.username}\x00${data.password}\x00$newUsername\x00',
+                                [
+                                  'change-username',
+                                  data.username!,
+                                  data.password!,
+                                  newUsername,
+                                ],
                               );
-                              connection.readItem().then((List<String> message) {
+                              connection
+                                  .readItem()
+                                  .then((List<String> message) {
                                 if (message[0] == 'F') {
                                   assert(message.length == 2);
-                                  if (message[1] == 'unrecognized credentials') {
+                                  if (message[1] ==
+                                      'unrecognized credentials') {
                                     data.removeCredentials();
                                     data.tempMessage('credential failure');
                                   } else {
@@ -187,11 +195,18 @@ class _MyHomePageState extends State<MyHomePage> {
                           builder: (context) => TextFieldDialog(
                             obscureText: true,
                             onSubmit: (String newPassword) {
-                              connection.send(
-                                  'change-password\x00${data.username}\x00${data.password}\x00$newPassword\x00');
-                              connection.readItem().then((List<String> message) {
+                              connection.send([
+                                'change-password',
+                                data.username!,
+                                data.password!,
+                                newPassword,
+                              ]);
+                              connection
+                                  .readItem()
+                                  .then((List<String> message) {
                                 if (message[0] == 'F') {
-                                  if (message[1] == 'unrecognized credentials') {
+                                  if (message[1] ==
+                                      'unrecognized credentials') {
                                     data.removeCredentials();
                                     data.tempMessage('credential failure');
                                     assert(message.length == 2);
@@ -220,8 +235,11 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                     OutlinedButton(
                       onPressed: () {
-                        connection.send(
-                            'logout\x00${data.username}\x00${data.password}\x00');
+                        connection.send([
+                          'logout',
+                          data.username!,
+                          data.password!,
+                        ]);
                         connection.readItem().then((List<String> message) {
                           if (message[0] == 'F') {
                             if (message[1] == 'unrecognized credentials') {
@@ -317,8 +335,7 @@ class _LoginDialogState extends State<LoginDialog> {
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed: () {
-                widget.connection
-                    .send('login\x00${username.text}\x00${password.text}\x00');
+                widget.connection.send(['login', username.text, password.text]);
                 widget.connection.readItem().then((List<String> message) {
                   if (message[0] == 'F') {
                     if (message[1] == 'unrecognized credentials') {

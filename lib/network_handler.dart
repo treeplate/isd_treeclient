@@ -25,9 +25,9 @@ class NetworkConnection {
   List<Object?> sent = [];
 
   /// Sends [message] to connected server/
-  void send(String message) {
-    assert(message.endsWith('\x00'));
-    socket.send(message);
+  void send(List<String> message) {
+    assert(!message.contains('\x00'));
+    socket.send(message.join('\x00') + '\x00');
   }
 
   // Waits for an item to be recieved and returns it.
