@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:isd_treeclient/network_handler.dart';
 import 'sockets_cookies_stub.dart'
     if (dart.library.io) 'sockets_cookies_io.dart'
     if (dart.library.html) 'sockets_cookies_html.dart';
@@ -27,6 +28,7 @@ const String kDarkModeCookieName = 'darkMode';
 class _MyHomePageState extends State<MyHomePage> {
   DataStructure data = DataStructure();
   ThemeMode themeMode = ThemeMode.system;
+  late final NetworkConnection connection;
   bool get isDarkMode => themeMode == ThemeMode.system
       ? WidgetsBinding.instance.platformDispatcher.platformBrightness ==
           Brightness.dark
@@ -34,8 +36,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void initState() {
     super.initState();
-    widget.webSocket.listen((event) {
-      parseMessage(data, event, widget.webSocket);
+    connection = NetworkConnection(widget.webSocket, (message) {
+      parseMessage(data, message);
     });
     String? darkModeCookie = getCookie(kDarkModeCookieName);
     if (darkModeCookie != null) {
@@ -46,7 +48,20 @@ class _MyHomePageState extends State<MyHomePage> {
     }
     setCookie(kDarkModeCookieName, themeMode.name);
     if (data.username != null && data.password != null) {
-      widget.webSocket.send('login\x00${data.username}\x00${data.password}');
+      connection.send('login\x00${data.username}\x00${data.password}\x00');
+      connection.readItem().then((List<String> message) {
+        if (message[0] == 'F') {
+          if (message[1] == 'unrecognized credentials') {
+            data.removeCredentials();
+            assert(message.length == 2);
+          } else {
+            data.tempMessage('startup login response (failure): ${message[1]}');
+          }
+        } else {
+          assert(message[0] == 'T');
+          assert(message.length == 1);
+        }
+      });
     }
   }
 
@@ -84,98 +99,156 @@ class _MyHomePageState extends State<MyHomePage> {
         body: ListenableBuilder(
           listenable: data,
           builder: (context, child) {
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (data.username == null || data.password == null) ...[
-                  OutlinedButton(
-                    onPressed: () {
-                      widget.webSocket.send('new\x00');
-                    },
-                    child: Text('Start new game'),
-                  ),
-                  SizedBox(
-                    height: 10,
-                  ),
-                  OutlinedButton(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => LoginDialog(
-                          login: (String username, String password) {
-                            data.setCredentials(username, password);
-                            widget.webSocket
-                                .send('login\x00$username\x00$password');
-                            Navigator.pop(context);
-                          },
-                        ),
-                      );
-                    },
-                    child: Text('Login'),
-                  ),
-                ] else ...[
-                  OutlinedButton(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => TextFieldDialog(
-                          obscureText: false,
-                          onSubmit: (String newUsername) {
-                            data.updateUsername(newUsername);
-                            widget.webSocket
-                                .send('change-username\x00${data.username}\x00${data.password}\x00$newUsername');
-                            Navigator.pop(context);
-                          },
-                          dialogTitle: 'Change username',
-                          buttonMessage: 'Change username',
-                          textFieldLabel: 'New username',
-                        ),
-                      );
-                    },
-                    child: Text('Change username'),
-                  ),
-                  SizedBox(
-                    height: 10,
-                  ),
-                  OutlinedButton(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => TextFieldDialog(
-                          obscureText: true,
-                          onSubmit: (String newPassword) {
-                            data.updatePassword(newPassword);
-                            widget.webSocket
-                                .send('change-password\x00${data.username}\x00${data.password}\x00$newPassword');
-                            Navigator.pop(context);
-                          },
-                          dialogTitle: 'Change password',
-                          buttonMessage: 'Change password',
-                          textFieldLabel: 'New password',
-                        ),
-                      );
-                    },
-                    child: Text('Change password'),
-                  ),
-                  SizedBox(
-                    height: 10,
-                  ),
-                  OutlinedButton(
-                    onPressed: () {
-                            widget.webSocket
-                                .send('logout\x00${data.username}\x00${data.password}');
-                            data.removeCredentials();
-                    },
-                    child: Text('Logout'),
-                  ),
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (data.username == null || data.password == null) ...[
+                    OutlinedButton(
+                      onPressed: () {
+                        connection.send('new\x00');
+                        connection.readItem().then((List<String> message) {
+                          if (message[0] == 'T') {
+                            data.setCredentials(message[1], message[2]);
+                            assert(message.length == 1);
+                          } else {
+                            assert(message[0] == 'F');
+                            assert(message.length == 2);
+                            data.tempMessage(
+                                'failed to create new user: ${message[1]}');
+                          }
+                        });
+                      },
+                      child: Text('Start new game'),
+                    ),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    OutlinedButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => LoginDialog(
+                            data: data,
+                            connection: connection,
+                          ),
+                        );
+                      },
+                      child: Text('Login'),
+                    ),
+                  ] else ...[
+                    Text('Logged in as ${data.username}'),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    OutlinedButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => TextFieldDialog(
+                            obscureText: false,
+                            onSubmit: (String newUsername) {
+                              connection.send(
+                                'change-username\x00${data.username}\x00${data.password}\x00$newUsername\x00',
+                              );
+                              connection.readItem().then((List<String> message) {
+                                if (message[0] == 'F') {
+                                  assert(message.length == 2);
+                                  if (message[1] == 'unrecognized credentials') {
+                                    data.removeCredentials();
+                                    data.tempMessage('credential failure');
+                                  } else {
+                                    data.tempMessage(
+                                        'change username failure: ${message[1]}');
+                                  }
+                                } else {
+                                  assert(message[0] == 'T');
+                                  data.updateUsername(newUsername);
+                                  assert(message.length == 1);
+                                }
+                              });
+                              Navigator.pop(context);
+                            },
+                            dialogTitle: 'Change username',
+                            buttonMessage: 'Change username',
+                            textFieldLabel: 'New username',
+                          ),
+                        );
+                      },
+                      child: Text('Change username'),
+                    ),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    OutlinedButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => TextFieldDialog(
+                            obscureText: true,
+                            onSubmit: (String newPassword) {
+                              connection.send(
+                                  'change-password\x00${data.username}\x00${data.password}\x00$newPassword\x00');
+                              connection.readItem().then((List<String> message) {
+                                if (message[0] == 'F') {
+                                  if (message[1] == 'unrecognized credentials') {
+                                    data.removeCredentials();
+                                    data.tempMessage('credential failure');
+                                    assert(message.length == 2);
+                                  } else {
+                                    data.tempMessage(
+                                        'change password failure: ${message[1]}');
+                                  }
+                                } else {
+                                  assert(message[0] == 'T');
+                                  data.updatePassword(newPassword);
+                                  assert(message.length == 1);
+                                }
+                              });
+                              Navigator.pop(context);
+                            },
+                            dialogTitle: 'Change password',
+                            buttonMessage: 'Change password',
+                            textFieldLabel: 'New password',
+                          ),
+                        );
+                      },
+                      child: Text('Change password'),
+                    ),
+                    SizedBox(
+                      height: 10,
+                    ),
+                    OutlinedButton(
+                      onPressed: () {
+                        connection.send(
+                            'logout\x00${data.username}\x00${data.password}\x00');
+                        connection.readItem().then((List<String> message) {
+                          if (message[0] == 'F') {
+                            if (message[1] == 'unrecognized credentials') {
+                              data.tempMessage('credential failure');
+                            } else {
+                              data.tempMessage('logout failure: ${message[1]}');
+                            }
+                          } else {
+                            assert(message[0] == 'T');
+                            assert(message.length == 1);
+                          }
+                        });
+                        data.removeCredentials();
+                      },
+                      child: Text('Logout'),
+                    ),
+                  ],
+                  if (data.tempCurrentMessage != null) ...[
+                    SizedBox(
+                      height: 10,
+                    ),
+                    Center(
+                      child: Text('${data.tempCurrentMessage}'),
+                    ),
+                  ]
                 ],
-                SizedBox(
-                  height: 10,
-                ),
-                Center(
-                  child: Text('${data.tempCurrentMessage}'),
-                ),
-              ],
+              ),
             );
           },
         ),
@@ -185,9 +258,10 @@ class _MyHomePageState extends State<MyHomePage> {
 }
 
 class LoginDialog extends StatefulWidget {
-  const LoginDialog({super.key, required this.login});
+  const LoginDialog({super.key, required this.data, required this.connection});
 
-  final void Function(String username, String password) login;
+  final DataStructure data;
+  final NetworkConnection connection;
 
   @override
   State<LoginDialog> createState() => _LoginDialogState();
@@ -196,6 +270,7 @@ class LoginDialog extends StatefulWidget {
 class _LoginDialogState extends State<LoginDialog> {
   TextEditingController username = TextEditingController();
   TextEditingController password = TextEditingController();
+  String? errorMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -234,9 +309,35 @@ class _LoginDialogState extends State<LoginDialog> {
                 ),
               ],
             ),
+            if (errorMessage != null)
+              Text(
+                errorMessage!,
+                style: TextStyle(color: Colors.red),
+              ),
             const SizedBox(height: 8),
             OutlinedButton(
-              onPressed: () => widget.login(username.text, password.text),
+              onPressed: () {
+                widget.connection
+                    .send('login\x00${username.text}\x00${password.text}\x00');
+                widget.connection.readItem().then((List<String> message) {
+                  if (message[0] == 'F') {
+                    if (message[1] == 'unrecognized credentials') {
+                      setState(() {
+                        errorMessage = 'Username or password incorrect';
+                      });
+                    } else {
+                      widget.data
+                          .tempMessage('manual login failure: ${message[1]}');
+                      Navigator.pop(context);
+                    }
+                  } else {
+                    assert(message[0] == 'T');
+                    widget.data.setCredentials(username.text, password.text);
+                    assert(message.length == 1);
+                    Navigator.pop(context);
+                  }
+                });
+              },
               child: Text('Login'),
             ),
           ],

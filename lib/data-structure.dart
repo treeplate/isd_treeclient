@@ -26,6 +26,7 @@ class DataStructure with ChangeNotifier {
     setCookie('password', null);
     username = null;
     password = null;
+    notifyListeners();
   }
 
    void updateUsername(String username) {
