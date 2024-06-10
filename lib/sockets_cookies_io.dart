@@ -4,10 +4,14 @@ import 'dart:io';
 class WebSocketWrapper {
   final WebSocket socket;
 
-  
   StreamSubscription<dynamic> listen(void onData(dynamic event),
       {Function? onError, void onDone()?, bool? cancelOnError}) {
-    return socket.listen(onData, onError: onError, onDone: onDone, cancelOnError: cancelOnError);
+    return socket.listen(
+      onData,
+      onError: onError,
+      onDone: onDone,
+      cancelOnError: cancelOnError,
+    );
   }
 
   void send(String data) {
@@ -37,7 +41,7 @@ void getCookiesFromFile() {
           _cookieStorage.readAsLinesSync().map(
             (String line) {
               List<String> parts = line.split(':');
-              if(parts.length != 2) {
+              if (parts.length != 2) {
                 throw FormatException('invalid _cookieStorage format');
               }
               return MapEntry(parts.first, parts.last);
@@ -54,8 +58,14 @@ void getCookiesFromFile() {
   }
 }
 
-void setCookie(String name, String value) {
+void setCookie(String name, String? value) {
   getCookiesFromFile();
-  _cookieCache![name] = value;
-  _cookieStorage.writeAsStringSync(_cookieCache!.entries.map((MapEntry<String, String> entry) => '${entry.key}:${entry.value}').join('\n')); 
+  if (value == null) {
+    _cookieCache!.remove(name);
+  } else {
+    _cookieCache![name] = value;
+  }
+  _cookieStorage.writeAsStringSync(_cookieCache!.entries
+      .map((MapEntry<String, String> entry) => '${entry.key}:${entry.value}')
+      .join('\n'));
 }

@@ -4,10 +4,14 @@ import 'dart:html';
 class WebSocketWrapper {
   final WebSocket socket;
 
-  
   StreamSubscription<dynamic> listen(void onData(dynamic event),
       {Function? onError, void onDone()?, bool? cancelOnError}) {
-    return socket.onMessage.map((MessageEvent message) => message.data).listen(onData, onError: onError, onDone: onDone, cancelOnError: cancelOnError);
+    return socket.onMessage.map((MessageEvent message) => message.data).listen(
+          onData,
+          onError: onError,
+          onDone: onDone,
+          cancelOnError: cancelOnError,
+        );
   }
 
   void send(String data) {
@@ -25,6 +29,10 @@ String? getCookie(String name) {
   return window.localStorage[name];
 }
 
-void setCookie(String name, String value) {
-  window.localStorage[name] = value;
+void setCookie(String name, String? value) {
+  if (value == null) {
+    window.localStorage.remove(name);
+  } else {
+    window.localStorage[name] = value;
+  }
 }

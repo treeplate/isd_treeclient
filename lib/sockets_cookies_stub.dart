@@ -20,4 +20,4 @@ String? getCookie(String name) {
   return null;
 }
 
-void setCookie(String name, String value) {}
+void setCookie(String name, String? value) {}
