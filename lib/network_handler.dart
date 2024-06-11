@@ -6,7 +6,7 @@ import 'sockets_cookies_stub.dart'
 class NetworkConnection {
   NetworkConnection(
       this.socket, void Function(List<String>) unrequestedMessageHandler) {
-    socket.listen((rawMessage) {
+    subscription = socket.listen((rawMessage) {
       List<String> message = (rawMessage as String).split('\x00');
       if (message[0] == 'reply') {
         items.add(message.sublist(1, message.length-1));
@@ -15,16 +15,27 @@ class NetworkConnection {
       } else {
         unrequestedMessageHandler(message.sublist(0, message.length-1));
       }
-    });
+    }, onDone: () {
+      if(!_closed) {
+        throw Exception('unexpectedly closed server ${socket.name}');
+      }
+    },);
   }
 
   final WebSocketWrapper socket;
+  late StreamSubscription subscription;
+  bool _closed = false;
+
+  void close() {
+    _closed = true;
+    socket.close();
+  }
 
   Completer<void> moreItems = Completer();
   List<List<String>> items = [];
   List<Object?> sent = [];
 
-  /// Sends [message] to connected server/
+  /// Sends [message] to connected server
   void send(List<String> message) {
     assert(!message.contains('\x00'));
     socket.send(message.join('\x00') + '\x00');

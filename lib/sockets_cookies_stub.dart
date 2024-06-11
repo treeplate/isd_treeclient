@@ -9,6 +9,10 @@ class WebSocketWrapper {
   void send(String data) {
     throw UnsupportedError('websockets');
   }
+  
+  void close() {}
+
+  String get name => 'a socket';
 }
 
 Future<WebSocketWrapper> connect(String serverUrl) async {

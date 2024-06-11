@@ -17,12 +17,17 @@ class WebSocketWrapper {
   void send(String data) {
     socket.add(data);
   }
+  
+  void close() {
+    socket.close();
+  }
+  final String name;
 
-  WebSocketWrapper(this.socket);
+  WebSocketWrapper(this.socket, this.name);
 }
 
 Future<WebSocketWrapper> connect(String serverUrl) async {
-  return WebSocketWrapper(await WebSocket.connect(serverUrl));
+  return WebSocketWrapper(await WebSocket.connect(serverUrl), serverUrl);
 }
 
 File _cookieStorage = File('cookies.save');
@@ -38,9 +43,9 @@ void getCookiesFromFile() {
     if (_cookieStorage.existsSync()) {
       try {
         _cookieCache = Map.fromEntries(
-          _cookieStorage.readAsLinesSync().map(
+          _cookieStorage.readAsStringSync().split('\x00\n\x00').map(
             (String line) {
-              List<String> parts = line.split(':');
+              List<String> parts = line.split('\x00:\x00');
               if (parts.length != 2) {
                 throw FormatException('invalid _cookieStorage format');
               }
@@ -66,6 +71,6 @@ void setCookie(String name, String? value) {
     _cookieCache![name] = value;
   }
   _cookieStorage.writeAsStringSync(_cookieCache!.entries
-      .map((MapEntry<String, String> entry) => '${entry.key}:${entry.value}')
-      .join('\n'));
+      .map((MapEntry<String, String> entry) => '${entry.key}\x00:\x00${entry.value}')
+      .join('\x00\n\x00'));
 }

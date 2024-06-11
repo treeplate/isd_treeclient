@@ -6,18 +6,14 @@ import 'sockets_cookies_stub.dart'
 import 'data-structure.dart';
 import 'parser.dart';
 
+const String loginServerURL = "wss://interstellar-dynasties.space:10024/";
+const String dynastyServerURL = "wss://interstellar-dynasties.space:10025/";
 void main() async {
-  WebSocketWrapper webSocket =
-      await connect("wss://interstellar-dynasties.space:10024/");
-  runApp(MyHomePage(
-    webSocket: webSocket,
-  ));
+  runApp(MyHomePage());
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({super.key, required this.webSocket});
-
-  final WebSocketWrapper webSocket;
+  MyHomePage({super.key});
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
@@ -28,7 +24,8 @@ const String kDarkModeCookieName = 'darkMode';
 class _MyHomePageState extends State<MyHomePage> {
   DataStructure data = DataStructure();
   ThemeMode themeMode = ThemeMode.system;
-  late final NetworkConnection connection;
+  late final NetworkConnection loginServer;
+  late final NetworkConnection dynastyServer;
   bool get isDarkMode => themeMode == ThemeMode.system
       ? WidgetsBinding.instance.platformDispatcher.platformBrightness ==
           Brightness.dark
@@ -36,8 +33,35 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void initState() {
     super.initState();
-    connection = NetworkConnection(widget.webSocket, (message) {
-      parseMessage(data, message);
+    connect(loginServerURL).then((socket) async {
+      loginServer = NetworkConnection(socket, (message) {
+        parseMessage(data, message);
+      });
+      if (data.username != null && data.password != null) {
+        loginServer.send(['login', data.username!, data.password!]);
+        List<String> message = await loginServer.readItem();
+          if (message[0] == 'F') {
+            if (message[1] == 'unrecognized credentials') {
+              data.removeCredentials();
+              assert(message.length == 2);
+            } else {
+              data.tempMessage(
+                  'startup login response (failure): ${message[1]}');
+            }
+          } else {
+            assert(message[0] == 'T');
+            assert(message.length == 1);
+          }
+        
+      }
+    });
+    connect(dynastyServerURL).then((socket) async{
+      dynastyServer = NetworkConnection(socket, (message) {
+        parseMessage(data, message);
+      });
+      dynastyServer.send(['moo']);
+        List<String> message = await dynastyServer.readItem();
+        data.tempMessage('moo response: $message');
     });
     String? darkModeCookie = getCookie(kDarkModeCookieName);
     if (darkModeCookie != null) {
@@ -47,22 +71,6 @@ class _MyHomePageState extends State<MyHomePage> {
           ThemeMode.system;
     }
     setCookie(kDarkModeCookieName, themeMode.name);
-    if (data.username != null && data.password != null) {
-      connection.send(['login', data.username!, data.password!]);
-      connection.readItem().then((List<String> message) {
-        if (message[0] == 'F') {
-          if (message[1] == 'unrecognized credentials') {
-            data.removeCredentials();
-            assert(message.length == 2);
-          } else {
-            data.tempMessage('startup login response (failure): ${message[1]}');
-          }
-        } else {
-          assert(message[0] == 'T');
-          assert(message.length == 1);
-        }
-      });
-    }
   }
 
   @override
@@ -106,11 +114,11 @@ class _MyHomePageState extends State<MyHomePage> {
                   if (data.username == null || data.password == null) ...[
                     OutlinedButton(
                       onPressed: () {
-                        connection.send(['new']);
-                        connection.readItem().then((List<String> message) {
+                        loginServer.send(['new']);
+                        loginServer.readItem().then((List<String> message) {
                           if (message[0] == 'T') {
                             data.setCredentials(message[1], message[2]);
-                            assert(message.length == 1);
+                            assert(message.length == 3);
                           } else {
                             assert(message[0] == 'F');
                             assert(message.length == 2);
@@ -130,7 +138,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           context: context,
                           builder: (context) => LoginDialog(
                             data: data,
-                            connection: connection,
+                            connection: loginServer,
                           ),
                         );
                       },
@@ -148,7 +156,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           builder: (context) => TextFieldDialog(
                             obscureText: false,
                             onSubmit: (String newUsername) {
-                              connection.send(
+                              loginServer.send(
                                 [
                                   'change-username',
                                   data.username!,
@@ -156,7 +164,12 @@ class _MyHomePageState extends State<MyHomePage> {
                                   newUsername,
                                 ],
                               );
-                              connection
+                              if (newUsername.contains('\x00')) {
+                                return Future.value(
+                                  'Username must not contain 0x0 byte.',
+                                );
+                              }
+                              return loginServer
                                   .readItem()
                                   .then((List<String> message) {
                                 if (message[0] == 'F') {
@@ -165,17 +178,29 @@ class _MyHomePageState extends State<MyHomePage> {
                                       'unrecognized credentials') {
                                     data.removeCredentials();
                                     data.tempMessage('credential failure');
+                                    Navigator.pop(context);
+                                  } else if (message[1] ==
+                                      'inadequate username') {
+                                    if (newUsername == '') {
+                                      return 'Username must be non-empty.';
+                                    } else if (newUsername.contains('\x10')) {
+                                      return 'Username must not contain 0x10 byte.';
+                                    } else {
+                                      return 'Username already in use.';
+                                    }
                                   } else {
                                     data.tempMessage(
                                         'change username failure: ${message[1]}');
+                                    Navigator.pop(context);
                                   }
                                 } else {
                                   assert(message[0] == 'T');
                                   data.updateUsername(newUsername);
                                   assert(message.length == 1);
+                                  Navigator.pop(context);
                                 }
+                                return null;
                               });
-                              Navigator.pop(context);
                             },
                             dialogTitle: 'Change username',
                             buttonMessage: 'Change username',
@@ -195,32 +220,39 @@ class _MyHomePageState extends State<MyHomePage> {
                           builder: (context) => TextFieldDialog(
                             obscureText: true,
                             onSubmit: (String newPassword) {
-                              connection.send([
+                              loginServer.send([
                                 'change-password',
                                 data.username!,
                                 data.password!,
                                 newPassword,
                               ]);
-                              connection
+                              return loginServer
                                   .readItem()
                                   .then((List<String> message) {
                                 if (message[0] == 'F') {
+                                  assert(message.length == 2);
                                   if (message[1] ==
                                       'unrecognized credentials') {
                                     data.removeCredentials();
                                     data.tempMessage('credential failure');
-                                    assert(message.length == 2);
+                                    Navigator.pop(context);
+                                  } else if (message[1] ==
+                                      'inadequate password') {
+                                    assert(newPassword.length < 6);
+                                    return 'Password must be at least 6 characters long.';
                                   } else {
                                     data.tempMessage(
                                         'change password failure: ${message[1]}');
+                                    Navigator.pop(context);
                                   }
                                 } else {
                                   assert(message[0] == 'T');
                                   data.updatePassword(newPassword);
                                   assert(message.length == 1);
+                                  Navigator.pop(context);
                                 }
+                                return null;
                               });
-                              Navigator.pop(context);
                             },
                             dialogTitle: 'Change password',
                             buttonMessage: 'Change password',
@@ -235,12 +267,12 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                     OutlinedButton(
                       onPressed: () {
-                        connection.send([
+                        loginServer.send([
                           'logout',
                           data.username!,
                           data.password!,
                         ]);
-                        connection.readItem().then((List<String> message) {
+                        loginServer.readItem().then((List<String> message) {
                           if (message[0] == 'F') {
                             if (message[1] == 'unrecognized credentials') {
                               data.tempMessage('credential failure');
@@ -377,7 +409,7 @@ class TextFieldDialog extends StatefulWidget {
   final String textFieldLabel;
   final String buttonMessage;
   final bool obscureText;
-  final void Function(String newValue) onSubmit;
+  final Future<String?> Function(String newValue) onSubmit;
 
   @override
   State<TextFieldDialog> createState() => _TextFieldDialogState();
@@ -385,6 +417,7 @@ class TextFieldDialog extends StatefulWidget {
 
 class _TextFieldDialogState extends State<TextFieldDialog> {
   TextEditingController textFieldController = TextEditingController();
+  String? errorMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -411,10 +444,21 @@ class _TextFieldDialogState extends State<TextFieldDialog> {
               ],
             ),
             const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: () => widget.onSubmit(
-                textFieldController.text,
+            if (errorMessage != null)
+              Text(
+                errorMessage!,
+                style: TextStyle(color: Colors.red),
               ),
+            OutlinedButton(
+              onPressed: () {
+                widget
+                    .onSubmit(
+                      textFieldController.text,
+                    )
+                    .then((e) => setState(() {
+                          errorMessage = e;
+                        }));
+              },
               child: Text(widget.buttonMessage),
             ),
           ],

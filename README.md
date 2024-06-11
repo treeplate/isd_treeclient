@@ -1,16 +1,9 @@
 # isd_treeclient
+This app is a client for [ISD](interstellar-dynasties.space).
+## Cookie Storage
+This app saves its state between runs. When using dart:html, it uses local storage, but when using dart:io, it has to save it to a file. This file is called "cookies.save", and uses its own format, described here.
 
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
-
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Map<String, String> => .save file
+Each entry in the map is separated by a null byte, a newline, and another null byte. The entries themselves are encoded as key, null, colon, null, value.
+### .save file => Map<String, String>
+Split the raw file data on null-newline-null, making a list of raw entries, and then split each entry on null-colon-null, making a list [key, value]. Now you have a List<List<String>>, and can map each List<String> to a MapEntry<String, String>, and then use Map.fromEntries to complete the decoding.

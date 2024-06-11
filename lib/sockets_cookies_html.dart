@@ -17,6 +17,12 @@ class WebSocketWrapper {
   void send(String data) {
     socket.send(data);
   }
+  
+  void close() {
+    socket.close();
+  }
+
+  String get name => socket.url!;
 
   WebSocketWrapper(this.socket);
 }
