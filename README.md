@@ -1,5 +1,5 @@
 # isd_treeclient
-This app is a client for [ISD](interstellar-dynasties.space).
+This app is a client for [ISD](https://interstellar-dynasties.space).
 ## Cookie Storage
 This app saves its state between runs. When using dart:html, it uses local storage, but when using dart:io, it has to save it to a file. This file is called "cookies.save", and uses its own format, described here.
 

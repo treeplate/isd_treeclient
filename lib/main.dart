@@ -7,7 +7,6 @@ import 'data-structure.dart';
 import 'parser.dart';
 
 const String loginServerURL = "wss://interstellar-dynasties.space:10024/";
-const String dynastyServerURL = "wss://interstellar-dynasties.space:10025/";
 void main() async {
   runApp(MyHomePage());
 }
@@ -25,7 +24,7 @@ class _MyHomePageState extends State<MyHomePage> {
   DataStructure data = DataStructure();
   ThemeMode themeMode = ThemeMode.system;
   late final NetworkConnection loginServer;
-  late final NetworkConnection dynastyServer;
+  NetworkConnection? dynastyServer;
   bool get isDarkMode => themeMode == ThemeMode.system
       ? WidgetsBinding.instance.platformDispatcher.platformBrightness ==
           Brightness.dark
@@ -40,28 +39,18 @@ class _MyHomePageState extends State<MyHomePage> {
       if (data.username != null && data.password != null) {
         loginServer.send(['login', data.username!, data.password!]);
         List<String> message = await loginServer.readItem();
-          if (message[0] == 'F') {
-            if (message[1] == 'unrecognized credentials') {
-              data.removeCredentials();
-              assert(message.length == 2);
-            } else {
-              data.tempMessage(
-                  'startup login response (failure): ${message[1]}');
-            }
+        if (message[0] == 'F') {
+          if (message[1] == 'unrecognized credentials') {
+            data.removeCredentials();
+            assert(message.length == 2);
           } else {
-            assert(message[0] == 'T');
-            assert(message.length == 1);
+            data.tempMessage('startup login response (failure): ${message[1]}');
           }
-        
+        } else {
+          assert(message[0] == 'T');
+          parseSuccessfulLoginResponse(message);
+        }
       }
-    });
-    connect(dynastyServerURL).then((socket) async{
-      dynastyServer = NetworkConnection(socket, (message) {
-        parseMessage(data, message);
-      });
-      dynastyServer.send(['moo']);
-        List<String> message = await dynastyServer.readItem();
-        data.tempMessage('moo response: $message');
     });
     String? darkModeCookie = getCookie(kDarkModeCookieName);
     if (darkModeCookie != null) {
@@ -71,6 +60,18 @@ class _MyHomePageState extends State<MyHomePage> {
           ThemeMode.system;
     }
     setCookie(kDarkModeCookieName, themeMode.name);
+  }
+
+  void parseSuccessfulLoginResponse(List<String> message) {
+    connect(message[1]).then((socket) async {
+      dynastyServer = NetworkConnection(socket, (message) {
+        parseMessage(data, message);
+      });
+      dynastyServer!.send(['moo']);
+      List<String> message = await dynastyServer!.readItem();
+      data.tempMessage('moo response: $message');
+    });
+    assert(message.length == 2);
   }
 
   @override
@@ -139,6 +140,8 @@ class _MyHomePageState extends State<MyHomePage> {
                           builder: (context) => LoginDialog(
                             data: data,
                             connection: loginServer,
+                            parseSuccessfulLoginResponse:
+                                parseSuccessfulLoginResponse,
                           ),
                         );
                       },
@@ -285,6 +288,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           }
                         });
                         data.removeCredentials();
+                        dynastyServer?.close();
                       },
                       child: Text('Logout'),
                     ),
@@ -308,10 +312,15 @@ class _MyHomePageState extends State<MyHomePage> {
 }
 
 class LoginDialog extends StatefulWidget {
-  const LoginDialog({super.key, required this.data, required this.connection});
+  const LoginDialog(
+      {super.key,
+      required this.data,
+      required this.connection,
+      required this.parseSuccessfulLoginResponse});
 
   final DataStructure data;
   final NetworkConnection connection;
+  final void Function(List<String> message) parseSuccessfulLoginResponse;
 
   @override
   State<LoginDialog> createState() => _LoginDialogState();
@@ -381,9 +390,12 @@ class _LoginDialogState extends State<LoginDialog> {
                     }
                   } else {
                     assert(message[0] == 'T');
-                    widget.data.setCredentials(username.text, password.text);
-                    assert(message.length == 1);
-                    Navigator.pop(context);
+                    try {
+                      widget.data.setCredentials(username.text, password.text);
+                      widget.parseSuccessfulLoginResponse(message);
+                    } finally {
+                      Navigator.pop(context);
+                    }
                   }
                 });
               },
