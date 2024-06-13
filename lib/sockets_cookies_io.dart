@@ -71,6 +71,6 @@ void setCookie(String name, String? value) {
     _cookieCache![name] = value;
   }
   _cookieStorage.writeAsStringSync(_cookieCache!.entries
-      .map((MapEntry<String, String> entry) => '${entry.key}\x00:\x00${entry.value}')
-      .join('\x00\n\x00'));
+      .map((MapEntry<String, String> entry) => '${entry.key}:\x00${entry.value}')
+      .join('\n\x00'));
 }
