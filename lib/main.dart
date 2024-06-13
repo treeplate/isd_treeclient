@@ -89,9 +89,11 @@ class _MyHomePageState extends State<MyHomePage> {
         appBar: AppBar(
           actions: [
             IconButton(
-              icon: Icon(isDarkMode
-                  ? Icons.light_mode_outlined
-                  : Icons.dark_mode_outlined),
+              icon: Icon(
+                isDarkMode
+                    ? Icons.light_mode_outlined
+                    : Icons.dark_mode_outlined,
+              ),
               onPressed: () {
                 setState(() {
                   if (isDarkMode) {
@@ -124,7 +126,8 @@ class _MyHomePageState extends State<MyHomePage> {
                             assert(message[0] == 'F');
                             assert(message.length == 2);
                             data.tempMessage(
-                                'failed to create new user: ${message[1]}');
+                              'failed to create new user: ${message[1]}',
+                            );
                           }
                         });
                       },
@@ -172,38 +175,39 @@ class _MyHomePageState extends State<MyHomePage> {
                                   'Username must not contain 0x0 byte.',
                                 );
                               }
-                              return loginServer
-                                  .readItem()
-                                  .then((List<String> message) {
-                                if (message[0] == 'F') {
-                                  assert(message.length == 2);
-                                  if (message[1] ==
-                                      'unrecognized credentials') {
-                                    data.removeCredentials();
-                                    data.tempMessage('credential failure');
-                                    Navigator.pop(context);
-                                  } else if (message[1] ==
-                                      'inadequate username') {
-                                    if (newUsername == '') {
-                                      return 'Username must be non-empty.';
-                                    } else if (newUsername.contains('\x10')) {
-                                      return 'Username must not contain 0x10 byte.';
+                              return loginServer.readItem().then(
+                                (List<String> message) {
+                                  if (message[0] == 'F') {
+                                    assert(message.length == 2);
+                                    if (message[1] ==
+                                        'unrecognized credentials') {
+                                      data.removeCredentials();
+                                      data.tempMessage('credential failure');
+                                      Navigator.pop(context);
+                                    } else if (message[1] ==
+                                        'inadequate username') {
+                                      if (newUsername == '') {
+                                        return 'Username must be non-empty.';
+                                      } else if (newUsername.contains('\x10')) {
+                                        return 'Username must not contain 0x10 byte.';
+                                      } else {
+                                        return 'Username already in use.';
+                                      }
                                     } else {
-                                      return 'Username already in use.';
+                                      data.tempMessage(
+                                        'change username failure: ${message[1]}',
+                                      );
+                                      Navigator.pop(context);
                                     }
                                   } else {
-                                    data.tempMessage(
-                                        'change username failure: ${message[1]}');
+                                    assert(message[0] == 'T');
+                                    data.updateUsername(newUsername);
+                                    assert(message.length == 1);
                                     Navigator.pop(context);
                                   }
-                                } else {
-                                  assert(message[0] == 'T');
-                                  data.updateUsername(newUsername);
-                                  assert(message.length == 1);
-                                  Navigator.pop(context);
-                                }
-                                return null;
-                              });
+                                  return null;
+                                },
+                              );
                             },
                             dialogTitle: 'Change username',
                             buttonMessage: 'Change username',
@@ -229,33 +233,34 @@ class _MyHomePageState extends State<MyHomePage> {
                                 data.password!,
                                 newPassword,
                               ]);
-                              return loginServer
-                                  .readItem()
-                                  .then((List<String> message) {
-                                if (message[0] == 'F') {
-                                  assert(message.length == 2);
-                                  if (message[1] ==
-                                      'unrecognized credentials') {
-                                    data.removeCredentials();
-                                    data.tempMessage('credential failure');
-                                    Navigator.pop(context);
-                                  } else if (message[1] ==
-                                      'inadequate password') {
-                                    assert(newPassword.length < 6);
-                                    return 'Password must be at least 6 characters long.';
+                              return loginServer.readItem().then(
+                                (List<String> message) {
+                                  if (message[0] == 'F') {
+                                    assert(message.length == 2);
+                                    if (message[1] ==
+                                        'unrecognized credentials') {
+                                      data.removeCredentials();
+                                      data.tempMessage('credential failure');
+                                      Navigator.pop(context);
+                                    } else if (message[1] ==
+                                        'inadequate password') {
+                                      assert(newPassword.length < 6);
+                                      return 'Password must be at least 6 characters long.';
+                                    } else {
+                                      data.tempMessage(
+                                        'change password failure: ${message[1]}',
+                                      );
+                                      Navigator.pop(context);
+                                    }
                                   } else {
-                                    data.tempMessage(
-                                        'change password failure: ${message[1]}');
+                                    assert(message[0] == 'T');
+                                    data.updatePassword(newPassword);
+                                    assert(message.length == 1);
                                     Navigator.pop(context);
                                   }
-                                } else {
-                                  assert(message[0] == 'T');
-                                  data.updatePassword(newPassword);
-                                  assert(message.length == 1);
-                                  Navigator.pop(context);
-                                }
-                                return null;
-                              });
+                                  return null;
+                                },
+                              );
                             },
                             dialogTitle: 'Change password',
                             buttonMessage: 'Change password',
@@ -312,11 +317,12 @@ class _MyHomePageState extends State<MyHomePage> {
 }
 
 class LoginDialog extends StatefulWidget {
-  const LoginDialog(
-      {super.key,
-      required this.data,
-      required this.connection,
-      required this.parseSuccessfulLoginResponse});
+  const LoginDialog({
+    super.key,
+    required this.data,
+    required this.connection,
+    required this.parseSuccessfulLoginResponse,
+  });
 
   final DataStructure data;
   final NetworkConnection connection;
@@ -384,8 +390,9 @@ class _LoginDialogState extends State<LoginDialog> {
                         errorMessage = 'Username or password incorrect';
                       });
                     } else {
-                      widget.data
-                          .tempMessage('manual login failure: ${message[1]}');
+                      widget.data.tempMessage(
+                        'manual login failure: ${message[1]}',
+                      );
                       Navigator.pop(context);
                     }
                   } else {
@@ -409,13 +416,14 @@ class _LoginDialogState extends State<LoginDialog> {
 }
 
 class TextFieldDialog extends StatefulWidget {
-  const TextFieldDialog(
-      {super.key,
-      required this.onSubmit,
-      required this.dialogTitle,
-      required this.buttonMessage,
-      required this.textFieldLabel,
-      required this.obscureText});
+  const TextFieldDialog({
+    super.key,
+    required this.onSubmit,
+    required this.dialogTitle,
+    required this.buttonMessage,
+    required this.textFieldLabel,
+    required this.obscureText,
+  });
 
   final String dialogTitle;
   final String textFieldLabel;
@@ -467,9 +475,11 @@ class _TextFieldDialogState extends State<TextFieldDialog> {
                     .onSubmit(
                       textFieldController.text,
                     )
-                    .then((e) => setState(() {
-                          errorMessage = e;
-                        }));
+                    .then(
+                      (e) => setState(() {
+                        errorMessage = e;
+                      }),
+                    );
               },
               child: Text(widget.buttonMessage),
             ),
