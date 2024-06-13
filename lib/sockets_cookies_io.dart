@@ -43,9 +43,9 @@ void getCookiesFromFile() {
     if (_cookieStorage.existsSync()) {
       try {
         _cookieCache = Map.fromEntries(
-          _cookieStorage.readAsStringSync().split('\x00\n\x00').map(
+          _cookieStorage.readAsStringSync().split('\n\x00').map(
             (String line) {
-              List<String> parts = line.split('\x00:\x00');
+              List<String> parts = line.split(':\x00');
               if (parts.length != 2) {
                 throw FormatException('invalid _cookieStorage format');
               }
