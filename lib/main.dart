@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:isd_treeclient/network_handler.dart';
 import 'sockets_cookies_stub.dart'
@@ -37,12 +39,12 @@ class _MyHomePageState extends State<MyHomePage> {
         parseMessage(data, message);
       });
       if (data.username != null && data.password != null) {
-        loginServer.send(['login', data.username!, data.password!]);
-        List<String> message = await loginServer.readItem();
+        List<String> message =
+            await loginServer.send(['login', data.username!, data.password!]);
         if (message[0] == 'F') {
           if (message[1] == 'unrecognized credentials') {
-            data.removeCredentials();
             assert(message.length == 2);
+            logout();
           } else {
             data.tempMessage('startup login response (failure): ${message[1]}');
           }
@@ -62,21 +64,44 @@ class _MyHomePageState extends State<MyHomePage> {
     setCookie(kDarkModeCookieName, themeMode.name);
   }
 
+  void connectToSystemServer(String server) {
+    connect(server).then((socket) async {
+      NetworkConnection systemServer = NetworkConnection(socket, (message) {
+        parseMessage(data, message);
+      });
+      List<String> message = await systemServer.send(['moo']);
+      data.tempMessage('moo response (from server $server): $message');
+      socket.close();
+    });
+  }
+
   void parseSuccessfulLoginResponse(List<String> message) {
+    assert(message[0] == 'T');
+    assert(message.length == 3);
+    data.setToken(message[2]);
     connect(message[1]).then((socket) async {
       dynastyServer = NetworkConnection(socket, (message) {
         parseMessage(data, message);
       });
-      dynastyServer!.send(['moo']);
-      List<String> message = await dynastyServer!.readItem();
-      data.tempMessage('moo response: $message');
+      List<String> message = await dynastyServer!.send(['login', data.token!]);
+      assert(message[0] == 'T');
+      int systemServerCount = int.parse(message[1]);
+      if (systemServerCount == 0) {
+        data.tempMessage('no system servers');
+      }
+      Iterable<String> systemServers = message.skip(2);
+      assert(systemServers.length == systemServerCount);
+      for (String server in systemServers) {
+        connectToSystemServer(server);
+      }
     });
-    assert(message.length == 2);
   }
 
   @override
   void dispose() {
     data.dispose();
+    dynastyServer?.close();
+    loginServer.close();
     super.dispose();
   }
 
@@ -117,11 +142,14 @@ class _MyHomePageState extends State<MyHomePage> {
                   if (data.username == null || data.password == null) ...[
                     OutlinedButton(
                       onPressed: () {
-                        loginServer.send(['new']);
-                        loginServer.readItem().then((List<String> message) {
+                        loginServer.send(['new']).then((List<String> message) {
                           if (message[0] == 'T') {
                             data.setCredentials(message[1], message[2]);
-                            assert(message.length == 3);
+                            List<String> loginResponse =
+                                message.skip(2).toList();
+                            loginResponse[0] = 'T';
+                            parseSuccessfulLoginResponse(loginResponse);
+                            assert(message.length == 5);
                           } else {
                             assert(message[0] == 'F');
                             assert(message.length == 2);
@@ -162,26 +190,25 @@ class _MyHomePageState extends State<MyHomePage> {
                           builder: (context) => TextFieldDialog(
                             obscureText: false,
                             onSubmit: (String newUsername) {
-                              loginServer.send(
+                              if (newUsername.contains('\x00')) {
+                                return Future.value(
+                                  'Username must not contain 0x0 byte.',
+                                );
+                              }
+                              return loginServer.send(
                                 [
                                   'change-username',
                                   data.username!,
                                   data.password!,
                                   newUsername,
                                 ],
-                              );
-                              if (newUsername.contains('\x00')) {
-                                return Future.value(
-                                  'Username must not contain 0x0 byte.',
-                                );
-                              }
-                              return loginServer.readItem().then(
+                              ).then(
                                 (List<String> message) {
                                   if (message[0] == 'F') {
                                     assert(message.length == 2);
                                     if (message[1] ==
                                         'unrecognized credentials') {
-                                      data.removeCredentials();
+                                      logout();
                                       data.tempMessage('credential failure');
                                       Navigator.pop(context);
                                     } else if (message[1] ==
@@ -227,24 +254,29 @@ class _MyHomePageState extends State<MyHomePage> {
                           builder: (context) => TextFieldDialog(
                             obscureText: true,
                             onSubmit: (String newPassword) {
-                              loginServer.send([
+                              if (newPassword.contains('\x00')) {
+                                return Future.value(
+                                  'Password must not contain 0x0 byte.',
+                                );
+                              }
+                              return loginServer.send([
                                 'change-password',
                                 data.username!,
                                 data.password!,
                                 newPassword,
-                              ]);
-                              return loginServer.readItem().then(
+                              ]).then(
                                 (List<String> message) {
                                   if (message[0] == 'F') {
                                     assert(message.length == 2);
                                     if (message[1] ==
                                         'unrecognized credentials') {
-                                      data.removeCredentials();
+                                      logout();
                                       data.tempMessage('credential failure');
                                       Navigator.pop(context);
                                     } else if (message[1] ==
                                         'inadequate password') {
-                                      assert(newPassword.length < 6);
+                                      assert(
+                                          utf8.encode(newPassword).length < 6);
                                       return 'Password must be at least 6 characters long.';
                                     } else {
                                       data.tempMessage(
@@ -279,8 +311,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           'logout',
                           data.username!,
                           data.password!,
-                        ]);
-                        loginServer.readItem().then((List<String> message) {
+                        ]).then((List<String> message) {
                           if (message[0] == 'F') {
                             if (message[1] == 'unrecognized credentials') {
                               data.tempMessage('credential failure');
@@ -292,20 +323,17 @@ class _MyHomePageState extends State<MyHomePage> {
                             assert(message.length == 1);
                           }
                         });
-                        data.removeCredentials();
-                        dynastyServer?.close();
+                        logout();
                       },
                       child: Text('Logout'),
                     ),
                   ],
-                  if (data.tempCurrentMessage != null) ...[
-                    SizedBox(
-                      height: 10,
-                    ),
-                    Center(
-                      child: Text('${data.tempCurrentMessage}'),
-                    ),
-                  ]
+                  SizedBox(
+                    height: 10,
+                  ),
+                  Column(
+                    children: data.tempMessages.map((e) => Text(e)).toList(),
+                  ),
                 ],
               ),
             );
@@ -313,6 +341,11 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
     );
+  }
+
+  void logout() {
+    data.removeCredentials();
+    dynastyServer?.close();
   }
 }
 
@@ -382,8 +415,17 @@ class _LoginDialogState extends State<LoginDialog> {
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed: () {
-                widget.connection.send(['login', username.text, password.text]);
-                widget.connection.readItem().then((List<String> message) {
+                if (username.text.contains('\x00')) {
+                  errorMessage = 'Username must not contain 0x0 byte.';
+                  return;
+                }
+                if (password.text.contains('\x00')) {
+                  errorMessage = 'Password must not contain 0x0 byte.';
+                  return;
+                }
+                widget.connection
+                    .send(['login', username.text, password.text]).then(
+                        (List<String> message) {
                   if (message[0] == 'F') {
                     if (message[1] == 'unrecognized credentials') {
                       setState(() {
@@ -393,7 +435,9 @@ class _LoginDialogState extends State<LoginDialog> {
                       widget.data.tempMessage(
                         'manual login failure: ${message[1]}',
                       );
-                      Navigator.pop(context);
+                      if (mounted) {
+                        Navigator.pop(context);
+                      }
                     }
                   } else {
                     assert(message[0] == 'T');
@@ -401,7 +445,9 @@ class _LoginDialogState extends State<LoginDialog> {
                       widget.data.setCredentials(username.text, password.text);
                       widget.parseSuccessfulLoginResponse(message);
                     } finally {
-                      Navigator.pop(context);
+                      if (mounted) {
+                        Navigator.pop(context);
+                      }
                     }
                   }
                 });

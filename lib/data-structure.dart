@@ -4,12 +4,13 @@ import 'sockets_cookies_stub.dart'
     if (dart.library.html) 'sockets_cookies_html.dart';
 
 class DataStructure with ChangeNotifier {
-  String? tempCurrentMessage;
+  List<String> tempMessages = [];
   String? username;
   String? password;
+  String? token;
 
   void tempMessage(String message) {
-    tempCurrentMessage = message;
+    tempMessages.add(message);
     notifyListeners();
   }
 
@@ -26,6 +27,11 @@ class DataStructure with ChangeNotifier {
     setCookie('password', null);
     username = null;
     password = null;
+    notifyListeners();
+  }
+
+  void setToken(String token) {
+    this.token = token;
     notifyListeners();
   }
 

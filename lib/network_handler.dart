@@ -6,20 +6,30 @@ import 'sockets_cookies_stub.dart'
 class NetworkConnection {
   NetworkConnection(
       this.socket, void Function(List<String>) unrequestedMessageHandler) {
-    subscription = socket.listen((rawMessage) {
-      List<String> message = (rawMessage as String).split('\x00');
-      if (message[0] == 'reply') {
-        items.add(message.sublist(1, message.length-1));
-        moreItems.complete();
-        moreItems = Completer();
-      } else {
-        unrequestedMessageHandler(message.sublist(0, message.length-1));
-      }
-    }, onDone: () {
-      if(!_closed) {
-        throw Exception('unexpectedly closed server ${socket.name}');
-      }
-    },);
+    subscription = socket.listen(
+      (rawMessage) {
+        List<String> message = (rawMessage as String).split('\x00');
+        // message[0] is the message type. Anything other than 'reply' is passed to unrequestedMessageHandler.
+        // message[1] (for replies) is the conversation ID, which in our case is the index into the replies list.
+        assert(message.last == ''); // all messages are null-terminated and we're splitting on nulls
+        if (message[0] == 'reply') {
+          int conversationID = int.parse(message[1]);
+          if (replies.length <= conversationID ||
+              replies[conversationID].isCompleted) {
+            throw Exception('unrequested reply $message');
+          }
+          replies[conversationID]
+              .complete(message.sublist(2, message.length - 1));
+        } else {
+          unrequestedMessageHandler(message.sublist(0, message.length - 1));
+        }
+      },
+      onDone: () {
+        if (!_closed) {
+          throw Exception('unexpectedly closed server ${socket.name}');
+        }
+      },
+    );
   }
 
   final WebSocketWrapper socket;
@@ -31,19 +41,21 @@ class NetworkConnection {
     socket.close();
   }
 
-  Completer<void> moreItems = Completer();
-  List<List<String>> items = [];
-  List<Object?> sent = [];
+  List<Completer<List<String>>> replies = [];
 
-  /// Sends [message] to connected server
-  void send(List<String> message) {
+  /// Sends [message] to connected server.
+  Future<List<String>> send(List<String> message) {
     assert(!message.contains('\x00'));
+    int index = replies.indexWhere((e) => e.isCompleted);
+    Completer<List<String>> reply = Completer();
+    if (index == -1) {
+      index = replies.length;
+      replies.add(reply);
+    } else {
+      replies[index] = reply;
+    }
+    message.insert(1, index.toString());
     socket.send(message.join('\x00') + '\x00');
-  }
-
-  // Waits for an item to be recieved and returns it.
-  Future<List<String>> readItem() async {
-    if (items.isEmpty) await moreItems.future;
-    return items.removeAt(0);
+    return reply.future;
   }
 }
