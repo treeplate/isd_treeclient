@@ -1,15 +1,22 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
+
+void _dummy(String? e) {}
 
 class WebSocketWrapper {
   final WebSocket socket;
 
-  StreamSubscription<dynamic> listen(void onData(dynamic event),
-      {Function? onError, void onDone()?, bool? cancelOnError}) {
+  StreamSubscription<dynamic> listen(
+    void onData(dynamic event), {
+    Function? onError,
+    void onDone(String? reason) = _dummy,
+    bool? cancelOnError,
+  }) {
     return socket.listen(
       onData,
       onError: onError,
-      onDone: onDone,
+      onDone: () => onDone('${socket.closeCode} ${socket.closeReason}'),
       cancelOnError: cancelOnError,
     );
   }
@@ -17,10 +24,11 @@ class WebSocketWrapper {
   void send(String data) {
     socket.add(data);
   }
-  
+
   void close() {
     socket.close();
   }
+
   final String name;
 
   WebSocketWrapper(this.socket, this.name);
@@ -71,6 +79,16 @@ void setCookie(String name, String? value) {
     _cookieCache![name] = value;
   }
   _cookieStorage.writeAsStringSync(_cookieCache!.entries
-      .map((MapEntry<String, String> entry) => '${entry.key}:\x00${entry.value}')
+      .map(
+          (MapEntry<String, String> entry) => '${entry.key}:\x00${entry.value}')
       .join('\n\x00'));
+}
+
+Uint8List? getBinaryBlob(String name) {
+  File file = File('$name.bin');
+  return file.existsSync() ? file.readAsBytesSync() : null;
+}
+
+void saveBinaryBlob(String name, List<int> data) {
+  File('$name.bin').writeAsBytesSync(data);
 }

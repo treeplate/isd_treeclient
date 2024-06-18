@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:ui';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:isd_treeclient/network_handler.dart';
 import 'sockets_cookies_stub.dart'
@@ -21,6 +23,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 const String kDarkModeCookieName = 'darkMode';
+const double kGalaxySize = 300;
 
 class _MyHomePageState extends State<MyHomePage> {
   DataStructure data = DataStructure();
@@ -31,6 +34,9 @@ class _MyHomePageState extends State<MyHomePage> {
       ? WidgetsBinding.instance.platformDispatcher.platformBrightness ==
           Brightness.dark
       : themeMode == ThemeMode.dark;
+  TransformationController scrollController = TransformationController();
+  double galaxyScroll = 1;
+  Offset galaxyScreenCenter = Offset(.5, .5);
 
   void initState() {
     super.initState();
@@ -38,19 +44,25 @@ class _MyHomePageState extends State<MyHomePage> {
       loginServer = NetworkConnection(socket, (message) {
         parseMessage(data, message);
       });
-      if (data.username != null && data.password != null) {
-        List<String> message =
-            await loginServer.send(['login', data.username!, data.password!]);
-        if (message[0] == 'F') {
-          if (message[1] == 'unrecognized credentials') {
-            assert(message.length == 2);
-            logout();
+      if (data.stars == null) {
+        loginServer
+            .sendExpectingBinaryReply(['get-stars']).then(data.parseStars);
+        if (data.username != null && data.password != null) {
+          List<String> message =
+              await loginServer.send(['login', data.username!, data.password!]);
+          if (message[0] == 'F') {
+            if (message[1] == 'unrecognized credentials') {
+              assert(message.length == 2);
+              logout();
+            } else {
+              data.tempMessage(
+                'startup login response (failure): ${message[1]}',
+              );
+            }
           } else {
-            data.tempMessage('startup login response (failure): ${message[1]}');
+            assert(message[0] == 'T');
+            parseSuccessfulLoginResponse(message);
           }
-        } else {
-          assert(message[0] == 'T');
-          parseSuccessfulLoginResponse(message);
         }
       }
     });
@@ -331,9 +343,48 @@ class _MyHomePageState extends State<MyHomePage> {
                   SizedBox(
                     height: 10,
                   ),
-                  Column(
-                    children: data.tempMessages.map((e) => Text(e)).toList(),
+                  Center(
+                    child: SizedBox(
+                      height: 100,
+                      width: 300,
+                      child: ListView(
+                        children:
+                            data.tempMessages.map((e) => Text(e)).toList(),
+                      ),
+                    ),
                   ),
+                  if (data.stars != null)
+                    Listener(
+                      onPointerMove: (details) {
+                        setState(() {
+                          galaxyScreenCenter +=
+                              (details.delta / kGalaxySize) / galaxyScroll;
+                        });
+                      },
+                      onPointerSignal: (details) {
+                        if (details is PointerScrollEvent) {
+                          setState(() {
+                            if (details.scrollDelta.dy > 0) {
+                              print(
+                                  ((details.localPosition / kGalaxySize) / 1.5)
+                                      .dx);
+                              galaxyScreenCenter *= 1.5;
+                              galaxyScroll /= 1.5;
+                            } else {
+                              galaxyScreenCenter /= 1.5;
+                              galaxyScroll *= 1.5;
+                            }
+                          });
+                        }
+                      },
+                      child: ClipRect(
+                        child: CustomPaint(
+                          size: Size.square(kGalaxySize),
+                          painter: GalaxyRenderer(
+                              data.stars!, galaxyScroll, galaxyScreenCenter),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             );
@@ -533,5 +584,85 @@ class _TextFieldDialogState extends State<TextFieldDialog> {
         ),
       ),
     );
+  }
+}
+
+final List<Paint> starCategories = [
+  // multiply strokeWidth by size of unit square
+  Paint()
+    ..color = Color(0x7FFFFFFF)
+    ..strokeWidth = 0.0040, // blurred.
+  Paint()
+    ..color = Color(0xCFCCBBAA)
+    ..strokeWidth = 0.0025,
+  Paint()
+    ..color = Color(0xDFFF0000)
+    ..strokeWidth = 0.0005,
+  Paint()
+    ..color = Color(0xCFFF9900)
+    ..strokeWidth = 0.0007,
+  Paint()
+    ..color = Color(0xBFFFFFFF)
+    ..strokeWidth = 0.0005,
+  Paint()
+    ..color = Color(0xAFFFFFFF)
+    ..strokeWidth = 0.0012,
+  Paint()
+    ..color = Color(0x2F0099FF)
+    ..strokeWidth = 0.0010,
+  Paint()
+    ..color = Color(0x2F0000FF)
+    ..strokeWidth = 0.0005,
+  Paint()
+    ..color = Color(0x4FFF9900)
+    ..strokeWidth = 0.0005,
+  Paint()
+    ..color = Color(0x2FFFFFFF)
+    ..strokeWidth = 0.0005,
+  Paint()
+    ..color = Color(0x5FFF2200)
+    ..strokeWidth = 0.0200, // blurred.
+];
+
+class GalaxyRenderer extends CustomPainter {
+  final List<List<Offset>> stars;
+  final double scroll;
+  final Offset screenCenter;
+
+  GalaxyRenderer(this.stars, this.scroll, this.screenCenter);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    int category = 0;
+    canvas.drawCircle(
+        screenCenter.scale(size.width * scroll, size.height * scroll),
+        size.shortestSide * scroll / 2,
+        Paint()
+          ..color = Color(0x5566BBFF)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, 10));
+    while (category < 11) {
+      canvas.drawPoints(
+          PointMode.points,
+          stars[category]
+              .map((e) =>
+                  (e + Offset(screenCenter.dx - .5, screenCenter.dy - .5))
+                      .scale(size.width * scroll, size.height * scroll))
+              .where((e) {
+            return !(e.dx < 0 ||
+                e.dy < 0 ||
+                e.dx > size.width ||
+                e.dy > size.height);
+          }).toList(),
+          Paint.from(starCategories[category])
+            ..strokeCap = StrokeCap.round
+            ..strokeWidth =
+                starCategories[category].strokeWidth * size.shortestSide);
+      category++;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return true;
   }
 }

@@ -1,4 +1,3 @@
-
 import 'data-structure.dart';
 
 void parseMessage(DataStructure data, List<String> message) {
