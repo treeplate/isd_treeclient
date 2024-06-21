@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/gestures.dart';
@@ -12,59 +14,41 @@ import 'parser.dart';
 
 const String loginServerURL = "wss://interstellar-dynasties.space:10024/";
 void main() async {
-  runApp(MyHomePage());
+  runApp(
+    MaterialApp(
+      home: RootWidget(),
+    ),
+  );
 }
 
-class MyHomePage extends StatefulWidget {
-  MyHomePage({super.key});
+class RootWidget extends StatefulWidget {
+  RootWidget({super.key});
 
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  _RootWidgetState createState() => _RootWidgetState();
 }
 
 const String kDarkModeCookieName = 'darkMode';
-const double kGalaxySize = 300;
 
-class _MyHomePageState extends State<MyHomePage> {
+class _RootWidgetState extends State<RootWidget> {
   DataStructure data = DataStructure();
   ThemeMode themeMode = ThemeMode.system;
-  late final NetworkConnection loginServer;
+  NetworkConnection? loginServer;
   NetworkConnection? dynastyServer;
   bool get isDarkMode => themeMode == ThemeMode.system
       ? WidgetsBinding.instance.platformDispatcher.platformBrightness ==
           Brightness.dark
       : themeMode == ThemeMode.dark;
-  TransformationController scrollController = TransformationController();
-  double galaxyScroll = 1;
-  Offset galaxyScreenCenter = Offset(.5, .5);
 
   void initState() {
     super.initState();
-    connect(loginServerURL).then((socket) async {
-      loginServer = NetworkConnection(socket, (message) {
-        parseMessage(data, message);
+    connect(loginServerURL).then((socket) {
+      setState(() {
+        loginServer = NetworkConnection(socket, (message) {
+          parseMessage(data, message);
+        }, onResetLogin);
       });
-      if (data.stars == null) {
-        loginServer
-            .sendExpectingBinaryReply(['get-stars']).then(data.parseStars);
-        if (data.username != null && data.password != null) {
-          List<String> message =
-              await loginServer.send(['login', data.username!, data.password!]);
-          if (message[0] == 'F') {
-            if (message[1] == 'unrecognized credentials') {
-              assert(message.length == 2);
-              logout();
-            } else {
-              data.tempMessage(
-                'startup login response (failure): ${message[1]}',
-              );
-            }
-          } else {
-            assert(message[0] == 'T');
-            parseSuccessfulLoginResponse(message);
-          }
-        }
-      }
+      onResetLogin();
     });
     String? darkModeCookie = getCookie(kDarkModeCookieName);
     if (darkModeCookie != null) {
@@ -76,11 +60,35 @@ class _MyHomePageState extends State<MyHomePage> {
     setCookie(kDarkModeCookieName, themeMode.name);
   }
 
+  FutureOr<Null> onResetLogin() async {
+    if (data.stars == null) {
+      loginServer!
+          .sendExpectingBinaryReply(['get-stars']).then(data.parseStars);
+      if (data.username != null && data.password != null) {
+        List<String> message =
+            await loginServer!.send(['login', data.username!, data.password!]);
+        if (message[0] == 'F') {
+          if (message[1] == 'unrecognized credentials') {
+            assert(message.length == 2);
+            logout();
+          } else {
+            data.tempMessage(
+              'startup login response (failure): ${message[1]}',
+            );
+          }
+        } else {
+          assert(message[0] == 'T');
+          parseSuccessfulLoginResponse(message);
+        }
+      }
+    }
+  }
+
   void connectToSystemServer(String server) {
     connect(server).then((socket) async {
       NetworkConnection systemServer = NetworkConnection(socket, (message) {
         parseMessage(data, message);
-      });
+      }, () {});
       List<String> message = await systemServer.send(['moo']);
       data.tempMessage('moo response (from server $server): $message');
       socket.close();
@@ -94,26 +102,30 @@ class _MyHomePageState extends State<MyHomePage> {
     connect(message[1]).then((socket) async {
       dynastyServer = NetworkConnection(socket, (message) {
         parseMessage(data, message);
-      });
-      List<String> message = await dynastyServer!.send(['login', data.token!]);
-      assert(message[0] == 'T');
-      int systemServerCount = int.parse(message[1]);
-      if (systemServerCount == 0) {
-        data.tempMessage('no system servers');
-      }
-      Iterable<String> systemServers = message.skip(2);
-      assert(systemServers.length == systemServerCount);
-      for (String server in systemServers) {
-        connectToSystemServer(server);
-      }
+      }, onResetDynasty);
+      await onResetDynasty();
     });
+  }
+
+  Future<void> onResetDynasty() async {
+    List<String> message = await dynastyServer!.send(['login', data.token!]);
+    assert(message[0] == 'T');
+    int systemServerCount = int.parse(message[1]);
+    if (systemServerCount == 0) {
+      data.tempMessage('no system servers');
+    }
+    Iterable<String> systemServers = message.skip(2);
+    assert(systemServers.length == systemServerCount);
+    for (String server in systemServers) {
+      connectToSystemServer(server);
+    }
   }
 
   @override
   void dispose() {
     data.dispose();
     dynastyServer?.close();
-    loginServer.close();
+    loginServer?.close();
     super.dispose();
   }
 
@@ -125,6 +137,26 @@ class _MyHomePageState extends State<MyHomePage> {
       home: Scaffold(
         appBar: AppBar(
           actions: [
+            IconButton(
+              icon: Icon(
+                Icons.person,
+              ),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => Theme(
+                    data: isDarkMode ? ThemeData.dark() : ThemeData.light(),
+                    child: Dialog(
+                      child: ProfileWidget(
+                        data: data,
+                        loginServer: loginServer!,
+                        logout: logout,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
             IconButton(
               icon: Icon(
                 isDarkMode
@@ -148,243 +180,28 @@ class _MyHomePageState extends State<MyHomePage> {
           listenable: data,
           builder: (context, child) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Stack(
                 children: [
-                  if (data.username == null || data.password == null) ...[
-                    OutlinedButton(
-                      onPressed: () {
-                        loginServer.send(['new']).then((List<String> message) {
-                          if (message[0] == 'T') {
-                            data.setCredentials(message[1], message[2]);
-                            List<String> loginResponse =
-                                message.skip(2).toList();
-                            loginResponse[0] = 'T';
-                            parseSuccessfulLoginResponse(loginResponse);
-                            assert(message.length == 5);
-                          } else {
-                            assert(message[0] == 'F');
-                            assert(message.length == 2);
-                            data.tempMessage(
-                              'failed to create new user: ${message[1]}',
-                            );
-                          }
-                        });
-                      },
-                      child: Text('Start new game'),
-                    ),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    OutlinedButton(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => LoginDialog(
-                            data: data,
-                            connection: loginServer,
-                            parseSuccessfulLoginResponse:
-                                parseSuccessfulLoginResponse,
-                          ),
-                        );
-                      },
-                      child: Text('Login'),
-                    ),
-                  ] else ...[
-                    Text('Logged in as ${data.username}'),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    OutlinedButton(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => TextFieldDialog(
-                            obscureText: false,
-                            onSubmit: (String newUsername) {
-                              if (newUsername.contains('\x00')) {
-                                return Future.value(
-                                  'Username must not contain 0x0 byte.',
-                                );
-                              }
-                              return loginServer.send(
-                                [
-                                  'change-username',
-                                  data.username!,
-                                  data.password!,
-                                  newUsername,
-                                ],
-                              ).then(
-                                (List<String> message) {
-                                  if (message[0] == 'F') {
-                                    assert(message.length == 2);
-                                    if (message[1] ==
-                                        'unrecognized credentials') {
-                                      logout();
-                                      data.tempMessage('credential failure');
-                                      Navigator.pop(context);
-                                    } else if (message[1] ==
-                                        'inadequate username') {
-                                      if (newUsername == '') {
-                                        return 'Username must be non-empty.';
-                                      } else if (newUsername.contains('\x10')) {
-                                        return 'Username must not contain 0x10 byte.';
-                                      } else {
-                                        return 'Username already in use.';
-                                      }
-                                    } else {
-                                      data.tempMessage(
-                                        'change username failure: ${message[1]}',
-                                      );
-                                      Navigator.pop(context);
-                                    }
-                                  } else {
-                                    assert(message[0] == 'T');
-                                    data.updateUsername(newUsername);
-                                    assert(message.length == 1);
-                                    Navigator.pop(context);
-                                  }
-                                  return null;
-                                },
-                              );
-                            },
-                            dialogTitle: 'Change username',
-                            buttonMessage: 'Change username',
-                            textFieldLabel: 'New username',
-                          ),
-                        );
-                      },
-                      child: Text('Change username'),
-                    ),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    OutlinedButton(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => TextFieldDialog(
-                            obscureText: true,
-                            onSubmit: (String newPassword) {
-                              if (newPassword.contains('\x00')) {
-                                return Future.value(
-                                  'Password must not contain 0x0 byte.',
-                                );
-                              }
-                              return loginServer.send([
-                                'change-password',
-                                data.username!,
-                                data.password!,
-                                newPassword,
-                              ]).then(
-                                (List<String> message) {
-                                  if (message[0] == 'F') {
-                                    assert(message.length == 2);
-                                    if (message[1] ==
-                                        'unrecognized credentials') {
-                                      logout();
-                                      data.tempMessage('credential failure');
-                                      Navigator.pop(context);
-                                    } else if (message[1] ==
-                                        'inadequate password') {
-                                      assert(
-                                          utf8.encode(newPassword).length < 6);
-                                      return 'Password must be at least 6 characters long.';
-                                    } else {
-                                      data.tempMessage(
-                                        'change password failure: ${message[1]}',
-                                      );
-                                      Navigator.pop(context);
-                                    }
-                                  } else {
-                                    assert(message[0] == 'T');
-                                    data.updatePassword(newPassword);
-                                    assert(message.length == 1);
-                                    Navigator.pop(context);
-                                  }
-                                  return null;
-                                },
-                              );
-                            },
-                            dialogTitle: 'Change password',
-                            buttonMessage: 'Change password',
-                            textFieldLabel: 'New password',
-                          ),
-                        );
-                      },
-                      child: Text('Change password'),
-                    ),
-                    SizedBox(
-                      height: 10,
-                    ),
-                    OutlinedButton(
-                      onPressed: () {
-                        loginServer.send([
-                          'logout',
-                          data.username!,
-                          data.password!,
-                        ]).then((List<String> message) {
-                          if (message[0] == 'F') {
-                            if (message[1] == 'unrecognized credentials') {
-                              data.tempMessage('credential failure');
-                            } else {
-                              data.tempMessage('logout failure: ${message[1]}');
-                            }
-                          } else {
-                            assert(message[0] == 'T');
-                            assert(message.length == 1);
-                          }
-                        });
-                        logout();
-                      },
-                      child: Text('Logout'),
-                    ),
-                  ],
-                  SizedBox(
-                    height: 10,
-                  ),
-                  Center(
-                    child: SizedBox(
-                      height: 100,
-                      width: 300,
+                  if (loginServer != null)
+                    if (data.username == null || data.password == null)
+                      Center(
+                        child: LoginWidget(
+                          loginServer: loginServer!,
+                          data: data,
+                          parseSuccessfulLoginResponse:
+                              parseSuccessfulLoginResponse,
+                        ),
+                      )
+                    else
+                      GameWidget(data: data),
+                  IgnorePointer(
+                    child: Center(
                       child: ListView(
                         children:
                             data.tempMessages.map((e) => Text(e)).toList(),
                       ),
                     ),
                   ),
-                  if (data.stars != null)
-                    Listener(
-                      onPointerMove: (details) {
-                        setState(() {
-                          galaxyScreenCenter +=
-                              (details.delta / kGalaxySize) / galaxyScroll;
-                        });
-                      },
-                      onPointerSignal: (details) {
-                        if (details is PointerScrollEvent) {
-                          setState(() {
-                            if (details.scrollDelta.dy > 0) {
-                              print(
-                                  ((details.localPosition / kGalaxySize) / 1.5)
-                                      .dx);
-                              galaxyScreenCenter *= 1.5;
-                              galaxyScroll /= 1.5;
-                            } else {
-                              galaxyScreenCenter /= 1.5;
-                              galaxyScroll *= 1.5;
-                            }
-                          });
-                        }
-                      },
-                      child: ClipRect(
-                        child: CustomPaint(
-                          size: Size.square(kGalaxySize),
-                          painter: GalaxyRenderer(
-                              data.stars!, galaxyScroll, galaxyScreenCenter),
-                        ),
-                      ),
-                    ),
                 ],
               ),
             );
@@ -397,6 +214,286 @@ class _MyHomePageState extends State<MyHomePage> {
   void logout() {
     data.removeCredentials();
     dynastyServer?.close();
+  }
+}
+
+class ProfileWidget extends StatelessWidget {
+  const ProfileWidget({
+    super.key,
+    required this.data,
+    required this.loginServer,
+    required this.logout,
+  });
+
+  final DataStructure data;
+  final NetworkConnection loginServer;
+  final VoidCallback logout;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+        listenable: data,
+        builder: (context, child) {
+          return Column(children: [
+            Text('Logged in as ${data.username}'),
+            SizedBox(
+              height: 10,
+            ),
+            OutlinedButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => TextFieldDialog(
+                    obscureText: false,
+                    onSubmit: (String newUsername) {
+                      if (newUsername.contains('\x00')) {
+                        return Future.value(
+                          'Username must not contain 0x0 byte.',
+                        );
+                      }
+                      return loginServer.send(
+                        [
+                          'change-username',
+                          data.username!,
+                          data.password!,
+                          newUsername,
+                        ],
+                      ).then(
+                        (List<String> message) {
+                          if (message[0] == 'F') {
+                            assert(message.length == 2);
+                            if (message[1] == 'unrecognized credentials') {
+                              logout();
+                              data.tempMessage('credential failure');
+                              Navigator.pop(context);
+                            } else if (message[1] == 'inadequate username') {
+                              if (newUsername == '') {
+                                return 'Username must be non-empty.';
+                              } else if (newUsername.contains('\x10')) {
+                                return 'Username must not contain 0x10 byte.';
+                              } else {
+                                return 'Username already in use.';
+                              }
+                            } else {
+                              data.tempMessage(
+                                'change username failure: ${message[1]}',
+                              );
+                              Navigator.pop(context);
+                            }
+                          } else {
+                            assert(message[0] == 'T');
+                            data.updateUsername(newUsername);
+                            assert(message.length == 1);
+                            Navigator.pop(context);
+                          }
+                          return null;
+                        },
+                      );
+                    },
+                    dialogTitle: 'Change username',
+                    buttonMessage: 'Change username',
+                    textFieldLabel: 'New username',
+                  ),
+                );
+              },
+              child: Text('Change username'),
+            ),
+            SizedBox(
+              height: 10,
+            ),
+            OutlinedButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => TextFieldDialog(
+                    obscureText: true,
+                    onSubmit: (String newPassword) {
+                      if (newPassword.contains('\x00')) {
+                        return Future.value(
+                          'Password must not contain 0x0 byte.',
+                        );
+                      }
+                      return loginServer.send([
+                        'change-password',
+                        data.username!,
+                        data.password!,
+                        newPassword,
+                      ]).then(
+                        (List<String> message) {
+                          if (message[0] == 'F') {
+                            assert(message.length == 2);
+                            if (message[1] == 'unrecognized credentials') {
+                              logout();
+                              data.tempMessage('credential failure');
+                              Navigator.pop(context);
+                            } else if (message[1] == 'inadequate password') {
+                              assert(utf8.encode(newPassword).length < 6);
+                              return 'Password must be at least 6 characters long.';
+                            } else {
+                              data.tempMessage(
+                                'change password failure: ${message[1]}',
+                              );
+                              Navigator.pop(context);
+                            }
+                          } else {
+                            assert(message[0] == 'T');
+                            data.updatePassword(newPassword);
+                            assert(message.length == 1);
+                            Navigator.pop(context);
+                          }
+                          return null;
+                        },
+                      );
+                    },
+                    dialogTitle: 'Change password',
+                    buttonMessage: 'Change password',
+                    textFieldLabel: 'New password',
+                  ),
+                );
+              },
+              child: Text('Change password'),
+            ),
+            SizedBox(
+              height: 10,
+            ),
+            OutlinedButton(
+              onPressed: () {
+                loginServer.send([
+                  'logout',
+                  data.username!,
+                  data.password!,
+                ]).then((List<String> message) {
+                  if (message[0] == 'F') {
+                    if (message[1] == 'unrecognized credentials') {
+                      data.tempMessage('credential failure');
+                    } else {
+                      data.tempMessage('logout failure: ${message[1]}');
+                    }
+                  } else {
+                    assert(message[0] == 'T');
+                    assert(message.length == 1);
+                  }
+                });
+                logout();
+                Navigator.pop(context);
+              },
+              child: Text('Logout'),
+            ),
+          ]);
+        });
+  }
+}
+
+class LoginWidget extends StatelessWidget {
+  const LoginWidget({
+    super.key,
+    required this.loginServer,
+    required this.data,
+    required this.parseSuccessfulLoginResponse,
+  });
+
+  final NetworkConnection loginServer;
+  final DataStructure data;
+  final void Function(List<String> message) parseSuccessfulLoginResponse;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      OutlinedButton(
+        onPressed: () {
+          loginServer.send(['new']).then((List<String> message) {
+            if (message[0] == 'T') {
+              data.setCredentials(message[1], message[2]);
+              List<String> loginResponse = message.skip(2).toList();
+              loginResponse[0] = 'T';
+              parseSuccessfulLoginResponse(loginResponse);
+              assert(message.length == 5);
+            } else {
+              assert(message[0] == 'F');
+              assert(message.length == 2);
+              data.tempMessage(
+                'failed to create new user: ${message[1]}',
+              );
+            }
+          });
+        },
+        child: Text('Start new game'),
+      ),
+      SizedBox(
+        height: 10,
+      ),
+      OutlinedButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (context) => LoginDialog(
+              data: data,
+              connection: loginServer,
+              parseSuccessfulLoginResponse: parseSuccessfulLoginResponse,
+            ),
+          );
+        },
+        child: Text('Login'),
+      ),
+    ]);
+  }
+}
+
+class GameWidget extends StatefulWidget {
+  const GameWidget({
+    super.key,
+    required this.data,
+  });
+  final DataStructure data;
+
+  @override
+  State<GameWidget> createState() => _GameWidgetState();
+}
+
+class _GameWidgetState extends State<GameWidget> {
+  double galaxyZoom = 1;
+
+  Offset galaxyScreenCenter = Offset(.5, .5);
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, constraints) {
+      return Listener(
+        onPointerMove: (details) {
+          setState(() {
+            galaxyScreenCenter -=
+                details.delta / constraints.biggest.shortestSide / galaxyZoom;
+            print(galaxyScreenCenter);
+            galaxyScreenCenter = Offset(
+              galaxyScreenCenter.dx.clamp(0, 1),
+              galaxyScreenCenter.dy.clamp(0, 1),
+            );
+          });
+        },
+        onPointerSignal: (details) {
+          if (details is PointerScrollEvent) {
+            setState(() {
+              if (details.scrollDelta.dy > 0) {
+                if (galaxyZoom > 1) {
+                  galaxyZoom /= 1.5;
+                }
+              } else {
+                galaxyZoom *= 1.5;
+              }
+              galaxyScreenCenter = Offset(galaxyScreenCenter.dx.clamp(0, 1),
+                  galaxyScreenCenter.dy.clamp(0, 1));
+            });
+          }
+        },
+        child: ClipRect(
+          child: CustomPaint(
+            size: Size.square(constraints.biggest.shortestSide),
+            painter: GalaxyRenderer(
+                widget.data.stars!, galaxyZoom, galaxyScreenCenter),
+          ),
+        ),
+      );
+    });
   }
 }
 
@@ -626,28 +723,32 @@ final List<Paint> starCategories = [
 
 class GalaxyRenderer extends CustomPainter {
   final List<List<Offset>> stars;
-  final double scroll;
+  final double zoom;
   final Offset screenCenter;
 
-  GalaxyRenderer(this.stars, this.scroll, this.screenCenter);
+  GalaxyRenderer(this.stars, this.zoom, this.screenCenter);
 
   @override
   void paint(Canvas canvas, Size size) {
     int category = 0;
-    canvas.drawCircle(
-        screenCenter.scale(size.width * scroll, size.height * scroll),
-        size.shortestSide * scroll / 2,
+    Offset inverseScreenCenter = Offset(1, 1) - screenCenter;
+    Offset topLeft = Offset(screenCenter.dx - .5, screenCenter.dy - .5);
+    canvas.drawOval(
+        (inverseScreenCenter.scale(size.width, size.height) -
+                Offset(size.width * zoom / 2, size.height * zoom / 2)) &
+            size * zoom,
         Paint()
-          ..color = Color(0x5566BBFF)
+          ..color = (Color(0x5566BBFF).withAlpha((0x55 / zoom).toInt()))
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, 10));
     while (category < 11) {
       canvas.drawPoints(
           PointMode.points,
-          stars[category]
-              .map((e) =>
-                  (e + Offset(screenCenter.dx - .5, screenCenter.dy - .5))
-                      .scale(size.width * scroll, size.height * scroll))
-              .where((e) {
+          stars[category].map((e) {
+            Offset noZoomPos = (e - topLeft);
+            Offset afterZoom =
+                ((noZoomPos - Offset(.5, .5)) * zoom) + Offset(.5, .5);
+            return afterZoom.scale(size.width, size.height);
+          }).where((e) {
             return !(e.dx < 0 ||
                 e.dy < 0 ||
                 e.dx > size.width ||
@@ -655,10 +756,16 @@ class GalaxyRenderer extends CustomPainter {
           }).toList(),
           Paint.from(starCategories[category])
             ..strokeCap = StrokeCap.round
-            ..strokeWidth =
-                starCategories[category].strokeWidth * size.shortestSide);
+            ..strokeWidth = starCategories[category].strokeWidth *
+                size.shortestSide *
+                sqrt(zoom)
+            ..maskFilter = category == 10
+                ? MaskFilter.blur(BlurStyle.normal, zoom)
+                : null);
       category++;
     }
+    canvas.drawRect(size.center(Offset.zero) - Offset(5, 5) & Size.square(10),
+        Paint()..color = Colors.white);
   }
 
   @override

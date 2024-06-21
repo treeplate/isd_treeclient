@@ -5,8 +5,15 @@ import 'sockets_cookies_stub.dart'
 
 class NetworkConnection {
   NetworkConnection(
-      this.socket, void Function(List<String>) unrequestedMessageHandler) {
-    subscription = socket.listen(
+      this.socket,
+      void Function(List<String>) unrequestedMessageHandler,
+      void Function() onReset) {
+    subscription = doListen(unrequestedMessageHandler, onReset);
+  }
+
+  StreamSubscription<dynamic> doListen(
+      void unrequestedMessageHandler(List<String> data), void onReset()) {
+    return socket.listen(
       (rawMessage) {
         if (rawMessage is String) {
           List<String> message = rawMessage.split('\x00');
@@ -25,7 +32,8 @@ class NetworkConnection {
                 throw Exception('binary message failed $message');
               }
               assert(message[2] == 'T');
-              assert(message.length == 5); // reply, conversationID, T, fileID, empty string 
+              assert(message.length ==
+                  5); // reply, conversationID, T, fileID, empty string
               fileIDs[int.parse(message[3])] = binaryReplies[conversationID]!;
             }
             replies[conversationID]
@@ -38,20 +46,17 @@ class NetworkConnection {
           fileIDs[fileID]!.complete(rawMessage.skip(4).toList());
         }
       },
-      onDone: (e) {
-        if (!_closed) {
-          throw Exception('unexpectedly closed server ${socket.name} ($e)');
-        }
+      onReset: () {
+        doListen(unrequestedMessageHandler, onReset);
+        onReset();
       },
     );
   }
 
   final WebSocketWrapper socket;
   late StreamSubscription subscription;
-  bool _closed = false;
 
   void close() {
-    _closed = true;
     socket.close();
   }
 

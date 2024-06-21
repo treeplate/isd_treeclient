@@ -2,21 +2,24 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-void _dummy(String? e) {}
-
 class WebSocketWrapper {
-  final WebSocket socket;
+  WebSocket socket;
 
   StreamSubscription<dynamic> listen(
     void onData(dynamic event), {
     Function? onError,
-    void onDone(String? reason) = _dummy,
+    void onReset()?,
     bool? cancelOnError,
   }) {
     return socket.listen(
       onData,
       onError: onError,
-      onDone: () => onDone('${socket.closeCode} ${socket.closeReason}'),
+      onDone: () async {
+        socket = await WebSocket.connect(name);
+        if (onReset != null) {
+          onReset();
+        }
+      },
       cancelOnError: cancelOnError,
     );
   }

@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-void _dummy(String? e) {}
 class WebSocketWrapper {
   StreamSubscription<dynamic /*String|List<int>*/> listen(void onData(dynamic /*String|List<int>*/ event)?,
-      {Function? onError, void onDone(String? reason) = _dummy, bool? cancelOnError}) {
+      {Function? onError, void onReset()?, bool? cancelOnError}) {
     throw UnsupportedError('websockets');
   }
 

@@ -4,24 +4,30 @@ import 'dart:js_interop';
 import 'dart:typed_data';
 import 'package:web/web.dart';
 
-void _dummy(String? e) {}
 class WebSocketWrapper {
-  final WebSocket socket;
+  WebSocket socket;
 
   StreamSubscription<dynamic> listen(void onData(dynamic event),
-      {Function? onError, void onDone(String? reason) = _dummy, bool? cancelOnError}) {
+      {Function? onError,
+      void onReset()?,
+      bool? cancelOnError}) {
     return socket.onMessage.map((MessageEvent message) => message.data).listen(
-          onData,
-          onError: onError,
-          onDone: () => onDone(null),
-          cancelOnError: cancelOnError,
-        );
+      onData,
+      onError: onError,
+      onDone: () {
+        socket = WebSocket(name);
+        if (onReset != null) {
+          onReset();
+        }
+      },
+      cancelOnError: cancelOnError,
+    );
   }
 
   void send(String data) {
     socket.send(data.toJS);
   }
-  
+
   void close() {
     socket.close();
   }
