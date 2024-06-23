@@ -72,7 +72,7 @@ class _RootWidgetState extends State<RootWidget> {
             assert(message.length == 2);
             logout();
           } else {
-            data.tempMessage(
+            print(
               'startup login response (failure): ${message[1]}',
             );
           }
@@ -85,12 +85,13 @@ class _RootWidgetState extends State<RootWidget> {
   }
 
   void connectToSystemServer(String server) {
+    print('connecting to system server: $server');
     connect(server).then((socket) async {
       NetworkConnection systemServer = NetworkConnection(socket, (message) {
         parseMessage(data, message);
       }, () {});
       List<String> message = await systemServer.send(['moo']);
-      data.tempMessage('moo response (from server $server): $message');
+      print('moo response (from server $server): $message');
       socket.close();
     });
   }
@@ -109,10 +110,11 @@ class _RootWidgetState extends State<RootWidget> {
 
   Future<void> onResetDynasty() async {
     List<String> message = await dynastyServer!.send(['login', data.token!]);
+    print(message);
     assert(message[0] == 'T');
     int systemServerCount = int.parse(message[1]);
     if (systemServerCount == 0) {
-      data.tempMessage('no system servers');
+      print('no system servers');
     }
     Iterable<String> systemServers = message.skip(2);
     assert(systemServers.length == systemServerCount);
@@ -194,14 +196,6 @@ class _RootWidgetState extends State<RootWidget> {
                       )
                     else
                       GameWidget(data: data),
-                  IgnorePointer(
-                    child: Center(
-                      child: ListView(
-                        children:
-                            data.tempMessages.map((e) => Text(e)).toList(),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             );
@@ -264,7 +258,7 @@ class ProfileWidget extends StatelessWidget {
                             assert(message.length == 2);
                             if (message[1] == 'unrecognized credentials') {
                               logout();
-                              data.tempMessage('credential failure');
+                              print('credential failure');
                               Navigator.pop(context);
                             } else if (message[1] == 'inadequate username') {
                               if (newUsername == '') {
@@ -275,7 +269,7 @@ class ProfileWidget extends StatelessWidget {
                                 return 'Username already in use.';
                               }
                             } else {
-                              data.tempMessage(
+                              print(
                                 'change username failure: ${message[1]}',
                               );
                               Navigator.pop(context);
@@ -324,13 +318,13 @@ class ProfileWidget extends StatelessWidget {
                             assert(message.length == 2);
                             if (message[1] == 'unrecognized credentials') {
                               logout();
-                              data.tempMessage('credential failure');
+                              print('credential failure');
                               Navigator.pop(context);
                             } else if (message[1] == 'inadequate password') {
                               assert(utf8.encode(newPassword).length < 6);
                               return 'Password must be at least 6 characters long.';
                             } else {
-                              data.tempMessage(
+                              print(
                                 'change password failure: ${message[1]}',
                               );
                               Navigator.pop(context);
@@ -365,9 +359,9 @@ class ProfileWidget extends StatelessWidget {
                 ]).then((List<String> message) {
                   if (message[0] == 'F') {
                     if (message[1] == 'unrecognized credentials') {
-                      data.tempMessage('credential failure');
+                      print('credential failure');
                     } else {
-                      data.tempMessage('logout failure: ${message[1]}');
+                      print('logout failure: ${message[1]}');
                     }
                   } else {
                     assert(message[0] == 'T');
@@ -411,7 +405,7 @@ class LoginWidget extends StatelessWidget {
             } else {
               assert(message[0] == 'F');
               assert(message.length == 2);
-              data.tempMessage(
+              print(
                 'failed to create new user: ${message[1]}',
               );
             }
@@ -463,7 +457,6 @@ class _GameWidgetState extends State<GameWidget> {
           setState(() {
             galaxyScreenCenter -=
                 details.delta / constraints.biggest.shortestSide / galaxyZoom;
-            print(galaxyScreenCenter);
             galaxyScreenCenter = Offset(
               galaxyScreenCenter.dx.clamp(0, 1),
               galaxyScreenCenter.dy.clamp(0, 1),
@@ -580,7 +573,7 @@ class _LoginDialogState extends State<LoginDialog> {
                         errorMessage = 'Username or password incorrect';
                       });
                     } else {
-                      widget.data.tempMessage(
+                      print(
                         'manual login failure: ${message[1]}',
                       );
                       if (mounted) {
@@ -688,7 +681,7 @@ final List<Paint> starCategories = [
   // multiply strokeWidth by size of unit square
   Paint()
     ..color = Color(0x7FFFFFFF)
-    ..strokeWidth = 0.0040, // blurred.
+    ..strokeWidth = 0.0040,
   Paint()
     ..color = Color(0xCFCCBBAA)
     ..strokeWidth = 0.0025,
@@ -718,7 +711,7 @@ final List<Paint> starCategories = [
     ..strokeWidth = 0.0005,
   Paint()
     ..color = Color(0x5FFF2200)
-    ..strokeWidth = 0.0200, // blurred.
+    ..strokeWidth = 0.0200,
 ];
 
 class GalaxyRenderer extends CustomPainter {
@@ -731,11 +724,10 @@ class GalaxyRenderer extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     int category = 0;
-    Offset inverseScreenCenter = Offset(1, 1) - screenCenter;
     Offset topLeft = Offset(screenCenter.dx - .5, screenCenter.dy - .5);
     canvas.drawOval(
-        (inverseScreenCenter.scale(size.width, size.height) -
-                Offset(size.width * zoom / 2, size.height * zoom / 2)) &
+        (((-topLeft - Offset(.5, .5)) * zoom) + Offset(.5, .5))
+                .scale(size.width, size.height) &
             size * zoom,
         Paint()
           ..color = (Color(0x5566BBFF).withAlpha((0x55 / zoom).toInt()))
