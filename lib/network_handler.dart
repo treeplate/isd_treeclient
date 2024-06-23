@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'sockets_cookies_stub.dart'
     if (dart.library.io) 'sockets_cookies_io.dart'
-    if (dart.library.html) 'sockets_cookies_html.dart';
+    if (dart.library.js_interop) 'sockets_cookies_web.dart';
 
 class NetworkConnection {
   NetworkConnection(
