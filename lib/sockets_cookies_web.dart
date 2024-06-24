@@ -8,16 +8,16 @@ class WebSocketWrapper {
   WebSocket socket;
 
   StreamSubscription<dynamic> listen(void onData(dynamic event),
-      {Function? onError,
-      void onReset()?,
-      bool? cancelOnError}) {
+      {Function? onError, void onReset()?, bool? cancelOnError}) {
     return socket.onMessage.map((MessageEvent message) => message.data).listen(
       onData,
       onError: onError,
       onDone: () {
-        socket = WebSocket(name);
-        if (onReset != null) {
-          onReset();
+        if (!_closed) {
+          socket = WebSocket(name);
+          if (onReset != null) {
+            onReset();
+          }
         }
       },
       cancelOnError: cancelOnError,
@@ -28,7 +28,9 @@ class WebSocketWrapper {
     socket.send(data.toJS);
   }
 
+  bool _closed = false;
   void close() {
+    _closed = true;
     socket.close();
   }
 

@@ -31,10 +31,11 @@ class RootWidget extends StatefulWidget {
 const String kDarkModeCookieName = 'darkMode';
 
 class _RootWidgetState extends State<RootWidget> {
-  DataStructure data = DataStructure();
+  final DataStructure data = DataStructure();
   ThemeMode themeMode = ThemeMode.system;
   NetworkConnection? loginServer;
   NetworkConnection? dynastyServer;
+  final List<NetworkConnection> systemServers = [];
   bool get isDarkMode => themeMode == ThemeMode.system
       ? WidgetsBinding.instance.platformDispatcher.platformBrightness ==
           Brightness.dark
@@ -64,22 +65,22 @@ class _RootWidgetState extends State<RootWidget> {
     if (data.stars == null) {
       loginServer!
           .sendExpectingBinaryReply(['get-stars']).then(data.parseStars);
-      if (data.username != null && data.password != null) {
-        List<String> message =
-            await loginServer!.send(['login', data.username!, data.password!]);
-        if (message[0] == 'F') {
-          if (message[1] == 'unrecognized credentials') {
-            assert(message.length == 2);
-            logout();
-          } else {
-            print(
-              'startup login response (failure): ${message[1]}',
-            );
-          }
+    }
+    if (data.username != null && data.password != null) {
+      List<String> message =
+          await loginServer!.send(['login', data.username!, data.password!]);
+      if (message[0] == 'F') {
+        if (message[1] == 'unrecognized credentials') {
+          assert(message.length == 2);
+          logout();
         } else {
-          assert(message[0] == 'T');
-          parseSuccessfulLoginResponse(message);
+          print(
+            'startup login response (failure): ${message[1]}',
+          );
         }
+      } else {
+        assert(message[0] == 'T');
+        parseSuccessfulLoginResponse(message);
       }
     }
   }
@@ -90,9 +91,9 @@ class _RootWidgetState extends State<RootWidget> {
       NetworkConnection systemServer = NetworkConnection(socket, (message) {
         parseMessage(data, message);
       }, () {});
-      List<String> message = await systemServer.send(['moo']);
-      print('moo response (from server $server): $message');
-      socket.close();
+      List<String> message = await systemServer.send(['login', data.token!]);
+      print('login response (from server $server): $message');
+      systemServers.add(systemServer);
     });
   }
 
@@ -110,7 +111,6 @@ class _RootWidgetState extends State<RootWidget> {
 
   Future<void> onResetDynasty() async {
     List<String> message = await dynastyServer!.send(['login', data.token!]);
-    print(message);
     assert(message[0] == 'T');
     int systemServerCount = int.parse(message[1]);
     if (systemServerCount == 0) {
@@ -128,6 +128,9 @@ class _RootWidgetState extends State<RootWidget> {
     data.dispose();
     dynastyServer?.close();
     loginServer?.close();
+    for (NetworkConnection server in systemServers) {
+      server.close();
+    }
     super.dispose();
   }
 
@@ -139,26 +142,29 @@ class _RootWidgetState extends State<RootWidget> {
       home: Scaffold(
         appBar: AppBar(
           actions: [
-            IconButton(
-              icon: Icon(
-                Icons.person,
-              ),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => Theme(
-                    data: isDarkMode ? ThemeData.dark() : ThemeData.light(),
-                    child: Dialog(
-                      child: ProfileWidget(
-                        data: data,
-                        loginServer: loginServer!,
-                        logout: logout,
+            if (loginServer == null)
+              CircularProgressIndicator()
+            else
+              IconButton(
+                icon: Icon(
+                  Icons.person,
+                ),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => Theme(
+                      data: isDarkMode ? ThemeData.dark() : ThemeData.light(),
+                      child: Dialog(
+                        child: ProfileWidget(
+                          data: data,
+                          loginServer: loginServer!,
+                          logout: logout,
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              ),
             IconButton(
               icon: Icon(
                 isDarkMode
@@ -194,8 +200,19 @@ class _RootWidgetState extends State<RootWidget> {
                               parseSuccessfulLoginResponse,
                         ),
                       )
+                    else if (data.stars != null)
+                      ZoomableCustomPaint(
+                        painter: (zoom, screenCenter) => GalaxyRenderer(
+                            data.stars!,
+                            zoom,
+                            screenCenter,
+                            Set.from(List.generate(
+                                data.stars![5].length ~/ 100, (i) => (5, i)))),
+                      )
                     else
-                      GameWidget(data: data),
+                      CircularProgressIndicator()
+                  else
+                    CircularProgressIndicator(),
                 ],
               ),
             );
@@ -433,21 +450,24 @@ class LoginWidget extends StatelessWidget {
   }
 }
 
-class GameWidget extends StatefulWidget {
-  const GameWidget({
+class ZoomableCustomPaint extends StatefulWidget {
+  const ZoomableCustomPaint({
     super.key,
-    required this.data,
+    required this.painter,
+    this.startingZoom = 1,
+    this.startingScreenCenter = const Offset(.5, .5),
   });
-  final DataStructure data;
+  final CustomPainter Function(double zoom, Offset screenCenter) painter;
+  final double startingZoom;
+  final Offset startingScreenCenter;
 
   @override
-  State<GameWidget> createState() => _GameWidgetState();
+  State<ZoomableCustomPaint> createState() => _ZoomableCustomPaintState();
 }
 
-class _GameWidgetState extends State<GameWidget> {
-  double galaxyZoom = 1;
-
-  Offset galaxyScreenCenter = Offset(.5, .5);
+class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
+  late double zoom = widget.startingZoom; // 1..infinity
+  late Offset screenCenter = widget.startingScreenCenter; // (0, 0)..(1, 1)
 
   @override
   Widget build(BuildContext context) {
@@ -455,11 +475,11 @@ class _GameWidgetState extends State<GameWidget> {
       return Listener(
         onPointerMove: (details) {
           setState(() {
-            galaxyScreenCenter -=
-                details.delta / constraints.biggest.shortestSide / galaxyZoom;
-            galaxyScreenCenter = Offset(
-              galaxyScreenCenter.dx.clamp(0, 1),
-              galaxyScreenCenter.dy.clamp(0, 1),
+            screenCenter -=
+                (details.delta / constraints.biggest.shortestSide) / zoom;
+            screenCenter = Offset(
+              screenCenter.dx.clamp(0, 1),
+              screenCenter.dy.clamp(0, 1),
             );
           });
         },
@@ -467,22 +487,19 @@ class _GameWidgetState extends State<GameWidget> {
           if (details is PointerScrollEvent) {
             setState(() {
               if (details.scrollDelta.dy > 0) {
-                if (galaxyZoom > 1) {
-                  galaxyZoom /= 1.5;
+                if (zoom >= 1.5) {
+                  zoom /= 1.5;
                 }
               } else {
-                galaxyZoom *= 1.5;
+                zoom *= 1.5;
               }
-              galaxyScreenCenter = Offset(galaxyScreenCenter.dx.clamp(0, 1),
-                  galaxyScreenCenter.dy.clamp(0, 1));
             });
           }
         },
         child: ClipRect(
           child: CustomPaint(
             size: Size.square(constraints.biggest.shortestSide),
-            painter: GalaxyRenderer(
-                widget.data.stars!, galaxyZoom, galaxyScreenCenter),
+            painter: widget.painter(zoom, screenCenter),
           ),
         ),
       );
@@ -718,13 +735,22 @@ class GalaxyRenderer extends CustomPainter {
   final List<List<Offset>> stars;
   final double zoom;
   final Offset screenCenter;
-
-  GalaxyRenderer(this.stars, this.zoom, this.screenCenter);
+  final Set<StarIdentifier> highlightedStars;
+  GalaxyRenderer(
+      this.stars, this.zoom, this.screenCenter, this.highlightedStars);
 
   @override
   void paint(Canvas canvas, Size size) {
     int category = 0;
     Offset topLeft = Offset(screenCenter.dx - .5, screenCenter.dy - .5);
+
+    Offset calculateScreenPosition(Offset basePosition) {
+      Offset noZoomPos = (basePosition - topLeft);
+      Offset afterZoomPos =
+          (((noZoomPos - Offset(.5, .5)) * zoom) + Offset(.5, .5));
+      return afterZoomPos.scale(size.width, size.height);
+    }
+
     canvas.drawOval(
         (((-topLeft - Offset(.5, .5)) * zoom) + Offset(.5, .5))
                 .scale(size.width, size.height) &
@@ -732,14 +758,24 @@ class GalaxyRenderer extends CustomPainter {
         Paint()
           ..color = (Color(0x5566BBFF).withAlpha((0x55 / zoom).toInt()))
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, 10));
+    for (StarIdentifier star in highlightedStars) {
+      Offset starPos = stars[star.$1][star.$2];
+      canvas.drawCircle(
+          calculateScreenPosition(starPos),
+          starCategories[star.$1].strokeWidth *
+              size.shortestSide *
+              2 *
+              sqrt(zoom) /
+              3,
+          Paint.from(starCategories[star.$1])
+            ..color = Colors.green
+            ..strokeWidth = 0);
+    }
     while (category < 11) {
       canvas.drawPoints(
           PointMode.points,
           stars[category].map((e) {
-            Offset noZoomPos = (e - topLeft);
-            Offset afterZoom =
-                ((noZoomPos - Offset(.5, .5)) * zoom) + Offset(.5, .5);
-            return afterZoom.scale(size.width, size.height);
+            return calculateScreenPosition(e);
           }).where((e) {
             return !(e.dx < 0 ||
                 e.dy < 0 ||

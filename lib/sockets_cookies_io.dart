@@ -15,9 +15,11 @@ class WebSocketWrapper {
       onData,
       onError: onError,
       onDone: () async {
-        socket = await WebSocket.connect(name);
-        if (onReset != null) {
-          onReset();
+        if (!_closed) {
+          socket = await WebSocket.connect(name);
+          if (onReset != null) {
+            onReset();
+          }
         }
       },
       cancelOnError: cancelOnError,
@@ -28,7 +30,9 @@ class WebSocketWrapper {
     socket.add(data);
   }
 
+  bool _closed = false;
   void close() {
+    _closed = true;
     socket.close();
   }
 

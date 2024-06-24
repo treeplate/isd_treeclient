@@ -10,6 +10,16 @@ const String kPasswordCookieName = 'password';
 const String kStarsCookieName = 'stars';
 const int integerLimit32 = 0x100000000;
 
+typedef StarIdentifier = (int category, int subindex);
+
+StarIdentifier parseStarIdentifier(int value) {
+  return (value >> 32, value & integerLimit32);
+}
+
+extension StarIdentifierConversion on StarIdentifier {
+  int get value => $1 << 32 + $2;
+}
+
 class DataStructure with ChangeNotifier {
   List<String> tempMessages = [];
   String? username;
