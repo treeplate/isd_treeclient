@@ -21,16 +21,10 @@ extension StarIdentifierConversion on StarIdentifier {
 }
 
 class DataStructure with ChangeNotifier {
-  List<String> tempMessages = [];
   String? username;
   String? password;
   String? token;
   List<List<Offset>>? stars;
-
-  void tempMessage(String message) {
-    tempMessages.add(message);
-    notifyListeners();
-  }
 
   void setCredentials(String username, String password) {
     setCookie(kUsernameCookieName, username);

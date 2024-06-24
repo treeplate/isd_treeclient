@@ -62,7 +62,7 @@ class NetworkConnection {
 
   List<Completer<List<String>>> replies = [];
   Map<int, Completer<List<int>>> binaryReplies =
-      {}; // replies index -> actual binary completer
+      {}; // [replies] index -> actual binary completer
   Map<int, Completer<List<int>>> fileIDs = {}; // file ID -> completer
 
   /// Sends [message] to connected server.
