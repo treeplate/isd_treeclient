@@ -13,11 +13,11 @@ const int integerLimit32 = 0x100000000;
 typedef StarIdentifier = (int category, int subindex);
 
 StarIdentifier parseStarIdentifier(int value) {
-  return (value >> 32, value & integerLimit32);
+  return (value >> 20, value & 0xFFFFF);
 }
 
 extension StarIdentifierConversion on StarIdentifier {
-  int get value => $1 << 32 + $2;
+  int get value => $1 << 20 + $2;
 }
 
 class DataStructure with ChangeNotifier {
