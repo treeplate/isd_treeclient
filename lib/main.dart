@@ -66,6 +66,10 @@ class _RootWidgetState extends State<RootWidget> {
       loginServer!
           .sendExpectingBinaryReply(['get-stars']).then(data.parseStars);
     }
+    if (data.systems == null) {
+      loginServer!
+          .sendExpectingBinaryReply(['get-systems']).then(data.parseSystems);
+    }
     if (data.username != null && data.password != null) {
       List<String> message =
           await loginServer!.send(['login', data.username!, data.password!]);
@@ -206,8 +210,7 @@ class _RootWidgetState extends State<RootWidget> {
                             data.stars!,
                             zoom,
                             screenCenter,
-                            Set.from(List.generate(
-                                data.stars![5].length ~/ 100, (i) => (5, i)))),
+                            data.systems?.values.toSet() ?? {}),
                       )
                     else
                       CircularProgressIndicator()

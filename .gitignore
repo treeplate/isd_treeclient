@@ -47,3 +47,4 @@ app.*.map.json
 # Local storage on desktop
 cookies.save
 stars.bin
+systems.bin

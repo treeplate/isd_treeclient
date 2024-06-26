@@ -8,6 +8,7 @@ import 'sockets_cookies_stub.dart'
 const String kUsernameCookieName = 'username';
 const String kPasswordCookieName = 'password';
 const String kStarsCookieName = 'stars';
+const String kSystemsCookieName = 'systems';
 const int integerLimit32 = 0x100000000;
 
 typedef StarIdentifier = (int category, int subindex);
@@ -25,6 +26,7 @@ class DataStructure with ChangeNotifier {
   String? password;
   String? token;
   List<List<Offset>>? stars;
+  Map<StarIdentifier, StarIdentifier>? systems; // star ID -> system ID (first star in the system)
 
   void setCredentials(String username, String password) {
     setCookie(kUsernameCookieName, username);
@@ -88,12 +90,28 @@ class DataStructure with ChangeNotifier {
     notifyListeners();
   }
 
+  void parseSystems(List<int> rawSystems) {
+    Uint32List rawSystems32 = Uint8List.fromList(rawSystems).buffer.asUint32List();
+    systems = {};
+    int index = 0;
+    while (index < rawSystems32.length) {
+      systems![parseStarIdentifier(rawSystems32[index])] = parseStarIdentifier(rawSystems32[index+1]);
+      index += 2;
+    }
+    saveBinaryBlob(kSystemsCookieName, rawSystems);
+    notifyListeners();
+  }
+
   DataStructure() {
     username = getCookie(kUsernameCookieName);
     password = getCookie(kPasswordCookieName);
-    Uint8List? binaryBlob = getBinaryBlob(kStarsCookieName);
-    if (binaryBlob != null) {
-      parseStars(binaryBlob);
+    Uint8List? rawStars = getBinaryBlob(kStarsCookieName);
+    if (rawStars != null) {
+      parseStars(rawStars);
+    }
+    Uint8List? rawSystems = getBinaryBlob(kSystemsCookieName);
+    if (rawSystems != null) {
+      parseSystems(rawSystems);
     }
   }
 }
