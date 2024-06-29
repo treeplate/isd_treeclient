@@ -51,14 +51,15 @@ class _RootWidgetState extends State<RootWidget> {
       });
       onResetLogin();
     });
-    String? darkModeCookie = getCookie(kDarkModeCookieName);
-    if (darkModeCookie != null) {
-      themeMode = ThemeMode.values
-              .where((mode) => mode.name == darkModeCookie)
-              .firstOrNull ??
-          ThemeMode.system;
-    }
-    setCookie(kDarkModeCookieName, themeMode.name);
+    getCookie(kDarkModeCookieName).then((darkModeCookie) {
+      if (darkModeCookie != null) {
+        themeMode = ThemeMode.values
+                .where((mode) => mode.name == darkModeCookie)
+                .firstOrNull ??
+            ThemeMode.system;
+      }
+      setCookie(kDarkModeCookieName, themeMode.name);
+    });
   }
 
   FutureOr<Null> onResetLogin() async {
@@ -148,7 +149,7 @@ class _RootWidgetState extends State<RootWidget> {
           actions: [
             if (loginServer == null)
               CircularProgressIndicator()
-            else
+            else if (data.username != null && data.password != null)
               IconButton(
                 icon: Icon(
                   Icons.person,
@@ -213,9 +214,19 @@ class _RootWidgetState extends State<RootWidget> {
                             data.systems?.values.toSet() ?? {}),
                       )
                     else
-                      CircularProgressIndicator()
+                      Column(
+                        children: [
+                          Text('loading starmap...'),
+                          CircularProgressIndicator(),
+                        ],
+                      )
                   else
-                    CircularProgressIndicator(),
+                    Column(
+                      children: [
+                          Text('connecting to login server...'),
+                        CircularProgressIndicator(),
+                      ],
+                    ),
                 ],
               ),
             );
@@ -471,40 +482,58 @@ class ZoomableCustomPaint extends StatefulWidget {
 class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
   late double zoom = widget.startingZoom; // 1..infinity
   late Offset screenCenter = widget.startingScreenCenter; // (0, 0)..(1, 1)
+  double lastRelativeScale = 1.0;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
       return Listener(
-        onPointerMove: (details) {
-          setState(() {
-            screenCenter -=
-                (details.delta / constraints.biggest.shortestSide) / zoom;
-            screenCenter = Offset(
-              screenCenter.dx.clamp(0, 1),
-              screenCenter.dy.clamp(0, 1),
-            );
-          });
-        },
         onPointerSignal: (details) {
           if (details is PointerScrollEvent) {
             setState(() {
               if (details.scrollDelta.dy > 0) {
-                if (zoom >= 1.5) {
-                  zoom /= 1.5;
-                }
+                handleZoom(1/1.5);
               } else {
-                zoom *= 1.5;
+                handleZoom(1.5);
               }
             });
           }
         },
-        child: ClipRect(
-          child: CustomPaint(
-            size: Size.square(constraints.biggest.shortestSide),
-            painter: widget.painter(zoom, screenCenter),
+        child: GestureDetector(
+          onScaleStart: (details) {
+            lastRelativeScale = 1.0;
+          },
+          onScaleUpdate: (details) {
+            print(
+                'pan ${details.focalPointDelta}! scale ${details.scale}! (tz: $zoom)');
+            handlePan(details.focalPointDelta, constraints);
+            double scaleMultiplicativeDelta = details.scale / lastRelativeScale;
+            handleZoom(scaleMultiplicativeDelta);
+            lastRelativeScale = details.scale;
+          },
+          child: ClipRect(
+            child: CustomPaint(
+              size: Size.square(constraints.biggest.shortestSide),
+              painter: widget.painter(zoom, screenCenter),
+            ),
           ),
         ),
+      );
+    });
+  }
+
+  void handleZoom(double scaleMultiplicativeDelta) {
+    if (zoom >= 1/scaleMultiplicativeDelta) {
+      zoom *= scaleMultiplicativeDelta;
+    }
+  }
+
+  void handlePan(Offset delta, BoxConstraints constraints) {
+    setState(() {
+      screenCenter -= (delta / constraints.biggest.shortestSide) / zoom;
+      screenCenter = Offset(
+        screenCenter.dx.clamp(0, 1),
+        screenCenter.dy.clamp(0, 1),
       );
     });
   }

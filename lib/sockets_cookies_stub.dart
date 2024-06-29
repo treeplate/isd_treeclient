@@ -21,11 +21,11 @@ Future<WebSocketWrapper> connect(String serverUrl) async {
 }
 
 
-String? getCookie(String name) {
+Future<String?> getCookie(String name) async {
   return null;
 }
 
-Uint8List? getBinaryBlob(String name) {
+Future<Uint8List?> getBinaryBlob(String name) async {
   return null;
 }
 

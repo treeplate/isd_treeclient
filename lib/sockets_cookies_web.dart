@@ -40,10 +40,12 @@ class WebSocketWrapper {
 }
 
 Future<WebSocketWrapper> connect(String serverUrl) async {
-  return WebSocketWrapper(WebSocket(serverUrl));
+  WebSocket webSocket = WebSocket(serverUrl);
+  await webSocket.onOpen.first;
+  return WebSocketWrapper(webSocket);
 }
 
-String? getCookie(String name) {
+Future<String?> getCookie(String name) async {
   return window.localStorage[name];
 }
 
@@ -55,11 +57,11 @@ void setCookie(String name, String? value) {
   }
 }
 
-Uint8List? getBinaryBlob(String name) {
-  var cookie = getCookie(name);
+Future<Uint8List?> getBinaryBlob(String name) async {
+  String? cookie = await getCookie(name);
   return cookie == null ? null : base64Decode(cookie);
 }
 
-void saveBinaryBlob(String name, List<int> data) {
+void saveBinaryBlob(String name, List<int> data) async {
   setCookie(name, base64Encode(data));
 }

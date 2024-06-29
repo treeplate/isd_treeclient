@@ -33,7 +33,7 @@ class NetworkConnection {
               }
               assert(message[2] == 'T');
               assert(message.length ==
-                  5); // reply, conversationID, T, fileID, empty string
+                  5, message); // reply, conversationID, T, fileID, empty string
               fileIDs[int.parse(message[3])] = binaryReplies[conversationID]!;
             }
             replies[conversationID]

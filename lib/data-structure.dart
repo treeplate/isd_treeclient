@@ -26,7 +26,8 @@ class DataStructure with ChangeNotifier {
   String? password;
   String? token;
   List<List<Offset>>? stars;
-  Map<StarIdentifier, StarIdentifier>? systems; // star ID -> system ID (first star in the system)
+  Map<StarIdentifier, StarIdentifier>?
+      systems; // star ID -> system ID (first star in the system)
 
   void setCredentials(String username, String password) {
     setCookie(kUsernameCookieName, username);
@@ -91,11 +92,13 @@ class DataStructure with ChangeNotifier {
   }
 
   void parseSystems(List<int> rawSystems) {
-    Uint32List rawSystems32 = Uint8List.fromList(rawSystems).buffer.asUint32List();
+    Uint32List rawSystems32 =
+        Uint8List.fromList(rawSystems).buffer.asUint32List();
     systems = {};
     int index = 0;
     while (index < rawSystems32.length) {
-      systems![parseStarIdentifier(rawSystems32[index])] = parseStarIdentifier(rawSystems32[index+1]);
+      systems![parseStarIdentifier(rawSystems32[index])] =
+          parseStarIdentifier(rawSystems32[index + 1]);
       index += 2;
     }
     saveBinaryBlob(kSystemsCookieName, rawSystems);
@@ -103,15 +106,23 @@ class DataStructure with ChangeNotifier {
   }
 
   DataStructure() {
-    username = getCookie(kUsernameCookieName);
-    password = getCookie(kPasswordCookieName);
-    Uint8List? rawStars = getBinaryBlob(kStarsCookieName);
-    if (rawStars != null) {
-      parseStars(rawStars);
-    }
-    Uint8List? rawSystems = getBinaryBlob(kSystemsCookieName);
-    if (rawSystems != null) {
-      parseSystems(rawSystems);
-    }
+    getCookie(kUsernameCookieName).then((e) {
+      username = e;
+      notifyListeners();
+    });
+    getCookie(kPasswordCookieName).then((e) {
+      password = e;
+      notifyListeners();
+    });
+    getBinaryBlob(kStarsCookieName).then((rawStars) {
+      if (rawStars != null) {
+        parseStars(rawStars);
+      }
+    });
+    getBinaryBlob(kSystemsCookieName).then((rawSystems) {
+      if (rawSystems != null) {
+        parseSystems(rawSystems);
+      }
+    });
   }
 }
