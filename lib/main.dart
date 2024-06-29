@@ -515,8 +515,6 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
             lastRelativeScale = 1.0;
           },
           onScaleUpdate: (details) {
-            print(
-                'pan ${details.focalPointDelta}! scale ${details.scale}! (tz: $zoom)');
             handlePan(details.focalPointDelta, constraints);
             double scaleMultiplicativeDelta = details.scale / lastRelativeScale;
             handleZoom(scaleMultiplicativeDelta);
