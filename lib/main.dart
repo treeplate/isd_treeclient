@@ -35,6 +35,7 @@ class _RootWidgetState extends State<RootWidget> {
   ThemeMode themeMode = ThemeMode.system;
   NetworkConnection? loginServer;
   NetworkConnection? dynastyServer;
+  bool loginServerHadError = false;
   final List<NetworkConnection> systemServers = [];
   bool get isDarkMode => themeMode == ThemeMode.system
       ? WidgetsBinding.instance.platformDispatcher.platformBrightness ==
@@ -50,6 +51,10 @@ class _RootWidgetState extends State<RootWidget> {
         }, onResetLogin);
       });
       onResetLogin();
+    }, onError: (e, st) {
+      setState(() {
+        loginServerHadError = true;
+      });
     });
     getCookie(kDarkModeCookieName).then((darkModeCookie) {
       if (darkModeCookie != null) {
@@ -223,8 +228,14 @@ class _RootWidgetState extends State<RootWidget> {
                   else
                     Column(
                       children: [
+                        if (loginServerHadError)
+                          Text(
+                            'Failed to connect to login server. Please try again later.',
+                          )
+                        else ...[
                           Text('connecting to login server...'),
-                        CircularProgressIndicator(),
+                          CircularProgressIndicator(),
+                        ]
                       ],
                     ),
                 ],
@@ -492,7 +503,7 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
           if (details is PointerScrollEvent) {
             setState(() {
               if (details.scrollDelta.dy > 0) {
-                handleZoom(1/1.5);
+                handleZoom(1 / 1.5);
               } else {
                 handleZoom(1.5);
               }
@@ -523,7 +534,7 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
   }
 
   void handleZoom(double scaleMultiplicativeDelta) {
-    if (zoom >= 1/scaleMultiplicativeDelta) {
+    if (zoom >= 1 / scaleMultiplicativeDelta) {
       zoom *= scaleMultiplicativeDelta;
     }
   }
