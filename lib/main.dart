@@ -84,8 +84,9 @@ class _RootWidgetState extends State<RootWidget> {
           assert(message.length == 2);
           logout();
         } else {
-          print(
-            'startup login response (failure): ${message[1]}',
+          openErrorDialog(
+            'Error when logging in: ${message[1]}',
+            context,
           );
         }
       } else {
@@ -96,6 +97,7 @@ class _RootWidgetState extends State<RootWidget> {
   }
 
   void connectToSystemServer(String server) {
+    openErrorDialog('Messages in debug console', context);
     print('connecting to system server: $server');
     connect(server).then((socket) async {
       NetworkConnection systemServer = NetworkConnection(socket, (message) {
@@ -124,7 +126,7 @@ class _RootWidgetState extends State<RootWidget> {
     assert(message[0] == 'T');
     int systemServerCount = int.parse(message[1]);
     if (systemServerCount == 0) {
-      print('no system servers');
+      openErrorDialog('No system servers avaliable.', context); // TODO
     }
     Iterable<String> systemServers = message.skip(2);
     assert(systemServers.length == systemServerCount);
@@ -300,7 +302,10 @@ class ProfileWidget extends StatelessWidget {
                             assert(message.length == 2);
                             if (message[1] == 'unrecognized credentials') {
                               logout();
-                              print('credential failure');
+                              openErrorDialog(
+                                'Credential failure when changing username.',
+                                context,
+                              ); // TODO
                               Navigator.pop(context);
                             } else if (message[1] == 'inadequate username') {
                               if (newUsername == '') {
@@ -311,8 +316,9 @@ class ProfileWidget extends StatelessWidget {
                                 return 'Username already in use.';
                               }
                             } else {
-                              print(
-                                'change username failure: ${message[1]}',
+                              openErrorDialog(
+                                'Error when changing username: ${message[1]}',
+                                context,
                               );
                               Navigator.pop(context);
                             }
@@ -360,14 +366,18 @@ class ProfileWidget extends StatelessWidget {
                             assert(message.length == 2);
                             if (message[1] == 'unrecognized credentials') {
                               logout();
-                              print('credential failure');
+                              openErrorDialog(
+                                'Credential failure when changing password.',
+                                context,
+                              ); // TODO
                               Navigator.pop(context);
                             } else if (message[1] == 'inadequate password') {
                               assert(utf8.encode(newPassword).length < 6);
                               return 'Password must be at least 6 characters long.';
                             } else {
-                              print(
-                                'change password failure: ${message[1]}',
+                              openErrorDialog(
+                                'Error when changing password: ${message[1]}',
+                                context,
                               );
                               Navigator.pop(context);
                             }
@@ -401,9 +411,15 @@ class ProfileWidget extends StatelessWidget {
                 ]).then((List<String> message) {
                   if (message[0] == 'F') {
                     if (message[1] == 'unrecognized credentials') {
-                      print('credential failure');
+                      openErrorDialog(
+                        'Credential failure when logging out.',
+                        context,
+                      ); // TODO
                     } else {
-                      print('logout failure: ${message[1]}');
+                      openErrorDialog(
+                        'Error when logging out: ${message[1]}',
+                        context,
+                      );
                     }
                   } else {
                     assert(message[0] == 'T');
@@ -447,8 +463,9 @@ class LoginWidget extends StatelessWidget {
             } else {
               assert(message[0] == 'F');
               assert(message.length == 2);
-              print(
-                'failed to create new user: ${message[1]}',
+              openErrorDialog(
+                'Error when creating new account: ${message[1]}',
+                context,
               );
             }
           });
@@ -631,9 +648,10 @@ class _LoginDialogState extends State<LoginDialog> {
                         errorMessage = 'Username or password incorrect';
                       });
                     } else {
-                      print(
-                        'manual login failure: ${message[1]}',
-                      );
+                              openErrorDialog(
+                                'Error logging in: ${message[1]}',
+                                context,
+                              );
                       if (mounted) {
                         Navigator.pop(context);
                       }
@@ -841,4 +859,25 @@ class GalaxyRenderer extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
     return true;
   }
+}
+
+void openErrorDialog(String message, BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Dialog(
+        child: Column(
+          children: [
+            Text('$message'),
+            OutlinedButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Ok'),
+            )
+          ],
+        ),
+      );
+    },
+  );
 }
