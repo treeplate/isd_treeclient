@@ -47,6 +47,7 @@ class _RootWidgetState extends State<RootWidget> {
     connect(loginServerURL).then((socket) {
       setState(() {
         loginServer = NetworkConnection(socket, (message) {
+        openErrorDialog('look in console', context);
           parseMessage(data, message);
         }, onResetLogin);
       });
@@ -101,6 +102,7 @@ class _RootWidgetState extends State<RootWidget> {
     print('connecting to system server: $server');
     connect(server).then((socket) async {
       NetworkConnection systemServer = NetworkConnection(socket, (message) {
+        openErrorDialog('look in console', context);
         parseMessage(data, message);
       }, () {});
       List<String> message = await systemServer.send(['login', data.token!]);
@@ -115,6 +117,7 @@ class _RootWidgetState extends State<RootWidget> {
     data.setToken(message[2]);
     connect(message[1]).then((socket) async {
       dynastyServer = NetworkConnection(socket, (message) {
+        openErrorDialog('look in console', context);
         parseMessage(data, message);
       }, onResetDynasty);
       await onResetDynasty();
@@ -126,7 +129,7 @@ class _RootWidgetState extends State<RootWidget> {
     assert(message[0] == 'T');
     int systemServerCount = int.parse(message[1]);
     if (systemServerCount == 0) {
-      openErrorDialog('No system servers avaliable.', context); // TODO
+      openErrorDialog('Error - No system servers', context);
     }
     Iterable<String> systemServers = message.skip(2);
     assert(systemServers.length == systemServerCount);
@@ -303,9 +306,9 @@ class ProfileWidget extends StatelessWidget {
                             if (message[1] == 'unrecognized credentials') {
                               logout();
                               openErrorDialog(
-                                'Credential failure when changing username.',
+                                'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
                                 context,
-                              ); // TODO
+                              ); 
                               Navigator.pop(context);
                             } else if (message[1] == 'inadequate username') {
                               if (newUsername == '') {
@@ -367,9 +370,9 @@ class ProfileWidget extends StatelessWidget {
                             if (message[1] == 'unrecognized credentials') {
                               logout();
                               openErrorDialog(
-                                'Credential failure when changing password.',
+                                'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
                                 context,
-                              ); // TODO
+                              ); 
                               Navigator.pop(context);
                             } else if (message[1] == 'inadequate password') {
                               assert(utf8.encode(newPassword).length < 6);
@@ -412,9 +415,9 @@ class ProfileWidget extends StatelessWidget {
                   if (message[0] == 'F') {
                     if (message[1] == 'unrecognized credentials') {
                       openErrorDialog(
-                        'Credential failure when logging out.',
+                        'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
                         context,
-                      ); // TODO
+                      );
                     } else {
                       openErrorDialog(
                         'Error when logging out: ${message[1]}',
