@@ -35,6 +35,7 @@ class NetworkConnection {
               assert(message.length ==
                   5, message); // reply, conversationID, T, fileID, empty string
               fileIDs[int.parse(message[3])] = binaryReplies[conversationID]!;
+              binaryReplies.remove(conversationID);
             }
             replies[conversationID]
                 .complete(message.sublist(2, message.length - 1));

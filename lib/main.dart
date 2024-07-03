@@ -47,10 +47,10 @@ class _RootWidgetState extends State<RootWidget> {
     connect(loginServerURL).then((socket) {
       setState(() {
         loginServer = NetworkConnection(socket, (message) {
-        String? errorMessage = parseMessage(data, message);
-        if (errorMessage != null) {
-          openErrorDialog(errorMessage, context);
-        }
+          String? errorMessage = parseMessage(data, message);
+          if (errorMessage != null) {
+            openErrorDialog(errorMessage, context, isDarkMode);
+          }
         }, onResetLogin);
       });
       onResetLogin();
@@ -90,6 +90,7 @@ class _RootWidgetState extends State<RootWidget> {
           openErrorDialog(
             'Error when logging in: ${message[1]}',
             context,
+            isDarkMode,
           );
         }
       } else {
@@ -100,16 +101,24 @@ class _RootWidgetState extends State<RootWidget> {
   }
 
   void connectToSystemServer(String server) {
-    openErrorDialog('connecting to system server: $server', context);
+    openErrorDialog(
+      'connecting to system server: $server',
+      context,
+      isDarkMode,
+    );
     connect(server).then((socket) async {
       NetworkConnection systemServer = NetworkConnection(socket, (message) {
         String? errorMessage = parseMessage(data, message);
         if (errorMessage != null) {
-          openErrorDialog(errorMessage, context);
+          openErrorDialog(errorMessage, context, isDarkMode);
         }
       }, () {});
       List<String> message = await systemServer.send(['login', data.token!]);
-      openErrorDialog('login response (from server $server): $message', context);
+      openErrorDialog(
+        'login response (from server $server): $message',
+        context,
+        isDarkMode,
+      );
       systemServers.add(systemServer);
     });
   }
@@ -122,7 +131,7 @@ class _RootWidgetState extends State<RootWidget> {
       dynastyServer = NetworkConnection(socket, (message) {
         String? errorMessage = parseMessage(data, message);
         if (errorMessage != null) {
-          openErrorDialog(errorMessage, context);
+          openErrorDialog(errorMessage, context, isDarkMode);
         }
       }, onResetDynasty);
       await onResetDynasty();
@@ -134,7 +143,7 @@ class _RootWidgetState extends State<RootWidget> {
     assert(message[0] == 'T');
     int systemServerCount = int.parse(message[1]);
     if (systemServerCount == 0) {
-      openErrorDialog('Error - No system servers', context);
+      openErrorDialog('Error - No system servers', context, isDarkMode);
     }
     Iterable<String> systemServers = message.skip(2);
     assert(systemServers.length == systemServerCount);
@@ -179,6 +188,7 @@ class _RootWidgetState extends State<RootWidget> {
                           data: data,
                           loginServer: loginServer!,
                           logout: logout,
+                          isDarkMode: isDarkMode,
                         ),
                       ),
                     ),
@@ -218,6 +228,7 @@ class _RootWidgetState extends State<RootWidget> {
                           data: data,
                           parseSuccessfulLoginResponse:
                               parseSuccessfulLoginResponse,
+                          isDarkMode: isDarkMode,
                         ),
                       )
                     else if (data.stars != null)
@@ -269,177 +280,188 @@ class ProfileWidget extends StatelessWidget {
     required this.data,
     required this.loginServer,
     required this.logout,
+    required this.isDarkMode,
   });
 
   final DataStructure data;
   final NetworkConnection loginServer;
   final VoidCallback logout;
+  final bool isDarkMode;
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
         listenable: data,
         builder: (context, child) {
-          return Column(children: [
-            Text('Logged in as ${data.username}'),
-            SizedBox(
-              height: 10,
-            ),
-            OutlinedButton(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => TextFieldDialog(
-                    obscureText: false,
-                    onSubmit: (String newUsername) {
-                      if (newUsername.contains('\x00')) {
-                        return Future.value(
-                          'Username must not contain 0x0 byte.',
-                        );
-                      }
-                      return loginServer.send(
-                        [
-                          'change-username',
-                          data.username!,
-                          data.password!,
-                          newUsername,
-                        ],
-                      ).then(
-                        (List<String> message) {
-                          if (message[0] == 'F') {
-                            assert(message.length == 2);
-                            if (message[1] == 'unrecognized credentials') {
-                              logout();
-                              openErrorDialog(
-                                'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
-                                context,
-                              );
-                              Navigator.pop(context);
-                            } else if (message[1] == 'inadequate username') {
-                              if (newUsername == '') {
-                                return 'Username must be non-empty.';
-                              } else if (newUsername.contains('\x10')) {
-                                return 'Username must not contain 0x10 byte.';
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Logged in as ${data.username}'),
+              SizedBox(
+                height: 10,
+              ),
+              OutlinedButton(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => TextFieldDialog(
+                      obscureText: false,
+                      onSubmit: (String newUsername) {
+                        if (newUsername.contains('\x00')) {
+                          return Future.value(
+                            'Username must not contain 0x0 byte.',
+                          );
+                        }
+                        return loginServer.send(
+                          [
+                            'change-username',
+                            data.username!,
+                            data.password!,
+                            newUsername,
+                          ],
+                        ).then(
+                          (List<String> message) {
+                            if (message[0] == 'F') {
+                              assert(message.length == 2);
+                              if (message[1] == 'unrecognized credentials') {
+                                logout();
+                                openErrorDialog(
+                                  'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
+                                  context,
+                                  isDarkMode,
+                                );
+                                Navigator.pop(context);
+                              } else if (message[1] == 'inadequate username') {
+                                if (newUsername == '') {
+                                  return 'Username must be non-empty.';
+                                } else if (newUsername.contains('\x10')) {
+                                  return 'Username must not contain 0x10 byte.';
+                                } else {
+                                  return 'Username already in use.';
+                                }
                               } else {
-                                return 'Username already in use.';
+                                openErrorDialog(
+                                  'Error when changing username: ${message[1]}',
+                                  context,
+                                  isDarkMode,
+                                );
+                                Navigator.pop(context);
                               }
                             } else {
-                              openErrorDialog(
-                                'Error when changing username: ${message[1]}',
-                                context,
-                              );
+                              assert(message[0] == 'T');
+                              data.updateUsername(newUsername);
+                              assert(message.length == 1);
                               Navigator.pop(context);
                             }
-                          } else {
-                            assert(message[0] == 'T');
-                            data.updateUsername(newUsername);
-                            assert(message.length == 1);
-                            Navigator.pop(context);
-                          }
-                          return null;
-                        },
-                      );
-                    },
-                    dialogTitle: 'Change username',
-                    buttonMessage: 'Change username',
-                    textFieldLabel: 'New username',
-                  ),
-                );
-              },
-              child: Text('Change username'),
-            ),
-            SizedBox(
-              height: 10,
-            ),
-            OutlinedButton(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => TextFieldDialog(
-                    obscureText: true,
-                    onSubmit: (String newPassword) {
-                      if (newPassword.contains('\x00')) {
-                        return Future.value(
-                          'Password must not contain 0x0 byte.',
+                            return null;
+                          },
+                        );
+                      },
+                      dialogTitle: 'Change username',
+                      buttonMessage: 'Change username',
+                      textFieldLabel: 'New username',
+                    ),
+                  );
+                },
+                child: Text('Change username'),
+              ),
+              SizedBox(
+                height: 10,
+              ),
+              OutlinedButton(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => TextFieldDialog(
+                      obscureText: true,
+                      onSubmit: (String newPassword) {
+                        if (newPassword.contains('\x00')) {
+                          return Future.value(
+                            'Password must not contain 0x0 byte.',
+                          );
+                        }
+                        return loginServer.send([
+                          'change-password',
+                          data.username!,
+                          data.password!,
+                          newPassword,
+                        ]).then(
+                          (List<String> message) {
+                            if (message[0] == 'F') {
+                              assert(message.length == 2);
+                              if (message[1] == 'unrecognized credentials') {
+                                logout();
+                                openErrorDialog(
+                                  'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
+                                  context,
+                                  isDarkMode,
+                                );
+                                Navigator.pop(context);
+                              } else if (message[1] == 'inadequate password') {
+                                assert(utf8.encode(newPassword).length < 6);
+                                return 'Password must be at least 6 characters long.';
+                              } else {
+                                openErrorDialog(
+                                  'Error when changing password: ${message[1]}',
+                                  context,
+                                  isDarkMode,
+                                );
+                                Navigator.pop(context);
+                              }
+                            } else {
+                              assert(message[0] == 'T');
+                              data.updatePassword(newPassword);
+                              assert(message.length == 1);
+                              Navigator.pop(context);
+                            }
+                            return null;
+                          },
+                        );
+                      },
+                      dialogTitle: 'Change password',
+                      buttonMessage: 'Change password',
+                      textFieldLabel: 'New password',
+                    ),
+                  );
+                },
+                child: Text('Change password'),
+              ),
+              SizedBox(
+                height: 10,
+              ),
+              OutlinedButton(
+                onPressed: () {
+                  loginServer.send([
+                    'logout',
+                    data.username!,
+                    data.password!,
+                  ]).then((List<String> message) {
+                    if (message[0] == 'F') {
+                      if (message[1] == 'unrecognized credentials') {
+                        openErrorDialog(
+                          'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
+                          context,
+                          isDarkMode,
+                        );
+                      } else {
+                        openErrorDialog(
+                          'Error when logging out: ${message[1]}',
+                          context,
+                          isDarkMode,
                         );
                       }
-                      return loginServer.send([
-                        'change-password',
-                        data.username!,
-                        data.password!,
-                        newPassword,
-                      ]).then(
-                        (List<String> message) {
-                          if (message[0] == 'F') {
-                            assert(message.length == 2);
-                            if (message[1] == 'unrecognized credentials') {
-                              logout();
-                              openErrorDialog(
-                                'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
-                                context,
-                              );
-                              Navigator.pop(context);
-                            } else if (message[1] == 'inadequate password') {
-                              assert(utf8.encode(newPassword).length < 6);
-                              return 'Password must be at least 6 characters long.';
-                            } else {
-                              openErrorDialog(
-                                'Error when changing password: ${message[1]}',
-                                context,
-                              );
-                              Navigator.pop(context);
-                            }
-                          } else {
-                            assert(message[0] == 'T');
-                            data.updatePassword(newPassword);
-                            assert(message.length == 1);
-                            Navigator.pop(context);
-                          }
-                          return null;
-                        },
-                      );
-                    },
-                    dialogTitle: 'Change password',
-                    buttonMessage: 'Change password',
-                    textFieldLabel: 'New password',
-                  ),
-                );
-              },
-              child: Text('Change password'),
-            ),
-            SizedBox(
-              height: 10,
-            ),
-            OutlinedButton(
-              onPressed: () {
-                loginServer.send([
-                  'logout',
-                  data.username!,
-                  data.password!,
-                ]).then((List<String> message) {
-                  if (message[0] == 'F') {
-                    if (message[1] == 'unrecognized credentials') {
-                      openErrorDialog(
-                        'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
-                        context,
-                      );
                     } else {
-                      openErrorDialog(
-                        'Error when logging out: ${message[1]}',
-                        context,
-                      );
+                      assert(message[0] == 'T');
+                      assert(message.length == 1);
                     }
-                  } else {
-                    assert(message[0] == 'T');
-                    assert(message.length == 1);
-                  }
-                });
-                logout();
-                Navigator.pop(context);
-              },
-              child: Text('Logout'),
-            ),
-          ]);
+                  });
+                  logout();
+                  Navigator.pop(context);
+                },
+                child: Text('Logout'),
+              ),
+            ],
+          );
         });
   }
 }
@@ -450,11 +472,13 @@ class LoginWidget extends StatelessWidget {
     required this.loginServer,
     required this.data,
     required this.parseSuccessfulLoginResponse,
+    required this.isDarkMode,
   });
 
   final NetworkConnection loginServer;
   final DataStructure data;
   final void Function(List<String> message) parseSuccessfulLoginResponse;
+  final bool isDarkMode;
 
   @override
   Widget build(BuildContext context) {
@@ -474,6 +498,7 @@ class LoginWidget extends StatelessWidget {
               openErrorDialog(
                 'Error when creating new account: ${message[1]}',
                 context,
+                isDarkMode,
               );
             }
           });
@@ -491,6 +516,7 @@ class LoginWidget extends StatelessWidget {
               data: data,
               connection: loginServer,
               parseSuccessfulLoginResponse: parseSuccessfulLoginResponse,
+              isDarkMode: isDarkMode,
             ),
           );
         },
@@ -579,11 +605,13 @@ class LoginDialog extends StatefulWidget {
     required this.data,
     required this.connection,
     required this.parseSuccessfulLoginResponse,
+    required this.isDarkMode,
   });
 
   final DataStructure data;
   final NetworkConnection connection;
   final void Function(List<String> message) parseSuccessfulLoginResponse;
+  final bool isDarkMode;
 
   @override
   State<LoginDialog> createState() => _LoginDialogState();
@@ -659,6 +687,7 @@ class _LoginDialogState extends State<LoginDialog> {
                       openErrorDialog(
                         'Error logging in: ${message[1]}',
                         context,
+                        widget.isDarkMode,
                       );
                       if (mounted) {
                         Navigator.pop(context);
@@ -869,21 +898,28 @@ class GalaxyRenderer extends CustomPainter {
   }
 }
 
-void openErrorDialog(String message, BuildContext context) {
+void openErrorDialog(String message, BuildContext context, bool darkMode) {
   showDialog(
     context: context,
     builder: (context) {
-      return Dialog(
-        child: Column(
-          children: [
-            Text('$message'),
-            OutlinedButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text('Ok'),
-            )
-          ],
+      return Theme(
+        data: darkMode ? ThemeData.dark() : ThemeData.light(),
+        child: Dialog(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('$message'),
+              SizedBox(
+                height: 16,
+              ),
+              OutlinedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text('Ok'),
+              )
+            ],
+          ),
         ),
       );
     },
