@@ -15,18 +15,18 @@ import 'parser.dart';
 const String loginServerURL = "wss://interstellar-dynasties.space:10024/";
 void main() async {
   runApp(
-    MyWidget(),
+    MaterialAppWidget(),
   );
 }
 
-class MyWidget extends StatefulWidget {
-  const MyWidget({super.key});
+class MaterialAppWidget extends StatefulWidget {
+  const MaterialAppWidget({super.key});
 
   @override
-  State<MyWidget> createState() => _MyWidgetState();
+  State<MaterialAppWidget> createState() => _MaterialAppWidgetState();
 }
 
-class _MyWidgetState extends State<MyWidget> {
+class _MaterialAppWidgetState extends State<MaterialAppWidget> {
   ThemeMode themeMode = ThemeMode.system;
   void changeThemeMode(ThemeMode newThemeMode) {
     setState(() {
@@ -55,7 +55,7 @@ class _MyWidgetState extends State<MyWidget> {
     return MaterialApp(
       darkTheme: ThemeData.dark(),
       themeMode: themeMode,
-      home: RootWidget(
+      home: ScaffoldWidget(
         themeMode: themeMode,
         changeThemeMode: changeThemeMode,
       ),
@@ -63,20 +63,20 @@ class _MyWidgetState extends State<MyWidget> {
   }
 }
 
-class RootWidget extends StatefulWidget {
-  RootWidget(
+class ScaffoldWidget extends StatefulWidget {
+  ScaffoldWidget(
       {super.key, required this.themeMode, required this.changeThemeMode});
 
   final ThemeMode themeMode;
   final void Function(ThemeMode) changeThemeMode;
 
   @override
-  _RootWidgetState createState() => _RootWidgetState();
+  _ScaffoldWidgetState createState() => _ScaffoldWidgetState();
 }
 
 const String kDarkModeCookieName = 'darkMode';
 
-class _RootWidgetState extends State<RootWidget> {
+class _ScaffoldWidgetState extends State<ScaffoldWidget> {
   final DataStructure data = DataStructure();
   NetworkConnection? loginServer;
   NetworkConnection? dynastyServer;
