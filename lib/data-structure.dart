@@ -7,6 +7,7 @@ import 'sockets_cookies_stub.dart'
 
 const String kUsernameCookieName = 'username';
 const String kPasswordCookieName = 'password';
+const String kGalaxyDiameterCookieName = 'galaxy-diameter';
 const String kStarsCookieName = 'stars';
 const String kSystemsCookieName = 'systems';
 const int integerLimit32 = 0x100000000;
@@ -25,6 +26,7 @@ class DataStructure with ChangeNotifier {
   String? username;
   String? password;
   String? token;
+  double? galaxyDiameter; // in meters
   List<List<Offset>>? stars;
   Map<StarIdentifier, StarIdentifier>?
       systems; // star ID -> system ID (first star in the system)
@@ -47,6 +49,12 @@ class DataStructure with ChangeNotifier {
 
   void setToken(String token) {
     this.token = token;
+    notifyListeners();
+  }
+
+  void setGalaxyDiameter(double galaxyDiameter) {
+    setCookie(kGalaxyDiameterCookieName, galaxyDiameter.toString());
+    this.galaxyDiameter = galaxyDiameter;
     notifyListeners();
   }
 
@@ -112,6 +120,10 @@ class DataStructure with ChangeNotifier {
     });
     getCookie(kPasswordCookieName).then((e) {
       password = e;
+      notifyListeners();
+    });
+    getCookie(kGalaxyDiameterCookieName).then((e) {
+      galaxyDiameter = e == null ? null : double.parse(e);
       notifyListeners();
     });
     getBinaryBlob(kStarsCookieName).then((rawStars) {

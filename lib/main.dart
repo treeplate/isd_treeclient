@@ -15,14 +15,60 @@ import 'parser.dart';
 const String loginServerURL = "wss://interstellar-dynasties.space:10024/";
 void main() async {
   runApp(
-    MaterialApp(
-      home: RootWidget(),
-    ),
+    MyWidget(),
   );
 }
 
+class MyWidget extends StatefulWidget {
+  const MyWidget({super.key});
+
+  @override
+  State<MyWidget> createState() => _MyWidgetState();
+}
+
+class _MyWidgetState extends State<MyWidget> {
+  ThemeMode themeMode = ThemeMode.system;
+  void changeThemeMode(ThemeMode newThemeMode) {
+    setState(() {
+      themeMode = newThemeMode;
+      setCookie(kDarkModeCookieName, themeMode.name);
+    });
+  }
+
+  @override
+  void initState() {
+    getCookie(kDarkModeCookieName).then((darkModeCookie) {
+      if (darkModeCookie != null) {
+        changeThemeMode(
+          ThemeMode.values
+                  .where((mode) => mode.name == darkModeCookie)
+                  .firstOrNull ??
+              ThemeMode.system,
+        );
+      }
+    });
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      darkTheme: ThemeData.dark(),
+      themeMode: themeMode,
+      home: RootWidget(
+        themeMode: themeMode,
+        changeThemeMode: changeThemeMode,
+      ),
+    );
+  }
+}
+
 class RootWidget extends StatefulWidget {
-  RootWidget({super.key});
+  RootWidget(
+      {super.key, required this.themeMode, required this.changeThemeMode});
+
+  final ThemeMode themeMode;
+  final void Function(ThemeMode) changeThemeMode;
 
   @override
   _RootWidgetState createState() => _RootWidgetState();
@@ -32,53 +78,79 @@ const String kDarkModeCookieName = 'darkMode';
 
 class _RootWidgetState extends State<RootWidget> {
   final DataStructure data = DataStructure();
-  ThemeMode themeMode = ThemeMode.system;
   NetworkConnection? loginServer;
   NetworkConnection? dynastyServer;
   bool loginServerHadError = false;
   final List<NetworkConnection> systemServers = [];
-  bool get isDarkMode => themeMode == ThemeMode.system
+  bool get isDarkMode => widget.themeMode == ThemeMode.system
       ? WidgetsBinding.instance.platformDispatcher.platformBrightness ==
           Brightness.dark
-      : themeMode == ThemeMode.dark;
+      : widget.themeMode == ThemeMode.dark;
 
   void initState() {
     super.initState();
     connect(loginServerURL).then((socket) {
       setState(() {
-        loginServer = NetworkConnection(socket, (message) {
-          String? errorMessage = parseMessage(data, message);
-          if (errorMessage != null) {
-            openErrorDialogWithTheme(errorMessage, context,
-                isDarkMode ? ThemeData.dark() : ThemeData.light());
-          }
-        }, onResetLogin);
+        loginServer = NetworkConnection(
+          socket,
+          (message) {
+            String? errorMessage = parseMessage(data, message);
+            if (errorMessage != null) {
+              openErrorDialog(
+                errorMessage,
+                context,
+              );
+            }
+          },
+          parseBinaryMessage,
+          onLoginServerReset,
+        );
       });
-      onResetLogin();
+      onLoginServerReset();
     }, onError: (e, st) {
       setState(() {
         loginServerHadError = true;
       });
     });
-    getCookie(kDarkModeCookieName).then((darkModeCookie) {
-      if (darkModeCookie != null) {
-        themeMode = ThemeMode.values
-                .where((mode) => mode.name == darkModeCookie)
-                .firstOrNull ??
-            ThemeMode.system;
-      }
-      setCookie(kDarkModeCookieName, themeMode.name);
-    });
   }
 
-  FutureOr<Null> onResetLogin() async {
+  void parseBinaryMessage(int fileID, List<int> data) {
+    switch (fileID) {
+      case 1:
+        this.data.parseStars(data);
+      case 2:
+        this.data.parseSystems(data);
+      default:
+        openErrorDialog('Error - Unrecognised file ID: $fileID', context);
+    }
+  }
+
+  FutureOr<Null> onLoginServerReset() async {
     if (data.stars == null) {
-      loginServer!
-          .sendExpectingBinaryReply(['get-stars']).then(data.parseStars);
+      loginServer!.send(['get-stars']).then((message) {
+        if (message[0] == 'F') {
+          assert(message.length == 2);
+          openErrorDialog(
+              'Error: failed to get stars - ${message[1]}', context);
+        }
+        assert(message.length == 3);
+        assert(message[0] == 'T');
+        assert(message[2] == '1');
+        data.setGalaxyDiameter(double.parse(message[1]));
+      });
     }
     if (data.systems == null) {
-      loginServer!
-          .sendExpectingBinaryReply(['get-systems']).then(data.parseSystems);
+      loginServer!.send(['get-systems']).then((message) {
+        if (message[0] == 'F') {
+          assert(message.length == 2);
+          openErrorDialog(
+              'Error: failed to get systems - ${message[1]}', context);
+        }
+        assert(message.length == 2);
+        assert(message[0] == 'T');
+        assert(message[1] == '2');
+        data.setGalaxyDiameter(double.parse(message[1]));
+      });
     }
     if (data.username != null && data.password != null) {
       List<String> message =
@@ -88,10 +160,9 @@ class _RootWidgetState extends State<RootWidget> {
           assert(message.length == 2);
           logout();
         } else {
-          openErrorDialogWithTheme(
+          openErrorDialog(
             'Error when logging in: ${message[1]}',
             context,
-            isDarkMode ? ThemeData.dark() : ThemeData.light(),
           );
         }
       } else {
@@ -102,27 +173,40 @@ class _RootWidgetState extends State<RootWidget> {
   }
 
   void connectToSystemServer(String server) {
-    openErrorDialogWithTheme(
+    openErrorDialog(
       'connecting to system server: $server',
       context,
-      isDarkMode ? ThemeData.dark() : ThemeData.light(),
     );
     connect(server).then((socket) async {
-      NetworkConnection systemServer = NetworkConnection(socket, (message) {
-        String? errorMessage = parseMessage(data, message);
-        if (errorMessage != null) {
-          openErrorDialogWithTheme(errorMessage, context,
-              isDarkMode ? ThemeData.dark() : ThemeData.light());
-        }
-      }, () {});
-      List<String> message = await systemServer.send(['login', data.token!]);
-      openErrorDialogWithTheme(
-        'login response (from server $server): $message',
-        context,
-        isDarkMode ? ThemeData.dark() : ThemeData.light(),
+      late NetworkConnection systemServer;
+      systemServer = NetworkConnection(
+        socket,
+        (message) {
+          String? errorMessage = parseMessage(data, message);
+          if (errorMessage != null) {
+            openErrorDialog(
+              errorMessage,
+              context,
+            );
+          }
+        },
+        parseBinaryMessage,
+        () {
+          onSystemServerReset(systemServer, server);
+        },
       );
+      await onSystemServerReset(systemServer, server);
       systemServers.add(systemServer);
     });
+  }
+
+  Future<void> onSystemServerReset(
+      NetworkConnection systemServer, String server) async {
+    List<String> message = await systemServer.send(['login', data.token!]);
+    openErrorDialog(
+      'login response (from server $server): $message',
+      context,
+    );
   }
 
   void parseSuccessfulLoginResponse(List<String> message) {
@@ -134,21 +218,25 @@ class _RootWidgetState extends State<RootWidget> {
       dynastyServer = NetworkConnection(socket, (message) {
         String? errorMessage = parseMessage(data, message);
         if (errorMessage != null) {
-          openErrorDialogWithTheme(errorMessage, context,
-              isDarkMode ? ThemeData.dark() : ThemeData.light());
+          openErrorDialog(
+            errorMessage,
+            context,
+          );
         }
-      }, onResetDynasty);
-      await onResetDynasty();
+      }, parseBinaryMessage, onDynastyServerReset);
+      await onDynastyServerReset();
     });
   }
 
-  Future<void> onResetDynasty() async {
+  Future<void> onDynastyServerReset() async {
     List<String> message = await dynastyServer!.send(['login', data.token!]);
     assert(message[0] == 'T');
     int systemServerCount = int.parse(message[1]);
     if (systemServerCount == 0) {
-      openErrorDialogWithTheme('Error - No system servers', context,
-          isDarkMode ? ThemeData.dark() : ThemeData.light());
+      openErrorDialog(
+        'Error - No system servers',
+        context,
+      );
     }
     Iterable<String> systemServers = message.skip(2);
     assert(systemServers.length == systemServerCount);
@@ -170,74 +258,64 @@ class _RootWidgetState extends State<RootWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      darkTheme: ThemeData.dark(),
-      themeMode: themeMode,
-      home: Scaffold(
-        appBar: AppBar(
-          actions: [
-            if (loginServer == null)
-              CircularProgressIndicator()
-            else if (data.username != null && data.password != null)
-              IconButton(
-                icon: Icon(
-                  Icons.person,
-                ),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => Theme(
-                      data: isDarkMode ? ThemeData.dark() : ThemeData.light(),
-                      child: Dialog(
-                        child: ProfileWidget(
-                          data: data,
-                          loginServer: loginServer!,
-                          logout: logout,
-                          isDarkMode: isDarkMode,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+    return Scaffold(
+      appBar: AppBar(
+        actions: [
+          if (loginServer == null)
+            CircularProgressIndicator()
+          else if (data.username != null && data.password != null)
             IconButton(
               icon: Icon(
-                isDarkMode
-                    ? Icons.light_mode_outlined
-                    : Icons.dark_mode_outlined,
+                Icons.person,
               ),
               onPressed: () {
-                setState(() {
-                  if (isDarkMode) {
-                    themeMode = ThemeMode.light;
-                  } else {
-                    themeMode = ThemeMode.dark;
-                  }
-                  setCookie(kDarkModeCookieName, themeMode.name);
-                });
+                showDialog(
+                  context: context,
+                  builder: (context) => Dialog(
+                    child: ProfileWidget(
+                      data: data,
+                      loginServer: loginServer!,
+                      logout: logout,
+                      isDarkMode: isDarkMode,
+                    ),
+                  ),
+                );
               },
-            )
-          ],
-        ),
-        body: loginServer == null
-            ? Column(
-                children: [
-                  if (loginServerHadError)
-                    Text(
-                      'Failed to connect to login server. Please try again later.',
-                    )
-                  else ...[
-                    Text('connecting to login server...'),
-                    CircularProgressIndicator(),
-                  ]
-                ],
-              )
-            : GameWidget(
-                data: data,
-                loginServer: loginServer!,
-                parseSuccessfulLoginResponse: parseSuccessfulLoginResponse,
-              ),
+            ),
+          IconButton(
+            icon: Icon(
+              isDarkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+            ),
+            onPressed: () {
+              setState(() {
+                if (isDarkMode) {
+                  widget.changeThemeMode(ThemeMode.light);
+                } else {
+                  widget.changeThemeMode(ThemeMode.dark);
+                }
+              });
+            },
+          )
+        ],
       ),
+      body: loginServer == null
+          ? Column(
+              children: [
+                if (loginServerHadError)
+                  Text(
+                    'Failed to connect to login server. Please try again later.',
+                  )
+                else ...[
+                  Text('connecting to login server...'),
+                  CircularProgressIndicator(),
+                ]
+              ],
+            )
+          : GameWidget(
+              data: data,
+              loginServer: loginServer!,
+              parseSuccessfulLoginResponse: parseSuccessfulLoginResponse,
+            ),
     );
   }
 
@@ -762,6 +840,7 @@ class _TextFieldDialogState extends State<TextFieldDialog> {
             Text(widget.dialogTitle),
             const SizedBox(height: 16),
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text('${widget.textFieldLabel}:'),
                 const SizedBox(width: 8),
@@ -907,35 +986,6 @@ class GalaxyRenderer extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
     return true;
   }
-}
-
-void openErrorDialogWithTheme(
-    String message, BuildContext context, ThemeData theme) {
-  showDialog(
-    context: context,
-    builder: (context) {
-      return Theme(
-        data: theme,
-        child: Dialog(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('$message'),
-              SizedBox(
-                height: 16,
-              ),
-              OutlinedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: Text('Ok'),
-              )
-            ],
-          ),
-        ),
-      );
-    },
-  );
 }
 
 void openErrorDialog(String message, BuildContext context) {

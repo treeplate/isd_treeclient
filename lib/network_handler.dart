@@ -7,12 +7,16 @@ class NetworkConnection {
   NetworkConnection(
       this.socket,
       void Function(List<String>) unrequestedMessageHandler,
+      void binaryMessageHandler(int fileID, List<int> data),
       void Function() onReset) {
-    subscription = doListen(unrequestedMessageHandler, onReset);
+    subscription =
+        doListen(unrequestedMessageHandler, binaryMessageHandler, onReset);
   }
 
   StreamSubscription<dynamic> doListen(
-      void unrequestedMessageHandler(List<String> data), void onReset()) {
+      void unrequestedMessageHandler(List<String> data),
+      void binaryMessageHandler(int fileID, List<int> data),
+      void onReset()) {
     return socket.listen(
       (rawMessage) {
         if (rawMessage is String) {
@@ -27,16 +31,6 @@ class NetworkConnection {
                 replies[conversationID].isCompleted) {
               throw Exception('unrequested reply $message');
             }
-            if (binaryReplies[conversationID] != null) {
-              if (message[2] == 'F') {
-                throw Exception('binary message failed $message');
-              }
-              assert(message[2] == 'T');
-              assert(message.length ==
-                  5, message); // reply, conversationID, T, fileID, empty string
-              fileIDs[int.parse(message[3])] = binaryReplies[conversationID]!;
-              binaryReplies.remove(conversationID);
-            }
             replies[conversationID]
                 .complete(message.sublist(2, message.length - 1));
           } else {
@@ -44,11 +38,11 @@ class NetworkConnection {
           }
         } else {
           int fileID = rawMessage[0];
-          fileIDs[fileID]!.complete(rawMessage.skip(4).toList());
+          binaryMessageHandler(fileID, rawMessage.skip(4).toList());
         }
       },
       onReset: () {
-        doListen(unrequestedMessageHandler, onReset);
+        doListen(unrequestedMessageHandler, binaryMessageHandler, onReset);
         onReset();
       },
     );
@@ -62,9 +56,6 @@ class NetworkConnection {
   }
 
   List<Completer<List<String>>> replies = [];
-  Map<int, Completer<List<int>>> binaryReplies =
-      {}; // [replies] index -> actual binary completer
-  Map<int, Completer<List<int>>> fileIDs = {}; // file ID -> completer
 
   /// Sends [message] to connected server.
   Future<List<String>> send(List<String> message) {
@@ -78,24 +69,6 @@ class NetworkConnection {
       replies[index] = reply;
     }
     message.insert(0, index.toString());
-    socket.send(message.join('\x00') + '\x00');
-    return reply.future;
-  }
-
-  /// Sends [message] to connected server.
-  Future<List<int>> sendExpectingBinaryReply(List<String> message) {
-    assert(!message.contains('\x00'));
-    Completer<List<int>> reply = Completer();
-    int index = replies.indexWhere((e) => e.isCompleted);
-    Completer<List<String>> reply2 = Completer();
-    if (index == -1) {
-      index = replies.length;
-      replies.add(reply2);
-    } else {
-      replies[index] = reply2;
-    }
-    message.insert(0, index.toString());
-    binaryReplies[index] = reply;
     socket.send(message.join('\x00') + '\x00');
     return reply.future;
   }
