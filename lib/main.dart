@@ -49,7 +49,8 @@ class _RootWidgetState extends State<RootWidget> {
         loginServer = NetworkConnection(socket, (message) {
           String? errorMessage = parseMessage(data, message);
           if (errorMessage != null) {
-            openErrorDialog(errorMessage, context, isDarkMode);
+            openErrorDialogWithTheme(errorMessage, context,
+                isDarkMode ? ThemeData.dark() : ThemeData.light());
           }
         }, onResetLogin);
       });
@@ -87,10 +88,10 @@ class _RootWidgetState extends State<RootWidget> {
           assert(message.length == 2);
           logout();
         } else {
-          openErrorDialog(
+          openErrorDialogWithTheme(
             'Error when logging in: ${message[1]}',
             context,
-            isDarkMode,
+            isDarkMode ? ThemeData.dark() : ThemeData.light(),
           );
         }
       } else {
@@ -101,29 +102,31 @@ class _RootWidgetState extends State<RootWidget> {
   }
 
   void connectToSystemServer(String server) {
-    openErrorDialog(
+    openErrorDialogWithTheme(
       'connecting to system server: $server',
       context,
-      isDarkMode,
+      isDarkMode ? ThemeData.dark() : ThemeData.light(),
     );
     connect(server).then((socket) async {
       NetworkConnection systemServer = NetworkConnection(socket, (message) {
         String? errorMessage = parseMessage(data, message);
         if (errorMessage != null) {
-          openErrorDialog(errorMessage, context, isDarkMode);
+          openErrorDialogWithTheme(errorMessage, context,
+              isDarkMode ? ThemeData.dark() : ThemeData.light());
         }
       }, () {});
       List<String> message = await systemServer.send(['login', data.token!]);
-      openErrorDialog(
+      openErrorDialogWithTheme(
         'login response (from server $server): $message',
         context,
-        isDarkMode,
+        isDarkMode ? ThemeData.dark() : ThemeData.light(),
       );
       systemServers.add(systemServer);
     });
   }
 
   void parseSuccessfulLoginResponse(List<String> message) {
+    setState(() {}); // for the profile button in the app bar
     assert(message[0] == 'T');
     assert(message.length == 3);
     data.setToken(message[2]);
@@ -131,7 +134,8 @@ class _RootWidgetState extends State<RootWidget> {
       dynastyServer = NetworkConnection(socket, (message) {
         String? errorMessage = parseMessage(data, message);
         if (errorMessage != null) {
-          openErrorDialog(errorMessage, context, isDarkMode);
+          openErrorDialogWithTheme(errorMessage, context,
+              isDarkMode ? ThemeData.dark() : ThemeData.light());
         }
       }, onResetDynasty);
       await onResetDynasty();
@@ -143,7 +147,8 @@ class _RootWidgetState extends State<RootWidget> {
     assert(message[0] == 'T');
     int systemServerCount = int.parse(message[1]);
     if (systemServerCount == 0) {
-      openErrorDialog('Error - No system servers', context, isDarkMode);
+      openErrorDialogWithTheme('Error - No system servers', context,
+          isDarkMode ? ThemeData.dark() : ThemeData.light());
     }
     Iterable<String> systemServers = message.skip(2);
     assert(systemServers.length == systemServerCount);
@@ -214,56 +219,24 @@ class _RootWidgetState extends State<RootWidget> {
             )
           ],
         ),
-        body: ListenableBuilder(
-          listenable: data,
-          builder: (context, child) {
-            return Center(
-              child: Stack(
+        body: loginServer == null
+            ? Column(
                 children: [
-                  if (loginServer != null)
-                    if (data.username == null || data.password == null)
-                      Center(
-                        child: LoginWidget(
-                          loginServer: loginServer!,
-                          data: data,
-                          parseSuccessfulLoginResponse:
-                              parseSuccessfulLoginResponse,
-                          isDarkMode: isDarkMode,
-                        ),
-                      )
-                    else if (data.stars != null)
-                      ZoomableCustomPaint(
-                        painter: (zoom, screenCenter) => GalaxyRenderer(
-                            data.stars!,
-                            zoom,
-                            screenCenter,
-                            data.systems?.values.toSet() ?? {}),
-                      )
-                    else
-                      Column(
-                        children: [
-                          Text('loading starmap...'),
-                          CircularProgressIndicator(),
-                        ],
-                      )
-                  else
-                    Column(
-                      children: [
-                        if (loginServerHadError)
-                          Text(
-                            'Failed to connect to login server. Please try again later.',
-                          )
-                        else ...[
-                          Text('connecting to login server...'),
-                          CircularProgressIndicator(),
-                        ]
-                      ],
-                    ),
+                  if (loginServerHadError)
+                    Text(
+                      'Failed to connect to login server. Please try again later.',
+                    )
+                  else ...[
+                    Text('connecting to login server...'),
+                    CircularProgressIndicator(),
+                  ]
                 ],
+              )
+            : GameWidget(
+                data: data,
+                loginServer: loginServer!,
+                parseSuccessfulLoginResponse: parseSuccessfulLoginResponse,
               ),
-            );
-          },
-        ),
       ),
     );
   }
@@ -271,6 +244,57 @@ class _RootWidgetState extends State<RootWidget> {
   void logout() {
     data.removeCredentials();
     dynastyServer?.close();
+  }
+}
+
+class GameWidget extends StatelessWidget {
+  const GameWidget({
+    super.key,
+    required this.data,
+    required this.loginServer,
+    required this.parseSuccessfulLoginResponse,
+  });
+  final DataStructure data;
+  final NetworkConnection loginServer;
+  final void Function(List<String>) parseSuccessfulLoginResponse;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: data,
+      builder: (context, child) {
+        return Center(
+          child: Stack(
+            children: [
+              if (data.username == null || data.password == null)
+                Center(
+                  child: LoginWidget(
+                    loginServer: loginServer,
+                    data: data,
+                    parseSuccessfulLoginResponse: parseSuccessfulLoginResponse,
+                  ),
+                )
+              else if (data.stars != null)
+                ZoomableCustomPaint(
+                  painter: (zoom, screenCenter) => GalaxyRenderer(
+                    data.stars!,
+                    zoom,
+                    screenCenter,
+                    data.systems?.values.toSet() ?? {},
+                  ),
+                )
+              else
+                Column(
+                  children: [
+                    Text('loading starmap...'),
+                    CircularProgressIndicator(),
+                  ],
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -328,7 +352,6 @@ class ProfileWidget extends StatelessWidget {
                                 openErrorDialog(
                                   'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
                                   context,
-                                  isDarkMode,
                                 );
                                 Navigator.pop(context);
                               } else if (message[1] == 'inadequate username') {
@@ -343,7 +366,6 @@ class ProfileWidget extends StatelessWidget {
                                 openErrorDialog(
                                   'Error when changing username: ${message[1]}',
                                   context,
-                                  isDarkMode,
                                 );
                                 Navigator.pop(context);
                               }
@@ -394,7 +416,6 @@ class ProfileWidget extends StatelessWidget {
                                 openErrorDialog(
                                   'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
                                   context,
-                                  isDarkMode,
                                 );
                                 Navigator.pop(context);
                               } else if (message[1] == 'inadequate password') {
@@ -404,7 +425,6 @@ class ProfileWidget extends StatelessWidget {
                                 openErrorDialog(
                                   'Error when changing password: ${message[1]}',
                                   context,
-                                  isDarkMode,
                                 );
                                 Navigator.pop(context);
                               }
@@ -441,13 +461,11 @@ class ProfileWidget extends StatelessWidget {
                         openErrorDialog(
                           'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
                           context,
-                          isDarkMode,
                         );
                       } else {
                         openErrorDialog(
                           'Error when logging out: ${message[1]}',
                           context,
-                          isDarkMode,
                         );
                       }
                     } else {
@@ -472,13 +490,11 @@ class LoginWidget extends StatelessWidget {
     required this.loginServer,
     required this.data,
     required this.parseSuccessfulLoginResponse,
-    required this.isDarkMode,
   });
 
   final NetworkConnection loginServer;
   final DataStructure data;
   final void Function(List<String> message) parseSuccessfulLoginResponse;
-  final bool isDarkMode;
 
   @override
   Widget build(BuildContext context) {
@@ -498,7 +514,6 @@ class LoginWidget extends StatelessWidget {
               openErrorDialog(
                 'Error when creating new account: ${message[1]}',
                 context,
-                isDarkMode,
               );
             }
           });
@@ -516,7 +531,6 @@ class LoginWidget extends StatelessWidget {
               data: data,
               connection: loginServer,
               parseSuccessfulLoginResponse: parseSuccessfulLoginResponse,
-              isDarkMode: isDarkMode,
             ),
           );
         },
@@ -605,13 +619,11 @@ class LoginDialog extends StatefulWidget {
     required this.data,
     required this.connection,
     required this.parseSuccessfulLoginResponse,
-    required this.isDarkMode,
   });
 
   final DataStructure data;
   final NetworkConnection connection;
   final void Function(List<String> message) parseSuccessfulLoginResponse;
-  final bool isDarkMode;
 
   @override
   State<LoginDialog> createState() => _LoginDialogState();
@@ -687,7 +699,6 @@ class _LoginDialogState extends State<LoginDialog> {
                       openErrorDialog(
                         'Error logging in: ${message[1]}',
                         context,
-                        widget.isDarkMode,
                       );
                       if (mounted) {
                         Navigator.pop(context);
@@ -898,12 +909,13 @@ class GalaxyRenderer extends CustomPainter {
   }
 }
 
-void openErrorDialog(String message, BuildContext context, bool darkMode) {
+void openErrorDialogWithTheme(
+    String message, BuildContext context, ThemeData theme) {
   showDialog(
     context: context,
     builder: (context) {
       return Theme(
-        data: darkMode ? ThemeData.dark() : ThemeData.light(),
+        data: theme,
         child: Dialog(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -920,6 +932,31 @@ void openErrorDialog(String message, BuildContext context, bool darkMode) {
               )
             ],
           ),
+        ),
+      );
+    },
+  );
+}
+
+void openErrorDialog(String message, BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Dialog(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('$message'),
+            SizedBox(
+              height: 16,
+            ),
+            OutlinedButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Ok'),
+            )
+          ],
         ),
       );
     },
