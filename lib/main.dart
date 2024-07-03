@@ -47,8 +47,10 @@ class _RootWidgetState extends State<RootWidget> {
     connect(loginServerURL).then((socket) {
       setState(() {
         loginServer = NetworkConnection(socket, (message) {
-        openErrorDialog('look in console', context);
-          parseMessage(data, message);
+        String? errorMessage = parseMessage(data, message);
+        if (errorMessage != null) {
+          openErrorDialog(errorMessage, context);
+        }
         }, onResetLogin);
       });
       onResetLogin();
@@ -98,15 +100,16 @@ class _RootWidgetState extends State<RootWidget> {
   }
 
   void connectToSystemServer(String server) {
-    openErrorDialog('Messages in debug console', context);
-    print('connecting to system server: $server');
+    openErrorDialog('connecting to system server: $server', context);
     connect(server).then((socket) async {
       NetworkConnection systemServer = NetworkConnection(socket, (message) {
-        openErrorDialog('look in console', context);
-        parseMessage(data, message);
+        String? errorMessage = parseMessage(data, message);
+        if (errorMessage != null) {
+          openErrorDialog(errorMessage, context);
+        }
       }, () {});
       List<String> message = await systemServer.send(['login', data.token!]);
-      print('login response (from server $server): $message');
+      openErrorDialog('login response (from server $server): $message', context);
       systemServers.add(systemServer);
     });
   }
@@ -117,8 +120,10 @@ class _RootWidgetState extends State<RootWidget> {
     data.setToken(message[2]);
     connect(message[1]).then((socket) async {
       dynastyServer = NetworkConnection(socket, (message) {
-        openErrorDialog('look in console', context);
-        parseMessage(data, message);
+        String? errorMessage = parseMessage(data, message);
+        if (errorMessage != null) {
+          openErrorDialog(errorMessage, context);
+        }
       }, onResetDynasty);
       await onResetDynasty();
     });
@@ -308,7 +313,7 @@ class ProfileWidget extends StatelessWidget {
                               openErrorDialog(
                                 'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
                                 context,
-                              ); 
+                              );
                               Navigator.pop(context);
                             } else if (message[1] == 'inadequate username') {
                               if (newUsername == '') {
@@ -372,7 +377,7 @@ class ProfileWidget extends StatelessWidget {
                               openErrorDialog(
                                 'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
                                 context,
-                              ); 
+                              );
                               Navigator.pop(context);
                             } else if (message[1] == 'inadequate password') {
                               assert(utf8.encode(newPassword).length < 6);
@@ -651,10 +656,10 @@ class _LoginDialogState extends State<LoginDialog> {
                         errorMessage = 'Username or password incorrect';
                       });
                     } else {
-                              openErrorDialog(
-                                'Error logging in: ${message[1]}',
-                                context,
-                              );
+                      openErrorDialog(
+                        'Error logging in: ${message[1]}',
+                        context,
+                      );
                       if (mounted) {
                         Navigator.pop(context);
                       }

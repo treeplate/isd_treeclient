@@ -1,8 +1,9 @@
 import 'data-structure.dart';
 
-void parseMessage(DataStructure data, List<String> message) {
+// if the return value of this function is non-null, it is an error message.
+String? parseMessage(DataStructure data, List<String> message) {
   switch (message.first) {
     default:
-      print(message.toString());
+      return 'Error: Unexpected unrequested message $message';
   }
 }
