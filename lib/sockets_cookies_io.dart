@@ -60,7 +60,7 @@ Future<void> getCookiesFromFile() async {
   if (_cookieCache == null) {
     if (_cookieStorage == null) {
       Directory documentsDirectory = await getApplicationDocumentsDirectory();
-      _cookieStorage = File(documentsDirectory.path + 'cookies.save');
+      _cookieStorage = File(documentsDirectory.path + '/cookies.save');
     }
     if (_cookieStorage!.existsSync()) {
       try {
@@ -104,7 +104,7 @@ Future<Uint8List?> getBinaryBlob(String name) async {
   if (_binaryDataDirectory == null) {
     _binaryDataDirectory = await getApplicationCacheDirectory();
   }
-  File file = File('${_binaryDataDirectory!.path}$name.bin');
+  File file = File('${_binaryDataDirectory!.path}/$name.bin');
   return file.existsSync() ? file.readAsBytesSync() : null;
 }
 
@@ -112,5 +112,5 @@ void saveBinaryBlob(String name, List<int> data) async {
   if (_binaryDataDirectory == null) {
     _binaryDataDirectory = await getApplicationCacheDirectory();
   }
-  File('${_binaryDataDirectory!.path}$name.bin').writeAsBytesSync(data);
+  File('${_binaryDataDirectory!.path}/$name.bin').writeAsBytesSync(data);
 }
