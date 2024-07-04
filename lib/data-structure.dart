@@ -22,6 +22,69 @@ extension StarIdentifierConversion on StarIdentifier {
   int get value => $1 << 20 + $2;
 }
 
+class Material {
+  final String name;
+  final String description;
+  final String icon;
+  final bool showInKG; // true for coal, false for computers
+  final double massPerUnit; // in kilograms
+  final double volumePerUnit; // in kiloliters
+
+  Material(
+    this.name,
+    this.description,
+    this.icon,
+    this.showInKG,
+    this.massPerUnit,
+    this.volumePerUnit,
+  );
+}
+
+class MaterialLineItem {
+  final String componentName;
+  final Material material;
+  final int quantity;
+
+  MaterialLineItem(this.componentName, this.material, this.quantity);
+}
+
+abstract class FeatureClass {
+  final String name;
+  final List<MaterialLineItem> materialBill;
+  final int minimumFunctionalQuantity;
+  int get totalQuantity => materialBill.fold(0, (a, b) => a + b.quantity);
+
+  FeatureClass(this.name, this.materialBill, this.minimumFunctionalQuantity);
+}
+
+class AssetClass {
+  final List<FeatureClass> features;
+  final String name;
+  final String description;
+  final String icon;
+  final double size; // in meters
+
+  AssetClass(this.features, this.name, this.description, this.icon, this.size);
+}
+
+abstract class FeatureSettings {
+  final AssetNode parent;
+  final int materialsQuantity;
+  final int structuralIntegrity;
+
+  FeatureSettings(this.parent, this.materialsQuantity, this.structuralIntegrity);
+}
+
+class AssetNode {
+  final AssetClass assetClass;
+  final int owner;
+  final FeatureSettings? parent;
+  final List<FeatureSettings> features;
+  final double mass;
+
+  AssetNode(this.assetClass, this.parent, this.features, this.mass, this.owner);
+}
+
 class DataStructure with ChangeNotifier {
   String? username;
   String? password;
