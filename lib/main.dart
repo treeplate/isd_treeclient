@@ -76,7 +76,8 @@ class ScaffoldWidget extends StatefulWidget {
 
 const String kDarkModeCookieName = 'darkMode';
 
-class _ScaffoldWidgetState extends State<ScaffoldWidget> {
+class _ScaffoldWidgetState extends State<ScaffoldWidget>
+    with SingleTickerProviderStateMixin {
   final DataStructure data = DataStructure();
   NetworkConnection? loginServer;
   NetworkConnection? dynastyServer;
@@ -86,6 +87,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget> {
       ? WidgetsBinding.instance.platformDispatcher.platformBrightness ==
           Brightness.dark
       : widget.themeMode == ThemeMode.dark;
+  late TabController tabController = TabController(length: 2, vsync: this);
 
   void initState() {
     super.initState();
@@ -264,6 +266,10 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        bottom: TabBar(
+          tabs: [Text('Galaxy'), Text('Debug info')],
+          controller: tabController,
+        ),
         actions: [
           if (loginServer == null)
             CircularProgressIndicator()
@@ -316,40 +322,50 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget> {
               ],
             )
           : ListenableBuilder(
-      listenable: data,
-      builder: (context, child) {
-        return Center(
-          child: Stack(
-            children: [
-              if (data.username == null || data.password == null)
-                Center(
-                  child: LoginWidget(
-                    loginServer: loginServer!,
-                    data: data,
-                    parseSuccessfulLoginResponse: parseSuccessfulLoginResponse,
-                  ),
-                )
-              else if (data.stars != null)
-                ZoomableCustomPaint(
-                  painter: (zoom, screenCenter) => GalaxyRenderer(
-                    data.stars!,
-                    zoom,
-                    screenCenter,
-                    data.systems?.values.toSet() ?? {},
-                  ),
-                )
-              else
-                Column(
-                  children: [
-                    Text('loading starmap...'),
-                    CircularProgressIndicator(),
-                  ],
-                ),
-            ],
-          ),
-        );
-      },
-    ),
+              listenable: data,
+              builder: (context, child) {
+                return Center(
+                  child: data.username == null || data.password == null
+                      ? Center(
+                          child: LoginWidget(
+                            loginServer: loginServer!,
+                            data: data,
+                            parseSuccessfulLoginResponse:
+                                parseSuccessfulLoginResponse,
+                          ),
+                        )
+                      : TabBarView(
+                          controller: tabController,
+                          children: [
+                            if (data.stars != null)
+                              ZoomableCustomPaint(
+                                painter: (zoom, screenCenter) => GalaxyRenderer(
+                                  data.stars!,
+                                  zoom,
+                                  screenCenter,
+                                  data.systems?.values.toSet() ?? {},
+                                ),
+                              )
+                            else
+                              Column(
+                                children: [
+                                  Text('loading starmap...'),
+                                  CircularProgressIndicator(),
+                                ],
+                              ),
+                            Column(
+                              children: [
+                                Text('username: "${data.username}"'),
+                                Text('password: "${data.password}"'),
+                                Text('token: "${data.token}"'),
+                                Text('galaxyDiameter: ${data.galaxyDiameter}'),
+                              ],
+                            )
+                          ],
+                        ),
+                );
+              },
+            ),
     );
   }
 
@@ -648,10 +664,16 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
             handleZoom(scaleMultiplicativeDelta);
             lastRelativeScale = details.scale;
           },
-          child: ClipRect(
-            child: CustomPaint(
-              size: Size.square(constraints.biggest.shortestSide),
-              painter: widget.painter(zoom, screenCenter),
+          child: Center(
+            child: ClipRect(
+              child: SizedBox(
+                width: constraints.biggest.shortestSide,
+                height: constraints.biggest.shortestSide,
+                child: CustomPaint(
+                  size: Size.square(constraints.biggest.shortestSide),
+                  painter: widget.painter(zoom, screenCenter),
+                ),
+              ),
             ),
           ),
         ),
