@@ -22,6 +22,8 @@ extension StarIdentifierConversion on StarIdentifier {
   int get value => $1 << 20 + $2;
 }
 
+// from systems.pas
+
 class Material {
   final String name;
   final String description;
@@ -62,27 +64,66 @@ class AssetClass {
   final String name;
   final String description;
   final String icon;
-  final double size; // in meters
 
-  AssetClass(this.features, this.name, this.description, this.icon, this.size);
+  AssetClass(this.features, this.name, this.description, this.icon);
 }
 
-abstract class FeatureSettings {
+abstract class FeatureNode {
   final AssetNode parent;
   final int materialsQuantity;
   final int structuralIntegrity;
+  final double size; // in meters
 
-  FeatureSettings(this.parent, this.materialsQuantity, this.structuralIntegrity);
+  FeatureNode(this.parent, this.materialsQuantity, this.structuralIntegrity, this.size);
 }
 
 class AssetNode {
   final AssetClass assetClass;
   final int owner;
-  final FeatureSettings? parent;
-  final List<FeatureSettings> features;
+  final FeatureNode? parent;
+  final List<FeatureNode> features;
   final double mass;
+  double get size => features.reduce((a, b) => a.size > b.size ? a : b).size;
 
   AssetNode(this.assetClass, this.parent, this.features, this.mass, this.owner);
+}
+
+// from features/orbit.pas
+
+class OrbitChild {
+  final AssetNode child;
+  final double semiMajorAxis; // meters
+  final double eccentricity;
+  final double theta0; // radians
+  final double omega; // radians
+
+  OrbitChild(
+    this.child,
+    this.semiMajorAxis,
+    this.eccentricity,
+    this.theta0,
+    this.omega,
+  );
+}
+
+class OrbitFeatureClass extends FeatureClass {
+  OrbitFeatureClass(
+    super.name,
+    super.materialBill,
+    super.minimumFunctionalQuantity,
+  );
+}
+
+class OrbitFeatureNode extends FeatureNode {
+  final List<OrbitChild> children;
+
+  OrbitFeatureNode(
+    super.parent,
+    super.materialsQuantity,
+    super.structuralIntegrity,
+    super.size,
+    this.children,
+  );
 }
 
 class DataStructure with ChangeNotifier {
