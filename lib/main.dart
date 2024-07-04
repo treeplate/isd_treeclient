@@ -125,32 +125,36 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget> {
     }
   }
 
-  FutureOr<Null> onLoginServerReset() async {
-    if (data.stars == null) {
-      loginServer!.send(['get-stars']).then((message) {
+  void getFile(int fileID) {
+    loginServer!.send(['get-file', fileID.toString()]).then((message) {
+      if (message[0] == 'F') {
+        assert(message.length == 2);
+        openErrorDialog(
+            'Error: failed to get file $fileID - ${message[1]}', context);
+      }
+      assert(message.length == 1);
+      assert(message[0] == 'T');
+    });
+  }
+
+  Future<void> onLoginServerReset() async {
+    if (data.galaxyDiameter == null) {
+      loginServer!.send(['get-constants']).then((message) {
         if (message[0] == 'F') {
           assert(message.length == 2);
           openErrorDialog(
-              'Error: failed to get stars - ${message[1]}', context);
-        }
-        assert(message.length == 3);
-        assert(message[0] == 'T');
-        assert(message[2] == '1');
-        data.setGalaxyDiameter(double.parse(message[1]));
-      });
-    }
-    if (data.systems == null) {
-      loginServer!.send(['get-systems']).then((message) {
-        if (message[0] == 'F') {
-          assert(message.length == 2);
-          openErrorDialog(
-              'Error: failed to get systems - ${message[1]}', context);
+              'Error: failed to get settings - ${message[1]}', context);
         }
         assert(message.length == 2);
         assert(message[0] == 'T');
-        assert(message[1] == '2');
         data.setGalaxyDiameter(double.parse(message[1]));
       });
+    }
+    if (data.stars == null) {
+      getFile(1);
+    }
+    if (data.systems == null) {
+      getFile(2);
     }
     if (data.username != null && data.password != null) {
       List<String> message =
@@ -311,34 +315,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget> {
                 ]
               ],
             )
-          : GameWidget(
-              data: data,
-              loginServer: loginServer!,
-              parseSuccessfulLoginResponse: parseSuccessfulLoginResponse,
-            ),
-    );
-  }
-
-  void logout() {
-    data.removeCredentials();
-    dynastyServer?.close();
-  }
-}
-
-class GameWidget extends StatelessWidget {
-  const GameWidget({
-    super.key,
-    required this.data,
-    required this.loginServer,
-    required this.parseSuccessfulLoginResponse,
-  });
-  final DataStructure data;
-  final NetworkConnection loginServer;
-  final void Function(List<String>) parseSuccessfulLoginResponse;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
+          : ListenableBuilder(
       listenable: data,
       builder: (context, child) {
         return Center(
@@ -347,7 +324,7 @@ class GameWidget extends StatelessWidget {
               if (data.username == null || data.password == null)
                 Center(
                   child: LoginWidget(
-                    loginServer: loginServer,
+                    loginServer: loginServer!,
                     data: data,
                     parseSuccessfulLoginResponse: parseSuccessfulLoginResponse,
                   ),
@@ -372,7 +349,16 @@ class GameWidget extends StatelessWidget {
           ),
         );
       },
+    ),
     );
+  }
+
+  void logout() {
+    data.removeCredentials();
+    dynastyServer?.close();
+    for (NetworkConnection server in systemServers) {
+      server.close();
+    }
   }
 }
 
@@ -536,10 +522,9 @@ class ProfileWidget extends StatelessWidget {
                   ]).then((List<String> message) {
                     if (message[0] == 'F') {
                       if (message[1] == 'unrecognized credentials') {
-                        openErrorDialog(
-                          'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
-                          context,
-                        );
+                        // (we're logging out, we don't care about unrecognized credentials)
+                        logout();
+                        Navigator.pop(context);
                       } else {
                         openErrorDialog(
                           'Error when logging out: ${message[1]}',
@@ -549,10 +534,10 @@ class ProfileWidget extends StatelessWidget {
                     } else {
                       assert(message[0] == 'T');
                       assert(message.length == 1);
+                      logout();
+                      Navigator.pop(context);
                     }
                   });
-                  logout();
-                  Navigator.pop(context);
                 },
                 child: Text('Logout'),
               ),
@@ -774,12 +759,12 @@ class _LoginDialogState extends State<LoginDialog> {
                         errorMessage = 'Username or password incorrect';
                       });
                     } else {
-                      openErrorDialog(
-                        'Error logging in: ${message[1]}',
-                        context,
-                      );
                       if (mounted) {
                         Navigator.pop(context);
+                        openErrorDialog(
+                          'Error logging in: ${message[1]}',
+                          context,
+                        );
                       }
                     }
                   } else {
