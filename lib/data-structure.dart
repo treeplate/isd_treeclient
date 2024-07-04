@@ -171,6 +171,14 @@ class SpaceFeatureNode extends FeatureNode {
   );
 }
 
+class StructureFeatureClass extends FeatureClass {
+  StructureFeatureClass(super.name, super.materialBill, super.minimumFunctionalQuantity);
+}
+
+class StructureFeatureNode extends FeatureNode {
+  StructureFeatureNode(super.parent, super.materialsQuantity, super.structuralIntegrity, super.size);
+}
+
 class DataStructure with ChangeNotifier {
   String? username;
   String? password;
