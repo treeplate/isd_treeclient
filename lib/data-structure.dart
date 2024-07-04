@@ -74,7 +74,12 @@ abstract class FeatureNode {
   final int structuralIntegrity;
   final double size; // in meters
 
-  FeatureNode(this.parent, this.materialsQuantity, this.structuralIntegrity, this.size);
+  FeatureNode(
+    this.parent,
+    this.materialsQuantity,
+    this.structuralIntegrity,
+    this.size,
+  );
 }
 
 class AssetNode {
@@ -118,6 +123,46 @@ class OrbitFeatureNode extends FeatureNode {
   final List<OrbitChild> children;
 
   OrbitFeatureNode(
+    super.parent,
+    super.materialsQuantity,
+    super.structuralIntegrity,
+    super.size,
+    this.children,
+  );
+}
+
+class SpaceChild {
+  final AssetNode child;
+  final double distanceFromCenter; // meters
+  final double theta0; // radians
+  final int time0; // seconds since epoch
+  final double direction; // radians
+  final double velocity0; // meters/second
+  final double acceleration0; // meters/second^2
+
+  SpaceChild(
+    this.child,
+    this.distanceFromCenter,
+    this.theta0,
+    this.time0,
+    this.direction,
+    this.velocity0,
+    this.acceleration0,
+  );
+}
+
+class SpaceFeatureClass extends FeatureClass {
+  SpaceFeatureClass(
+    super.name,
+    super.materialBill,
+    super.minimumFunctionalQuantity,
+  );
+}
+
+class SpaceFeatureNode extends FeatureNode {
+  final List<SpaceChild> children;
+
+  SpaceFeatureNode(
     super.parent,
     super.materialsQuantity,
     super.structuralIntegrity,
