@@ -97,10 +97,10 @@ class AssetNode {
 
 class OrbitChild {
   final AssetNode child;
-  final double semiMajorAxis; // meters
+  final double semiMajorAxis; // in meters
   final double eccentricity;
-  final double theta0; // radians
-  final double omega; // radians
+  final double theta0; // in radians
+  final double omega; // in radians
 
   OrbitChild(
     this.child,
@@ -133,12 +133,12 @@ class OrbitFeatureNode extends FeatureNode {
 
 class SpaceChild {
   final AssetNode child;
-  final double distanceFromCenter; // meters
-  final double theta0; // radians
-  final int time0; // seconds since epoch
-  final double direction; // radians
-  final double velocity0; // meters/second
-  final double acceleration0; // meters/second^2
+  final double distanceFromCenter; // in meters
+  final double theta0; // in radians
+  final int time0; // in seconds since epoch
+  final double direction; // in radians
+  final double velocity0; // in meters/second
+  final double acceleration0; // in meters/second^2
 
   SpaceChild(
     this.child,
