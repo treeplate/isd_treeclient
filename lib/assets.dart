@@ -26,14 +26,7 @@ class MaterialLineItem {
   MaterialLineItem(this.componentName, this.material, this.quantity);
 }
 
-abstract class FeatureClass {
-  final String name;
-  final List<MaterialLineItem> materialBill;
-  final int minimumFunctionalQuantity;
-  int get totalQuantity => materialBill.fold(0, (a, b) => a + b.quantity);
-
-  FeatureClass(this.name, this.materialBill, this.minimumFunctionalQuantity);
-}
+abstract class FeatureClass<T extends FeatureNode> {}
 
 class AssetClass {
   final List<FeatureClass> features;
@@ -46,27 +39,18 @@ class AssetClass {
 
 abstract class FeatureNode {
   final AssetNode parent;
-  final int materialsQuantity;
-  final int structuralIntegrity;
-  final double size; // in meters
 
-  FeatureNode(
-    this.parent,
-    this.materialsQuantity,
-    this.structuralIntegrity,
-    this.size,
-  );
+  FeatureNode(this.parent);
 }
 
 class AssetNode {
   final AssetClass assetClass;
   final int owner;
-  final FeatureNode? parent;
   final List<FeatureNode> features;
   final double mass;
-  double get size => features.reduce((a, b) => a.size > b.size ? a : b).size;
+  final double size;
 
-  AssetNode(this.assetClass, this.parent, this.features, this.mass, this.owner);
+  AssetNode(this.assetClass, this.features, this.mass, this.owner, this.size);
 }
 
 // from features/orbit.pas
@@ -87,29 +71,22 @@ class OrbitChild {
   );
 }
 
-class OrbitFeatureClass extends FeatureClass {
-  OrbitFeatureClass(
-    super.name,
-    super.materialBill,
-    super.minimumFunctionalQuantity,
-  );
-}
+class OrbitFeatureClass extends FeatureClass<OrbitFeatureNode> {}
 
 class OrbitFeatureNode extends FeatureNode {
-  final List<OrbitChild> children;
+  final List<OrbitChild> orbitingChildren;
+  final AssetNode primaryChild;
 
   OrbitFeatureNode(
     super.parent,
-    super.materialsQuantity,
-    super.structuralIntegrity,
-    super.size,
-    this.children,
+    this.orbitingChildren,
+    this.primaryChild,
   );
 }
 
 // from features/space.pas
 
-class SpaceChild {
+class EmptySpaceChild {
   final AssetNode child;
   final double distanceFromCenter; // in meters
   final double theta0; // in radians
@@ -118,7 +95,7 @@ class SpaceChild {
   final double velocity0; // in meters/second
   final double acceleration0; // in meters/second^2
 
-  SpaceChild(
+  EmptySpaceChild(
     this.child,
     this.distanceFromCenter,
     this.theta0,
@@ -129,22 +106,22 @@ class SpaceChild {
   );
 }
 
-class SpaceFeatureClass extends FeatureClass {
-  SpaceFeatureClass(
-    super.name,
-    super.materialBill,
-    super.minimumFunctionalQuantity,
-  );
+class SolarSystemChild {
+  final AssetNode child;
+  final double distanceFromCenter; // in meters
+  final double theta;
+
+  SolarSystemChild(
+      this.child, this.distanceFromCenter, this.theta); // in radians
 }
 
-class SpaceFeatureNode extends FeatureNode {
-  final List<SpaceChild> children;
+class SolarSystemFeatureClass extends FeatureClass<SolarSystemFeatureNode> {}
 
-  SpaceFeatureNode(
+class SolarSystemFeatureNode extends FeatureNode {
+  final List<SolarSystemChild> children;
+
+  SolarSystemFeatureNode(
     super.parent,
-    super.materialsQuantity,
-    super.structuralIntegrity,
-    super.size,
     this.children,
   );
 }
@@ -152,62 +129,44 @@ class SpaceFeatureNode extends FeatureNode {
 // from features/structure.pas
 
 class StructureFeatureClass extends FeatureClass {
+  final double defaultSize;
+  final List<MaterialLineItem> materialBill;
+  final int minimumFunctionalQuantity;
+  int get totalQuantity => materialBill.fold(0, (a, b) => a + b.quantity);
+
   StructureFeatureClass(
-      super.name, super.materialBill, super.minimumFunctionalQuantity);
+    this.defaultSize,
+    this.materialBill,
+    this.minimumFunctionalQuantity,
+  );
 }
 
 class StructureFeatureNode extends FeatureNode {
+  final int materialsQuantity;
+  final int structuralIntegrity;
   StructureFeatureNode(
     super.parent,
-    super.materialsQuantity,
-    super.structuralIntegrity,
-    super.size,
+    this.materialsQuantity,
+    this.structuralIntegrity,
   );
 }
 
-// from features/stars.pas
+// from features/stellar.pas
 
-class StellarFeatureClass extends FeatureClass {
-  final int category; // StarIdentifier.category
-
-  StellarFeatureClass(
-    super.name,
-    super.materialBill,
-    super.minimumFunctionalQuantity,
-    this.category,
-  );
-}
+class StellarFeatureClass extends FeatureClass {}
 
 class StellarFeatureNode extends FeatureNode {
   final int starIndex; // StarIdentifier.subindex
 
-  StellarFeatureNode(
-    super.parent,
-    super.materialsQuantity,
-    super.structuralIntegrity,
-    super.size,
-    this.starIndex,
-  );
+  StellarFeatureNode(super.parent, this.starIndex);
 }
 
 // from features/name.pas
 
-class NameFeatureClass extends FeatureClass {
-  NameFeatureClass(
-    super.name,
-    super.materialBill,
-    super.minimumFunctionalQuantity,
-  );
-}
+class NameFeatureClass extends FeatureClass {}
 
 class NameFeatureNode extends FeatureNode {
   final String name;
 
-  NameFeatureNode(
-    super.parent,
-    super.materialsQuantity,
-    super.structuralIntegrity,
-    super.size,
-    this.name,
-  );
+  NameFeatureNode(super.parent, this.name);
 }
