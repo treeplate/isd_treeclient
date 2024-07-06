@@ -153,12 +153,12 @@ class StructureFeatureNode extends FeatureNode {
 
 // from features/stellar.pas
 
-class StellarFeatureClass extends FeatureClass {}
+class StarFeatureClass extends FeatureClass {}
 
-class StellarFeatureNode extends FeatureNode {
+class StarFeatureNode extends FeatureNode {
   final StarIdentifier starID;
 
-  StellarFeatureNode(this.starID);
+  StarFeatureNode(this.starID);
 }
 
 // from features/name.pas
