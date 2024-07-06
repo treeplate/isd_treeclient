@@ -1,16 +1,16 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math';
 import 'dart:ui';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:isd_treeclient/network_handler.dart';
+import 'account.dart';
 import 'sockets_cookies_stub.dart'
     if (dart.library.io) 'sockets_cookies_io.dart'
     if (dart.library.js_interop) 'sockets_cookies_web.dart';
 import 'data-structure.dart';
 import 'parser.dart';
+import 'ui-core.dart';
 
 const String loginServerURL = "wss://interstellar-dynasties.space:10024/";
 void main() async {
@@ -87,7 +87,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
       ? WidgetsBinding.instance.platformDispatcher.platformBrightness ==
           Brightness.dark
       : widget.themeMode == ThemeMode.dark;
-  late TabController tabController = TabController(length: 2, vsync: this);
+  late TabController tabController =
+      TabController(length: 3, vsync: this, initialIndex: 2);
 
   void initState() {
     super.initState();
@@ -221,15 +222,17 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     assert(message.length == 3);
     data.setToken(message[2]);
     connect(message[1]).then((socket) async {
-      dynastyServer = NetworkConnection(socket, (message) {
-        String? errorMessage = parseMessage(data, message);
-        if (errorMessage != null) {
-          openErrorDialog(
-            errorMessage,
-            context,
-          );
-        }
-      }, parseBinaryMessage, onDynastyServerReset);
+      setState(() {
+        dynastyServer = NetworkConnection(socket, (message) {
+          String? errorMessage = parseMessage(data, message);
+          if (errorMessage != null) {
+            openErrorDialog(
+              errorMessage,
+              context,
+            );
+          }
+        }, parseBinaryMessage, onDynastyServerReset);
+      });
       await onDynastyServerReset();
     });
   }
@@ -267,7 +270,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     return Scaffold(
       appBar: AppBar(
         bottom: TabBar(
-          tabs: [Text('Galaxy'), Text('Debug info')],
+          tabs: [Text('Galaxy'), Text('Debug info'), Text('Star lookup')],
           controller: tabController,
         ),
         actions: [
@@ -282,7 +285,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                 showDialog(
                   context: context,
                   builder: (context) => Dialog(
-                    child: ProfileWidget(
+                    child: AccountWidget(
                       data: data,
                       loginServer: loginServer!,
                       logout: logout,
@@ -360,7 +363,11 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                                 Text('token: "${data.token}"'),
                                 Text('galaxyDiameter: ${data.galaxyDiameter}'),
                               ],
-                            )
+                            ),
+                            StarLookupWidget(
+                              data: data,
+                              dynastyServer: dynastyServer,
+                            ),
                           ],
                         ),
                 );
@@ -378,511 +385,121 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
   }
 }
 
-class ProfileWidget extends StatelessWidget {
-  const ProfileWidget({
-    super.key,
-    required this.data,
-    required this.loginServer,
-    required this.logout,
-    required this.isDarkMode,
-  });
+class StarLookupWidget extends StatefulWidget {
+  const StarLookupWidget(
+      {super.key, required this.data, required this.dynastyServer});
 
   final DataStructure data;
-  final NetworkConnection loginServer;
-  final VoidCallback logout;
-  final bool isDarkMode;
+  final NetworkConnection? dynastyServer;
+
+  @override
+  State<StarLookupWidget> createState() => _StarLookupWidgetState();
+}
+
+class _StarLookupWidgetState extends State<StarLookupWidget> {
+  final TextEditingController textFieldController = TextEditingController();
+  String? errorMessage;
+  String? description;
+  Offset? starOffset; // position of star in galaxy
+  StarIdentifier? selectedStar;
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-        listenable: data,
-        builder: (context, child) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Logged in as ${data.username}'),
-              SizedBox(
-                height: 10,
-              ),
-              OutlinedButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => TextFieldDialog(
-                      obscureText: false,
-                      onSubmit: (String newUsername) {
-                        if (newUsername.contains('\x00')) {
-                          return Future.value(
-                            'Username must not contain 0x0 byte.',
-                          );
-                        }
-                        return loginServer.send(
-                          [
-                            'change-username',
-                            data.username!,
-                            data.password!,
-                            newUsername,
-                          ],
-                        ).then(
-                          (List<String> message) {
-                            if (message[0] == 'F') {
-                              assert(message.length == 2);
-                              if (message[1] == 'unrecognized credentials') {
-                                logout();
-                                openErrorDialog(
-                                  'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
-                                  context,
-                                );
-                                Navigator.pop(context);
-                              } else if (message[1] == 'inadequate username') {
-                                if (newUsername == '') {
-                                  return 'Username must be non-empty.';
-                                } else if (newUsername.contains('\x10')) {
-                                  return 'Username must not contain 0x10 byte.';
-                                } else {
-                                  return 'Username already in use.';
-                                }
-                              } else {
-                                openErrorDialog(
-                                  'Error when changing username: ${message[1]}',
-                                  context,
-                                );
-                                Navigator.pop(context);
-                              }
-                            } else {
-                              assert(message[0] == 'T');
-                              data.updateUsername(newUsername);
-                              assert(message.length == 1);
-                              Navigator.pop(context);
-                            }
-                            return null;
-                          },
-                        );
-                      },
-                      dialogTitle: 'Change username',
-                      buttonMessage: 'Change username',
-                      textFieldLabel: 'New username',
-                    ),
-                  );
-                },
-                child: Text('Change username'),
-              ),
-              SizedBox(
-                height: 10,
-              ),
-              OutlinedButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => TextFieldDialog(
-                      obscureText: true,
-                      onSubmit: (String newPassword) {
-                        if (newPassword.contains('\x00')) {
-                          return Future.value(
-                            'Password must not contain 0x0 byte.',
-                          );
-                        }
-                        return loginServer.send([
-                          'change-password',
-                          data.username!,
-                          data.password!,
-                          newPassword,
-                        ]).then(
-                          (List<String> message) {
-                            if (message[0] == 'F') {
-                              assert(message.length == 2);
-                              if (message[1] == 'unrecognized credentials') {
-                                logout();
-                                openErrorDialog(
-                                  'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
-                                  context,
-                                );
-                                Navigator.pop(context);
-                              } else if (message[1] == 'inadequate password') {
-                                assert(utf8.encode(newPassword).length < 6);
-                                return 'Password must be at least 6 characters long.';
-                              } else {
-                                openErrorDialog(
-                                  'Error when changing password: ${message[1]}',
-                                  context,
-                                );
-                                Navigator.pop(context);
-                              }
-                            } else {
-                              assert(message[0] == 'T');
-                              data.updatePassword(newPassword);
-                              assert(message.length == 1);
-                              Navigator.pop(context);
-                            }
-                            return null;
-                          },
-                        );
-                      },
-                      dialogTitle: 'Change password',
-                      buttonMessage: 'Change password',
-                      textFieldLabel: 'New password',
-                    ),
-                  );
-                },
-                child: Text('Change password'),
-              ),
-              SizedBox(
-                height: 10,
-              ),
-              OutlinedButton(
-                onPressed: () {
-                  loginServer.send([
-                    'logout',
-                    data.username!,
-                    data.password!,
-                  ]).then((List<String> message) {
-                    if (message[0] == 'F') {
-                      if (message[1] == 'unrecognized credentials') {
-                        // (we're logging out, we don't care about unrecognized credentials)
-                        logout();
-                        Navigator.pop(context);
-                      } else {
-                        openErrorDialog(
-                          'Error when logging out: ${message[1]}',
-                          context,
-                        );
-                      }
-                    } else {
-                      assert(message[0] == 'T');
-                      assert(message.length == 1);
-                      logout();
-                      Navigator.pop(context);
-                    }
-                  });
-                },
-                child: Text('Logout'),
-              ),
-            ],
-          );
-        });
-  }
-}
-
-class LoginWidget extends StatelessWidget {
-  const LoginWidget({
-    super.key,
-    required this.loginServer,
-    required this.data,
-    required this.parseSuccessfulLoginResponse,
-  });
-
-  final NetworkConnection loginServer;
-  final DataStructure data;
-  final void Function(List<String> message) parseSuccessfulLoginResponse;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(children: [
-      OutlinedButton(
-        onPressed: () {
-          loginServer.send(['new']).then((List<String> message) {
-            if (message[0] == 'T') {
-              data.setCredentials(message[1], message[2]);
-              List<String> loginResponse = message.skip(2).toList();
-              loginResponse[0] = 'T';
-              parseSuccessfulLoginResponse(loginResponse);
-              assert(message.length == 5);
-            } else {
-              assert(message[0] == 'F');
-              assert(message.length == 2);
-              openErrorDialog(
-                'Error when creating new account: ${message[1]}',
-                context,
-              );
-            }
-          });
-        },
-        child: Text('Start new game'),
-      ),
-      SizedBox(
-        height: 10,
-      ),
-      OutlinedButton(
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (context) => LoginDialog(
-              data: data,
-              connection: loginServer,
-              parseSuccessfulLoginResponse: parseSuccessfulLoginResponse,
-            ),
-          );
-        },
-        child: Text('Login'),
-      ),
-    ]);
-  }
-}
-
-class ZoomableCustomPaint extends StatefulWidget {
-  const ZoomableCustomPaint({
-    super.key,
-    required this.painter,
-    this.startingZoom = 1,
-    this.startingScreenCenter = const Offset(.5, .5),
-  });
-  final CustomPainter Function(double zoom, Offset screenCenter) painter;
-  final double startingZoom;
-  final Offset startingScreenCenter;
-
-  @override
-  State<ZoomableCustomPaint> createState() => _ZoomableCustomPaintState();
-}
-
-class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
-  late double zoom = widget.startingZoom; // 1..infinity
-  late Offset screenCenter = widget.startingScreenCenter; // (0, 0)..(1, 1)
-  double lastRelativeScale = 1.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      return Listener(
-        onPointerSignal: (details) {
-          if (details is PointerScrollEvent) {
-            setState(() {
-              if (details.scrollDelta.dy > 0) {
-                handleZoom(1 / 1.5);
-              } else {
-                handleZoom(1.5);
-              }
-            });
-          }
-        },
-        child: GestureDetector(
-          onScaleStart: (details) {
-            lastRelativeScale = 1.0;
-          },
-          onScaleUpdate: (details) {
-            handlePan(details.focalPointDelta, constraints);
-            double scaleMultiplicativeDelta = details.scale / lastRelativeScale;
-            handleZoom(scaleMultiplicativeDelta);
-            lastRelativeScale = details.scale;
-          },
-          child: Center(
-            child: ClipRect(
-              child: SizedBox(
-                width: constraints.biggest.shortestSide,
-                height: constraints.biggest.shortestSide,
-                child: CustomPaint(
-                  size: Size.square(constraints.biggest.shortestSide),
-                  painter: widget.painter(zoom, screenCenter),
-                ),
-              ),
-            ),
+    return Column(
+      children: [
+        Text('Lookup star by ID:'),
+        SizedBox(
+          width: 200,
+          child: TextField(
+            controller: textFieldController,
           ),
         ),
-      );
-    });
-  }
-
-  void handleZoom(double scaleMultiplicativeDelta) {
-    if (zoom >= 1 / scaleMultiplicativeDelta) {
-      zoom *= scaleMultiplicativeDelta;
-    }
-  }
-
-  void handlePan(Offset delta, BoxConstraints constraints) {
-    setState(() {
-      screenCenter -= (delta / constraints.biggest.shortestSide) / zoom;
-      screenCenter = Offset(
-        screenCenter.dx.clamp(0, 1),
-        screenCenter.dy.clamp(0, 1),
-      );
-    });
-  }
-}
-
-class LoginDialog extends StatefulWidget {
-  const LoginDialog({
-    super.key,
-    required this.data,
-    required this.connection,
-    required this.parseSuccessfulLoginResponse,
-  });
-
-  final DataStructure data;
-  final NetworkConnection connection;
-  final void Function(List<String> message) parseSuccessfulLoginResponse;
-
-  @override
-  State<LoginDialog> createState() => _LoginDialogState();
-}
-
-class _LoginDialogState extends State<LoginDialog> {
-  TextEditingController username = TextEditingController();
-  TextEditingController password = TextEditingController();
-  String? errorMessage;
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text('Login'),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Text('Username:'),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 100,
-                  child: TextField(
-                    controller: username,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Text('Password:'),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 100,
-                  child: TextField(
-                    controller: password,
-                    obscureText: true,
-                  ),
-                ),
-              ],
-            ),
-            if (errorMessage != null)
-              Text(
-                errorMessage!,
-                style: TextStyle(color: Colors.red),
-              ),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: () {
-                if (username.text.contains('\x00')) {
-                  errorMessage = 'Username must not contain 0x0 byte.';
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: OutlinedButton(
+            onPressed: () {
+              setState(() {
+                String rawStarID = textFieldController.text;
+                if (!rawStarID.startsWith('S')) {
+                  errorMessage =
+                      'Invalid star ID. All star IDs must start with S.';
                   return;
                 }
-                if (password.text.contains('\x00')) {
-                  errorMessage = 'Password must not contain 0x0 byte.';
+                int? integerStarID =
+                    int.tryParse(rawStarID.substring(1), radix: 16);
+                if (integerStarID == null) {
+                  errorMessage =
+                      'Invalid star ID. All star IDs must be S followed by a hexadecimal integer.';
                   return;
                 }
-                widget.connection
-                    .send(['login', username.text, password.text]).then(
-                        (List<String> message) {
-                  if (message[0] == 'F') {
-                    if (message[1] == 'unrecognized credentials') {
-                      setState(() {
-                        errorMessage = 'Username or password incorrect';
-                      });
-                    } else {
-                      if (mounted) {
-                        Navigator.pop(context);
-                        openErrorDialog(
-                          'Error logging in: ${message[1]}',
-                          context,
-                        );
+                StarIdentifier starID = parseStarIdentifier(integerStarID);
+                if (starID.$1 < 0) {
+                  errorMessage =
+                      'Invalid star ID. Star IDs cannot be negative.';
+                  return;
+                }
+                if (starID.$1 > 10) {
+                  errorMessage =
+                      'Invalid star ID. The maximum star category (the first hexadecimal digit) is A.';
+                  return;
+                }
+                if (widget.data.stars == null) {
+                  errorMessage = 'Still loading stars. Try again later.';
+                  return;
+                }
+                if (widget.data.stars![starID.$1].length <= starID.$2) {
+                  errorMessage =
+                      'Invalid star ID. The maximum value for the last five hexadecimal digits of a star with category ${starID.$1} is ${(widget.data.stars![starID.$1].length - 1).toRadixString(16)}.';
+                  return;
+                }
+                errorMessage = null;
+                description = null;
+                selectedStar = starID;
+                starOffset = widget.data.stars![starID.$1][starID.$2];
+                if (widget.dynastyServer != null) {
+                  widget.dynastyServer!.send([
+                    'get-star-name',
+                    starID.value.toString(),
+                  ]).then((e) {
+                    setState(() {
+                      if (e[0] == 'F') {
+                        description = e.toString();
+                      } else {
+                        description = '${e[1]}';
                       }
-                    }
-                  } else {
-                    assert(message[0] == 'T');
-                    try {
-                      widget.data.setCredentials(username.text, password.text);
-                      widget.parseSuccessfulLoginResponse(message);
-                    } finally {
-                      if (mounted) {
-                        Navigator.pop(context);
-                      }
-                    }
-                  }
-                });
-              },
-              child: Text('Login'),
-            ),
-          ],
+                    });
+                  });
+                } else {
+                  errorMessage = 'Could not load name; try again later.';
+                }
+              });
+            },
+            child: Text('Lookup'),
+          ),
         ),
-      ),
-    );
-  }
-}
-
-class TextFieldDialog extends StatefulWidget {
-  const TextFieldDialog({
-    super.key,
-    required this.onSubmit,
-    required this.dialogTitle,
-    required this.buttonMessage,
-    required this.textFieldLabel,
-    required this.obscureText,
-  });
-
-  final String dialogTitle;
-  final String textFieldLabel;
-  final String buttonMessage;
-  final bool obscureText;
-  final Future<String?> Function(String newValue) onSubmit;
-
-  @override
-  State<TextFieldDialog> createState() => _TextFieldDialogState();
-}
-
-class _TextFieldDialogState extends State<TextFieldDialog> {
-  TextEditingController textFieldController = TextEditingController();
-  String? errorMessage;
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(widget.dialogTitle),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('${widget.textFieldLabel}:'),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 100,
-                  child: TextField(
-                    obscureText: widget.obscureText,
-                    controller: textFieldController,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (errorMessage != null)
-              Text(
-                errorMessage!,
-                style: TextStyle(color: Colors.red),
+        if (errorMessage != null)
+          Text(
+            errorMessage!,
+            style: TextStyle(color: Colors.red),
+          ),
+        if (description != null)
+          SelectableText(
+            description!,
+          ),
+        if (starOffset != null)
+          Expanded(
+            child: ZoomableCustomPaint(
+              painter: (zoom, screenCenter) => GalaxyRenderer(
+                widget.data.stars!,
+                zoom,
+                screenCenter,
+                {selectedStar!},
               ),
-            OutlinedButton(
-              onPressed: () {
-                widget
-                    .onSubmit(
-                      textFieldController.text,
-                    )
-                    .then(
-                      (e) => setState(() {
-                        errorMessage = e;
-                      }),
-                    );
-              },
-              child: Text(widget.buttonMessage),
+              startingScreenCenter: starOffset!,
+              startingZoom: 100,
             ),
-          ],
-        ),
-      ),
+          ),
+      ],
     );
   }
 }
@@ -985,37 +602,12 @@ class GalaxyRenderer extends CustomPainter {
                 : null);
       category++;
     }
-    canvas.drawRect(size.center(Offset.zero) - Offset(5, 5) & Size.square(10),
+    canvas.drawRect(size.center(Offset.zero) - Offset(1, 1) & Size.square(2),
         Paint()..color = Colors.white);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+  bool shouldRepaint(GalaxyRenderer oldDelegate) {
     return true;
   }
-}
-
-void openErrorDialog(String message, BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (context) {
-      return Dialog(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('$message'),
-            SizedBox(
-              height: 16,
-            ),
-            OutlinedButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text('Ok'),
-            )
-          ],
-        ),
-      );
-    },
-  );
 }

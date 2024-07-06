@@ -19,7 +19,7 @@ StarIdentifier parseStarIdentifier(int value) {
 }
 
 extension StarIdentifierConversion on StarIdentifier {
-  int get value => $1 << 20 + $2;
+  int get value => ($1 << 20) + $2;
 }
 
 class DataStructure with ChangeNotifier {
