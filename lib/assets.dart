@@ -109,10 +109,10 @@ class EmptySpaceChild {
 class SolarSystemChild {
   final AssetNode child;
   final double distanceFromCenter; // in meters
-  final double theta;
+  final double theta0; // in radians
 
   SolarSystemChild(
-      this.child, this.distanceFromCenter, this.theta); // in radians
+      this.child, this.distanceFromCenter, this.theta0); 
 }
 
 class SolarSystemFeatureClass extends FeatureClass<SolarSystemFeatureNode> {}
