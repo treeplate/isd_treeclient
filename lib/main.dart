@@ -5,6 +5,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:isd_treeclient/network_handler.dart';
 import 'account.dart';
+import 'assets.dart';
 import 'sockets_cookies_stub.dart'
     if (dart.library.io) 'sockets_cookies_io.dart'
     if (dart.library.js_interop) 'sockets_cookies_web.dart';

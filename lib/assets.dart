@@ -1,5 +1,15 @@
 // from systems.pas
 
+typedef StarIdentifier = (int category, int subindex);
+
+StarIdentifier parseStarIdentifier(int value) {
+  return (value >> 20, value & 0xFFFFF);
+}
+
+extension StarIdentifierConversion on StarIdentifier {
+  int get value => ($1 << 20) + $2;
+}
+
 class Material {
   final String name;
   final String description;
@@ -37,11 +47,7 @@ class AssetClass {
   AssetClass(this.features, this.name, this.description, this.icon);
 }
 
-abstract class FeatureNode {
-  final AssetNode parent;
-
-  FeatureNode(this.parent);
-}
+abstract class FeatureNode {}
 
 class AssetNode {
   final AssetClass assetClass;
@@ -78,7 +84,6 @@ class OrbitFeatureNode extends FeatureNode {
   final AssetNode primaryChild;
 
   OrbitFeatureNode(
-    super.parent,
     this.orbitingChildren,
     this.primaryChild,
   );
@@ -111,8 +116,7 @@ class SolarSystemChild {
   final double distanceFromCenter; // in meters
   final double theta0; // in radians
 
-  SolarSystemChild(
-      this.child, this.distanceFromCenter, this.theta0); 
+  SolarSystemChild(this.child, this.distanceFromCenter, this.theta0);
 }
 
 class SolarSystemFeatureClass extends FeatureClass<SolarSystemFeatureNode> {}
@@ -121,7 +125,6 @@ class SolarSystemFeatureNode extends FeatureNode {
   final List<SolarSystemChild> children;
 
   SolarSystemFeatureNode(
-    super.parent,
     this.children,
   );
 }
@@ -143,7 +146,6 @@ class StructureFeatureNode extends FeatureNode {
   final int materialsQuantity;
   final int structuralIntegrity;
   StructureFeatureNode(
-    super.parent,
     this.materialsQuantity,
     this.structuralIntegrity,
   );
@@ -154,9 +156,9 @@ class StructureFeatureNode extends FeatureNode {
 class StellarFeatureClass extends FeatureClass {}
 
 class StellarFeatureNode extends FeatureNode {
-  final int starIndex; // StarIdentifier.subindex
+  final StarIdentifier starID;
 
-  StellarFeatureNode(super.parent, this.starIndex);
+  StellarFeatureNode(this.starID);
 }
 
 // from features/name.pas
@@ -166,5 +168,5 @@ class NameFeatureClass extends FeatureClass {}
 class NameFeatureNode extends FeatureNode {
   final String name;
 
-  NameFeatureNode(super.parent, this.name);
+  NameFeatureNode(this.name);
 }

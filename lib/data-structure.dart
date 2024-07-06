@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'dart:ui' show Offset;
 import 'package:flutter/foundation.dart' show ChangeNotifier;
+import 'assets.dart';
 import 'sockets_cookies_stub.dart'
     if (dart.library.io) 'sockets_cookies_io.dart'
     if (dart.library.js_interop) 'sockets_cookies_web.dart';
@@ -11,16 +12,6 @@ const String kGalaxyDiameterCookieName = 'galaxy-diameter';
 const String kStarsCookieName = 'stars';
 const String kSystemsCookieName = 'systems';
 const int integerLimit32 = 0x100000000;
-
-typedef StarIdentifier = (int category, int subindex);
-
-StarIdentifier parseStarIdentifier(int value) {
-  return (value >> 20, value & 0xFFFFF);
-}
-
-extension StarIdentifierConversion on StarIdentifier {
-  int get value => ($1 << 20) + $2;
-}
 
 class DataStructure with ChangeNotifier {
   String? username;
