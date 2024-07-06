@@ -129,13 +129,11 @@ class SolarSystemFeatureNode extends FeatureNode {
 // from features/structure.pas
 
 class StructureFeatureClass extends FeatureClass {
-  final double defaultSize;
   final List<MaterialLineItem> materialBill;
   final int minimumFunctionalQuantity;
   int get totalQuantity => materialBill.fold(0, (a, b) => a + b.quantity);
 
   StructureFeatureClass(
-    this.defaultSize,
     this.materialBill,
     this.minimumFunctionalQuantity,
   );
