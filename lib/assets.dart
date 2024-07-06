@@ -10,32 +10,6 @@ extension StarIdentifierConversion on StarIdentifier {
 
 // from systems.pas
 
-class Material {
-  final String name;
-  final String description;
-  final String icon;
-  final bool showInKG; // true for coal, false for computers
-  final double massPerUnit; // in kilograms
-  final double volumePerUnit; // in kiloliters
-
-  Material(
-    this.name,
-    this.description,
-    this.icon,
-    this.showInKG,
-    this.massPerUnit,
-    this.volumePerUnit,
-  );
-}
-
-class MaterialLineItem {
-  final String componentName;
-  final Material material;
-  final int quantity;
-
-  MaterialLineItem(this.componentName, this.material, this.quantity);
-}
-
 abstract class FeatureClass<T extends FeatureNode> {}
 
 class AssetClass {
@@ -130,6 +104,32 @@ class SolarSystemFeatureNode extends FeatureNode {
 }
 
 // from features/structure.pas
+
+class Material {
+  final String name;
+  final String description;
+  final String icon;
+  final bool showInKG; // true for coal, false for computers
+  final double massPerUnit; // in kilograms
+  final double volumePerUnit; // in kiloliters
+
+  Material(
+    this.name,
+    this.description,
+    this.icon,
+    this.showInKG,
+    this.massPerUnit,
+    this.volumePerUnit,
+  );
+}
+
+class MaterialLineItem {
+  final String componentName;
+  final Material material;
+  final int quantity;
+
+  MaterialLineItem(this.componentName, this.material, this.quantity);
+}
 
 class StructureFeatureClass extends FeatureClass {
   final List<MaterialLineItem> materialBill;
