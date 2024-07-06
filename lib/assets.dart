@@ -1,5 +1,3 @@
-// from systems.pas
-
 typedef StarIdentifier = (int category, int subindex);
 
 StarIdentifier parseStarIdentifier(int value) {
@@ -9,6 +7,8 @@ StarIdentifier parseStarIdentifier(int value) {
 extension StarIdentifierConversion on StarIdentifier {
   int get value => ($1 << 20) + $2;
 }
+
+// from systems.pas
 
 class Material {
   final String name;
