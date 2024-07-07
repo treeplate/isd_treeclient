@@ -24,13 +24,14 @@ class AssetClass {
 abstract class FeatureNode {}
 
 class AssetNode {
+  final FeatureNode parent;
   final AssetClass assetClass;
   final int owner;
   final List<FeatureNode> features;
   final double mass;
   final double size;
 
-  AssetNode(this.assetClass, this.features, this.mass, this.owner, this.size);
+  AssetNode(this.assetClass, this.features, this.mass, this.owner, this.size, this.parent);
 }
 
 // from features/orbit.pas
