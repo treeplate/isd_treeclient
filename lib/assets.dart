@@ -21,7 +21,7 @@ class AssetClass {
   AssetClass(this.features, this.name, this.description, this.icon);
 }
 
-abstract class FeatureNode {}
+abstract class FeatureNode {} // XXX maybe name field?
 
 class AssetNode {
   final FeatureNode parent;
@@ -32,6 +32,12 @@ class AssetNode {
   final double size;
 
   AssetNode(this.assetClass, this.features, this.mass, this.owner, this.size, this.parent);
+}
+
+// from providers.pas
+
+abstract class AssetNameProvider {
+  String get assetName;
 }
 
 // from features/orbit.pas
@@ -54,13 +60,15 @@ class OrbitChild {
 
 class OrbitFeatureClass extends FeatureClass<OrbitFeatureNode> {}
 
-class OrbitFeatureNode extends FeatureNode {
+class OrbitFeatureNode extends FeatureNode implements AssetNameProvider {
   final List<OrbitChild> orbitingChildren;
   final AssetNode primaryChild;
+  final String assetName;
 
   OrbitFeatureNode(
     this.orbitingChildren,
     this.primaryChild,
+    this.assetName,
   );
 }
 
@@ -166,8 +174,8 @@ class StarFeatureNode extends FeatureNode {
 
 class NameFeatureClass extends FeatureClass {}
 
-class NameFeatureNode extends FeatureNode {
-  final String name;
+class NameFeatureNode extends FeatureNode implements AssetNameProvider {
+  final String assetName;
 
-  NameFeatureNode(this.name);
+  NameFeatureNode(this.assetName);
 }
