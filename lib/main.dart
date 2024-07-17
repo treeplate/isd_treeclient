@@ -325,7 +325,18 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                 ]
               ],
             )
-          : ListenableBuilder(
+          : loginServer!.reloading ? Column(
+              children: [
+                if (loginServerHadError)
+                  Text(
+                    'Failed to reconnect to login server. Please try again later.',
+                  )
+                else ...[
+                  Text('reconnecting to login server...'),
+                  CircularProgressIndicator(),
+                ]
+              ],
+            ) : ListenableBuilder(
               listenable: data,
               builder: (context, child) {
                 return Center(

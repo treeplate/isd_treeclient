@@ -1,19 +1,17 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-class WebSocketWrapper {
+abstract class WebSocketWrapper {
   StreamSubscription<dynamic /*String|List<int>*/> listen(void onData(dynamic /*String|List<int>*/ event)?,
-      {Function? onError, void onReset()?, bool? cancelOnError}) {
-    throw UnsupportedError('websockets');
-  }
+      {Function? onError, void onReset()?, bool? cancelOnError});
 
-  void send(String data) {
-    throw UnsupportedError('websockets');
-  }
+  void send(String data);
   
-  void close() {}
+  void close();
 
-  String get name => 'a socket';
+  bool get reloading;
+
+  String get name;
 }
 
 Future<WebSocketWrapper> connect(String serverUrl) async {

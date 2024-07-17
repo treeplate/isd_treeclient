@@ -6,6 +6,8 @@ import 'package:path_provider/path_provider.dart';
 
 class WebSocketWrapper {
   WebSocket socket;
+  bool reloading = false;
+  Completer<void> _doneReloading = Completer();
 
   StreamSubscription<dynamic> listen(
     void onData(dynamic event), {
@@ -18,7 +20,11 @@ class WebSocketWrapper {
       onError: onError,
       onDone: () async {
         if (!_closed) {
+          _doneReloading = Completer();
+          reloading = true;
           socket = await WebSocket.connect(name);
+          reloading = false;
+          _doneReloading.complete();
           if (onReset != null) {
             onReset();
           }
@@ -28,7 +34,8 @@ class WebSocketWrapper {
     );
   }
 
-  void send(String data) {
+  void send(String data) async {
+    await _doneReloading.future;
     socket.add(data);
   }
 
@@ -40,7 +47,9 @@ class WebSocketWrapper {
 
   final String name;
 
-  WebSocketWrapper(this.socket, this.name);
+  WebSocketWrapper(this.socket, this.name) {
+    _doneReloading.complete();
+  }
 }
 
 Future<WebSocketWrapper> connect(String serverUrl) async {

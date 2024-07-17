@@ -13,6 +13,8 @@ class NetworkConnection {
         doListen(unrequestedMessageHandler, binaryMessageHandler, onReset);
   }
 
+  bool get reloading => socket.reloading;
+
   StreamSubscription<dynamic> doListen(
       void unrequestedMessageHandler(List<String> data),
       void binaryMessageHandler(int fileID, List<int> data),

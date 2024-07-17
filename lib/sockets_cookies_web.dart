@@ -6,15 +6,22 @@ import 'package:web/web.dart';
 
 class WebSocketWrapper {
   WebSocket socket;
+  bool reloading = false;
+  Completer<void> _doneReloading = Completer();
 
   StreamSubscription<dynamic> listen(void onData(dynamic event),
       {Function? onError, void onReset()?, bool? cancelOnError}) {
     return socket.onMessage.map((MessageEvent message) => message.data).listen(
       onData,
       onError: onError,
-      onDone: () {
+      onDone: () async {
         if (!_closed) {
+          _doneReloading = Completer();
+          reloading = true;
           socket = WebSocket(name);
+          await socket.onOpen.first;
+          reloading = false;
+          _doneReloading.complete();
           if (onReset != null) {
             onReset();
           }
@@ -24,7 +31,8 @@ class WebSocketWrapper {
     );
   }
 
-  void send(String data) {
+  void send(String data) async {
+    await _doneReloading.future;
     socket.send(data.toJS);
   }
 
