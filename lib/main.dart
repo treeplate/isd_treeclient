@@ -370,10 +370,10 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                               ),
                             Column(
                               children: [
-                                Text('username: "${data.username}"'),
-                                Text('password: "${data.password}"'),
-                                Text('token: "${data.token}"'),
-                                Text('galaxyDiameter: ${data.galaxyDiameter}'),
+                                SelectableText('username: "${data.username}"'),
+                                SelectableText('password: "${data.password}"'),
+                                SelectableText('token: "${data.token}"'),
+                                SelectableText('galaxyDiameter: ${data.galaxyDiameter}'),
                               ],
                             ),
                             StarLookupWidget(

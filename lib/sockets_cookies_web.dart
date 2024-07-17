@@ -10,7 +10,7 @@ class WebSocketWrapper {
   Completer<void> _doneReloading = Completer();
 
   StreamSubscription<dynamic> listen(void onData(dynamic event),
-      {Function? onError, void onReset()?, bool? cancelOnError}) {
+      {void Function(Object error, StackTrace)? onError, void onReset()?, bool? cancelOnError}) {
     return socket.onMessage.map((MessageEvent message) => message.data).listen(
       onData,
       onError: onError,
@@ -19,6 +19,12 @@ class WebSocketWrapper {
           _doneReloading = Completer();
           reloading = true;
           socket = WebSocket(name);
+          socket.onError.listen((Event event) {
+            if (onError == null) {
+              throw event;
+            }
+            onError(event, StackTrace.current);
+          });
           await socket.onOpen.first;
           reloading = false;
           _doneReloading.complete();

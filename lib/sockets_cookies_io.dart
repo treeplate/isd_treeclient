@@ -11,7 +11,7 @@ class WebSocketWrapper {
 
   StreamSubscription<dynamic> listen(
     void onData(dynamic event), {
-    Function? onError,
+    void Function(Object error, StackTrace)? onError,
     void onReset()?,
     bool? cancelOnError,
   }) {
@@ -22,7 +22,12 @@ class WebSocketWrapper {
         if (!_closed) {
           _doneReloading = Completer();
           reloading = true;
-          socket = await WebSocket.connect(name);
+          try {
+            socket = await WebSocket.connect(name);
+          } catch (e, st) {
+            if (onError == null) rethrow;
+            onError(e, st);
+          }
           reloading = false;
           _doneReloading.complete();
           if (onReset != null) {
