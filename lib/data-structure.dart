@@ -21,6 +21,8 @@ class DataStructure with ChangeNotifier {
   List<List<Offset>>? stars;
   Map<StarIdentifier, StarIdentifier>?
       systems; // star ID -> system ID (first star in the system)
+  Map<StarIdentifier, int> rootAssetNodeIDs = {};
+  Map<int, AssetNode> assetNodes = {};
 
   void setCredentials(String username, String password) {
     setCookie(kUsernameCookieName, username);
