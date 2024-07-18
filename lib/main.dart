@@ -10,7 +10,6 @@ import 'sockets_cookies_stub.dart'
     if (dart.library.io) 'sockets_cookies_io.dart'
     if (dart.library.js_interop) 'sockets_cookies_web.dart';
 import 'data-structure.dart';
-import 'parser.dart';
 import 'ui-core.dart';
 
 const String loginServerURL = "wss://interstellar-dynasties.space:10024/";
@@ -98,15 +97,12 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         loginServer = NetworkConnection(
           socket,
           (message) {
-            String? errorMessage = parseMessage(data, message);
-            if (errorMessage != null) {
-              openErrorDialog(
-                errorMessage,
-                context,
-              );
-            }
+            openErrorDialog(
+              'Unexpected message from login server: $message',
+              context,
+            );
           },
-          parseBinaryMessage,
+          parseLoginServerBinaryMessage,
           onLoginServerReset,
         );
       });
@@ -118,12 +114,13 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     });
   }
 
-  void parseBinaryMessage(int fileID, List<int> data) {
+  void parseLoginServerBinaryMessage(List<int> data) {
+    int fileID = data[0];
     switch (fileID) {
       case 1:
-        this.data.parseStars(data);
+        this.data.parseStars(data.skip(4).toList());
       case 2:
-        this.data.parseSystems(data);
+        this.data.parseSystems(data.skip(4).toList());
       default:
         openErrorDialog('Error - Unrecognised file ID: $fileID', context);
     }
@@ -180,6 +177,13 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     }
   }
 
+  void parseSystemServerBinaryMessage(List<int> data) {
+    openErrorDialog(
+      'Unexpected binary message from system server: ${data.length <= 10 ? data : '[${data.sublist(0, 10)}, ...${data.length - 10} more]'}',
+      context,
+    );
+  }
+
   void connectToSystemServer(String server) {
     openErrorDialog(
       'connecting to system server: $server',
@@ -190,15 +194,12 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
       systemServer = NetworkConnection(
         socket,
         (message) {
-          String? errorMessage = parseMessage(data, message);
-          if (errorMessage != null) {
-            openErrorDialog(
-              errorMessage,
-              context,
-            );
-          }
+          openErrorDialog(
+            'Unexpected message from system server $server: $message',
+            context,
+          );
         },
-        parseBinaryMessage,
+        parseSystemServerBinaryMessage,
         () {
           onSystemServerReset(systemServer, server);
         },
@@ -224,15 +225,22 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     data.setToken(message[2]);
     connect(message[1]).then((socket) async {
       setState(() {
-        dynastyServer = NetworkConnection(socket, (message) {
-          String? errorMessage = parseMessage(data, message);
-          if (errorMessage != null) {
+        dynastyServer = NetworkConnection(
+          socket,
+          (message) {
             openErrorDialog(
-              errorMessage,
+              'Unexpected message from dynasty server: $message',
               context,
             );
-          }
-        }, parseBinaryMessage, onDynastyServerReset);
+          },
+          (data) {
+            openErrorDialog(
+              'Unexpected binary message from system server: ${data.length <= 10 ? data : '[${data.sublist(0, 10)}, ...${data.length - 10} more]'}',
+              context,
+            );
+          },
+          onDynastyServerReset,
+        );
       });
       await onDynastyServerReset();
     });
@@ -325,66 +333,72 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                 ]
               ],
             )
-          : loginServer!.reloading ? Column(
-              children: [
-                if (loginServerHadError)
-                  Text(
-                    'Failed to reconnect to login server. Please try again later.',
-                  )
-                else ...[
-                  Text('reconnecting to login server...'),
-                  CircularProgressIndicator(),
-                ]
-              ],
-            ) : ListenableBuilder(
-              listenable: data,
-              builder: (context, child) {
-                return Center(
-                  child: data.username == null || data.password == null
-                      ? Center(
-                          child: LoginWidget(
-                            loginServer: loginServer!,
-                            data: data,
-                            parseSuccessfulLoginResponse:
-                                parseSuccessfulLoginResponse,
-                          ),
-                        )
-                      : TabBarView(
-                          controller: tabController,
-                          children: [
-                            if (data.stars != null)
-                              ZoomableCustomPaint(
-                                painter: (zoom, screenCenter) => GalaxyRenderer(
-                                  data.stars!,
-                                  zoom,
-                                  screenCenter,
-                                  data.systems?.values.toSet() ?? {},
-                                ),
-                              )
-                            else
-                              Column(
-                                children: [
-                                  Text('loading starmap...'),
-                                  CircularProgressIndicator(),
-                                ],
+          : loginServer!.reloading
+              ? Column(
+                  children: [
+                    if (loginServerHadError)
+                      Text(
+                        'Failed to reconnect to login server. Please try again later.',
+                      )
+                    else ...[
+                      Text('reconnecting to login server...'),
+                      CircularProgressIndicator(),
+                    ]
+                  ],
+                )
+              : ListenableBuilder(
+                  listenable: data,
+                  builder: (context, child) {
+                    return Center(
+                      child: data.username == null || data.password == null
+                          ? Center(
+                              child: LoginWidget(
+                                loginServer: loginServer!,
+                                data: data,
+                                parseSuccessfulLoginResponse:
+                                    parseSuccessfulLoginResponse,
                               ),
-                            Column(
+                            )
+                          : TabBarView(
+                              controller: tabController,
                               children: [
-                                SelectableText('username: "${data.username}"'),
-                                SelectableText('password: "${data.password}"'),
-                                SelectableText('token: "${data.token}"'),
-                                SelectableText('galaxyDiameter: ${data.galaxyDiameter}'),
+                                if (data.stars != null)
+                                  ZoomableCustomPaint(
+                                    painter: (zoom, screenCenter) =>
+                                        GalaxyRenderer(
+                                      data.stars!,
+                                      zoom,
+                                      screenCenter,
+                                      data.systems?.values.toSet() ?? {},
+                                    ),
+                                  )
+                                else
+                                  Column(
+                                    children: [
+                                      Text('loading starmap...'),
+                                      CircularProgressIndicator(),
+                                    ],
+                                  ),
+                                Column(
+                                  children: [
+                                    SelectableText(
+                                        'username: "${data.username}"'),
+                                    SelectableText(
+                                        'password: "${data.password}"'),
+                                    SelectableText('token: "${data.token}"'),
+                                    SelectableText(
+                                        'galaxyDiameter: ${data.galaxyDiameter}'),
+                                  ],
+                                ),
+                                StarLookupWidget(
+                                  data: data,
+                                  dynastyServer: dynastyServer,
+                                ),
                               ],
                             ),
-                            StarLookupWidget(
-                              data: data,
-                              dynastyServer: dynastyServer,
-                            ),
-                          ],
-                        ),
-                );
-              },
-            ),
+                    );
+                  },
+                ),
     );
   }
 

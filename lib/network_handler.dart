@@ -7,7 +7,7 @@ class NetworkConnection {
   NetworkConnection(
       this.socket,
       void Function(List<String>) unrequestedMessageHandler,
-      void binaryMessageHandler(int fileID, List<int> data),
+      void binaryMessageHandler(List<int> data),
       void Function() onReset) {
     subscription =
         doListen(unrequestedMessageHandler, binaryMessageHandler, onReset);
@@ -17,7 +17,7 @@ class NetworkConnection {
 
   StreamSubscription<dynamic> doListen(
       void unrequestedMessageHandler(List<String> data),
-      void binaryMessageHandler(int fileID, List<int> data),
+      void binaryMessageHandler(List<int> data),
       void onReset()) {
     return socket.listen(
       (rawMessage) {
@@ -39,8 +39,7 @@ class NetworkConnection {
             unrequestedMessageHandler(message.sublist(0, message.length - 1));
           }
         } else {
-          int fileID = rawMessage[0];
-          binaryMessageHandler(fileID, rawMessage.skip(4).toList());
+          binaryMessageHandler(rawMessage);
         }
       },
       onReset: () {
