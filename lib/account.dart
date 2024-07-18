@@ -347,8 +347,10 @@ class AccountWidget extends StatelessWidget {
                     } else {
                       assert(message[0] == 'T');
                       assert(message.length == 1);
-                      logout();
-                      Navigator.pop(context);
+                      if (data.username != null && data.password != null) {
+                        logout();
+                        Navigator.pop(context);
+                      }
                     }
                   });
                 },
