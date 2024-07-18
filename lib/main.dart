@@ -225,6 +225,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     data.setToken(message[2]);
     connect(message[1]).then((socket) async {
       setState(() {
+        dynastyServer?.close();
         dynastyServer = NetworkConnection(
           socket,
           (message) {
@@ -255,6 +256,9 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         'Error - No system servers',
         context,
       );
+    }
+    for (NetworkConnection connection in this.systemServers) {
+      connection.close();
     }
     Iterable<String> systemServers = message.skip(2);
     assert(systemServers.length == systemServerCount);
@@ -483,18 +487,22 @@ class _StarLookupWidgetState extends State<StarLookupWidget> {
                 selectedStar = starID;
                 starOffset = widget.data.stars![starID.$1][starID.$2];
                 if (widget.dynastyServer != null) {
-                  widget.dynastyServer!.send([
-                    'get-star-name',
-                    starID.value.toString(),
-                  ]).then((e) {
-                    setState(() {
-                      if (e[0] == 'F') {
-                        description = e.toString();
-                      } else {
-                        description = '${e[1]}';
-                      }
+                  if (widget.dynastyServer!.reloading) {
+                    errorMessage = 'Dynasty server offline; try again later';
+                  } else {
+                    widget.dynastyServer!.send([
+                      'get-star-name',
+                      starID.value.toString(),
+                    ]).then((e) {
+                      setState(() {
+                        if (e[0] == 'F') {
+                          description = e.toString();
+                        } else {
+                          description = '${e[1]}';
+                        }
+                      });
                     });
-                  });
+                  }
                 } else {
                   errorMessage = 'Could not load name; try again later.';
                 }
