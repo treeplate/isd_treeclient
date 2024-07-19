@@ -3,7 +3,8 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:isd_treeclient/network_handler.dart';
+import 'binaryreader.dart';
+import 'network_handler.dart';
 import 'account.dart';
 import 'assets.dart';
 import 'sockets_cookies_stub.dart'
@@ -177,11 +178,65 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     }
   }
 
-  void parseSystemServerBinaryMessage(List<int> data) {
-    openErrorDialog(
-      'Unexpected binary message from system server: ${data.length <= 10 ? data : '[${data.sublist(0, 10)}, ...${data.length - 10} more]'}',
-      context,
-    );
+  FeatureNode parseFeature(int featureID, BinaryReader reader, String server) {
+    switch (featureID) {
+      case 1:
+        return AssetNameFeatureNode(reader.readString());
+      case 2:
+        AssetID primaryChild = (server, reader.readUint64());
+        int childCount = reader.readUint32();
+        int i = 0;
+        List<SolarSystemChild> children = [];
+        while (i < childCount) {
+          double distanceFromCenter = reader.readFloat64();
+          double theta = reader.readFloat64();
+          AssetID child = (server, reader.readUint64());
+          children.add(SolarSystemChild(child, distanceFromCenter, theta));
+          i++;
+        }
+        return SolarSystemFeatureNode(children, primaryChild);
+      case 3:
+        AssetID primaryChild = (server, reader.readUint64());
+        int childCount = reader.readUint32();
+        int i = 0;
+        List<OrbitChild> children = [];
+        while (i < childCount) {
+          double semiMajorAxis = reader.readFloat64();
+          double eccentricity = reader.readFloat64();
+          double theta0 = reader.readFloat64();
+          double omega = reader.readFloat64();
+          AssetID child = (server, reader.readUint64());
+          children.add(OrbitChild(child, semiMajorAxis, eccentricity, theta0, omega));
+          i++;
+        }
+        return OrbitFeatureNode(children, primaryChild);
+      default:
+        throw UnimplementedError('Unknown featureID $featureID');
+    }
+  }
+
+  void parseSystemServerBinaryMessage(String server, List<int> data) {
+    BinaryReader reader = BinaryReader(data);
+    while (!reader.done) {
+      StarIdentifier systemID = parseStarIdentifier(reader.readUint32());
+      AssetID rootAssetID = (server, reader.readUint64());
+      this.data.rootAssetNodes[systemID] = rootAssetID;
+      while (true) {
+        AssetID assetID = (server, reader.readUint64());
+        if (assetID.$2 == 0) break;
+        int owner = reader.readUint32();
+        double mass = reader.readFloat64();
+        double size = reader.readFloat64();
+        List<FeatureNode> features = [];
+        while (true) {
+          int featureID = reader.readUint32();
+          if (featureID == 0) break;
+          features.add(parseFeature(featureID, reader, server));
+        }
+        openErrorDialog('updated asset $assetID with $features', context);
+        //this.data.assetNodes[assetID] = AssetNode(XXX, features, mass, owner, size);
+      }
+    }
   }
 
   void connectToSystemServer(String server) {
@@ -199,7 +254,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
             context,
           );
         },
-        parseSystemServerBinaryMessage,
+        (data) => parseSystemServerBinaryMessage(server, data),
         () {
           onSystemServerReset(systemServer, server);
         },

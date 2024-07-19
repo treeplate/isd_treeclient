@@ -1,4 +1,5 @@
 typedef StarIdentifier = (int category, int subindex);
+typedef AssetID = (String, int); // server, id
 
 StarIdentifier parseStarIdentifier(int value) {
   return (value >> 20, value & 0xFFFFF);
@@ -6,6 +7,7 @@ StarIdentifier parseStarIdentifier(int value) {
 
 extension StarIdentifierConversion on StarIdentifier {
   int get value => ($1 << 20) + $2;
+  String get displayName => 'S${value.toRadixString(16).padLeft(6, '0')}';
 }
 
 // from systems.pas
@@ -24,26 +26,19 @@ class AssetClass {
 abstract class FeatureNode {} // XXX maybe name field?
 
 class AssetNode {
-  final FeatureNode parent;
   final AssetClass assetClass;
   final int owner;
   final List<FeatureNode> features;
-  final double mass;
-  final double size;
+  final double mass; // in kg
+  final double size; // in meters
 
-  AssetNode(this.assetClass, this.features, this.mass, this.owner, this.size, this.parent);
-}
-
-// from providers.pas
-
-abstract class AssetNameProvider {
-  String get assetName;
+  AssetNode(this.assetClass, this.features, this.mass, this.owner, this.size);
 }
 
 // from features/orbit.pas
 
 class OrbitChild {
-  final AssetNode child;
+  final AssetID child;
   final double semiMajorAxis; // in meters
   final double eccentricity;
   final double theta0; // in radians
@@ -60,22 +55,20 @@ class OrbitChild {
 
 class OrbitFeatureClass extends FeatureClass<OrbitFeatureNode> {}
 
-class OrbitFeatureNode extends FeatureNode implements AssetNameProvider {
+class OrbitFeatureNode extends FeatureNode {
   final List<OrbitChild> orbitingChildren;
-  final AssetNode primaryChild;
-  final String assetName;
+  final AssetID primaryChild;
 
   OrbitFeatureNode(
     this.orbitingChildren,
     this.primaryChild,
-    this.assetName,
   );
 }
 
 // from features/space.pas
 
 class EmptySpaceChild {
-  final AssetNode child;
+  final AssetID child;
   final double distanceFromCenter; // in meters
   final double theta0; // in radians
   final int time0; // in seconds since epoch
@@ -95,20 +88,22 @@ class EmptySpaceChild {
 }
 
 class SolarSystemChild {
-  final AssetNode child;
+  final AssetID child;
   final double distanceFromCenter; // in meters
-  final double theta0; // in radians
+  final double theta; // in radians
 
-  SolarSystemChild(this.child, this.distanceFromCenter, this.theta0);
+  SolarSystemChild(this.child, this.distanceFromCenter, this.theta);
 }
 
 class SolarSystemFeatureClass extends FeatureClass<SolarSystemFeatureNode> {}
 
 class SolarSystemFeatureNode extends FeatureNode {
   final List<SolarSystemChild> children;
+  final AssetID primaryChild;
 
   SolarSystemFeatureNode(
     this.children,
+    this.primaryChild,
   );
 }
 
@@ -172,10 +167,10 @@ class StarFeatureNode extends FeatureNode {
 
 // from features/name.pas
 
-class NameFeatureClass extends FeatureClass {}
+class AssetNameFeatureClass extends FeatureClass {}
 
-class NameFeatureNode extends FeatureNode implements AssetNameProvider {
+class AssetNameFeatureNode extends FeatureNode {
   final String assetName;
 
-  NameFeatureNode(this.assetName);
+  AssetNameFeatureNode(this.assetName);
 }
