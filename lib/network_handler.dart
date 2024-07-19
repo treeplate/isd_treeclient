@@ -23,6 +23,7 @@ class NetworkConnection {
       (rawMessage) {
         if (rawMessage is String) {
           List<String> message = rawMessage.split('\x00');
+          print(message);
           // message[0] is the message type. Anything other than 'reply' is passed to unrequestedMessageHandler.
           // message[1] (for replies) is the conversation ID, which in our case is the index into the replies list.
           assert(message.last ==
@@ -60,6 +61,7 @@ class NetworkConnection {
 
   /// Sends [message] to connected server.
   Future<List<String>> send(List<String> message) {
+    print(message);
     assert(!message.contains('\x00'));
     int index = replies.indexWhere((e) => e.isCompleted);
     Completer<List<String>> reply = Completer();
