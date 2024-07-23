@@ -35,6 +35,7 @@ class _SystemSelectorState extends State<SystemSelector> {
 }
 
 // ends with newline
+// first line has no indent
 String prettifyFeature(DataStructure data, FeatureNode feature,
     [int indent = 0]) {
       StringBuffer buffer = StringBuffer();
@@ -43,7 +44,7 @@ String prettifyFeature(DataStructure data, FeatureNode feature,
         orbitingChildren: List<OrbitChild> children,
         primaryChild: AssetID primaryChild
       ):
-      buffer.writeln('${'  ' * indent}Orbit feature');
+      buffer.writeln('Orbit feature');
       buffer.writeln('${'  ' * indent}  Center:');
       buffer.write(prettifyAsset(data, primaryChild, indent + 2));
       buffer.writeln('${'  ' * indent}  Orbiting:');
@@ -56,7 +57,7 @@ String prettifyFeature(DataStructure data, FeatureNode feature,
         children: List<SolarSystemChild> children,
         primaryChild: AssetID primaryChild
       ):
-      buffer.writeln('${'  ' * indent}Solar system feature');
+      buffer.writeln('Solar system feature');
       buffer.writeln('${'  ' * indent}  Center:');
       buffer.write(prettifyAsset(data, primaryChild, indent + 2));
       buffer.writeln('${'  ' * indent}  Around:');
@@ -105,9 +106,11 @@ class SystemView extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 16),
-          child: SelectableText(
-            '${system.displayName}',
-            style: TextStyle(fontSize: 20),
+          child: Center(
+            child: SelectableText(
+              '${system.displayName}',
+              style: TextStyle(fontSize: 20),
+            ),
           ),
         ),
         Center(child: SelectableText(prettifyAsset(data, data.rootAssetNodes[system]!))),

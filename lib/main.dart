@@ -248,7 +248,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           if (featureID == 0) break;
           features.add(parseFeature(featureID, reader, server));
         }
-        openErrorDialog('updated asset $assetID with $features', context);
         this.data.setAssetNode(
             assetID,
             AssetNode(classID, features, mass, owner, size,
