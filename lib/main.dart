@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'systemview.dart';
 import 'binaryreader.dart';
 import 'network_handler.dart';
 import 'account.dart';
@@ -83,13 +85,13 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
   NetworkConnection? loginServer;
   NetworkConnection? dynastyServer;
   bool loginServerHadError = false;
-  final List<NetworkConnection> systemServers = [];
+  final Map<String, NetworkConnection> systemServers = {}; // URI -> connection
   bool get isDarkMode => widget.themeMode == ThemeMode.system
       ? WidgetsBinding.instance.platformDispatcher.platformBrightness ==
           Brightness.dark
       : widget.themeMode == ThemeMode.dark;
   late TabController tabController =
-      TabController(length: 3, vsync: this, initialIndex: 2);
+      TabController(length: 4, vsync: this, initialIndex: 3);
 
   void initState() {
     super.initState();
@@ -105,8 +107,15 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           },
           parseLoginServerBinaryMessage,
           onLoginServerReset,
+          (e, st) {
+            openErrorDialog(
+              'Network error with login server connection: $e',
+              context,
+            );
+          },
         );
       });
+      setupPing(loginServer!);
       onLoginServerReset();
     }, onError: (e, st) {
       setState(() {
@@ -139,13 +148,27 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     });
   }
 
+  void setupPing(NetworkConnection server) async {
+    Random r = Random();
+    while (true) {
+      if (server.closed) break;
+      List<String> message = await server.send(['ping']);
+      if (message[0] != 'F') {
+        assert(message[0] == 'T');
+        openErrorDialog('ping response: $message', context);
+      }
+      assert(message.length == 2);
+      await Future.delayed(Duration(milliseconds: r.nextInt(1000) + 500));
+    }
+  }
+
   Future<void> onLoginServerReset() async {
     if (data.galaxyDiameter == null) {
       loginServer!.send(['get-constants']).then((message) {
         if (message[0] == 'F') {
           assert(message.length == 2);
           openErrorDialog(
-              'Error: failed to get settings - ${message[1]}', context);
+              'Error: failed to get constants - ${message[1]}', context);
         }
         assert(message.length == 2);
         assert(message[0] == 'T');
@@ -181,22 +204,22 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
   FeatureNode parseFeature(int featureID, BinaryReader reader, String server) {
     switch (featureID) {
       case 1:
-        return AssetNameFeatureNode(reader.readString());
+        return StarFeatureNode(StarIdentifier.parse(reader.readUint32()));
       case 2:
-        AssetID primaryChild = (server, reader.readUint64());
+        AssetID primaryChild = AssetID(server, reader.readUint64());
         int childCount = reader.readUint32();
         int i = 0;
         List<SolarSystemChild> children = [];
         while (i < childCount) {
           double distanceFromCenter = reader.readFloat64();
           double theta = reader.readFloat64();
-          AssetID child = (server, reader.readUint64());
+          AssetID child = AssetID(server, reader.readUint64());
           children.add(SolarSystemChild(child, distanceFromCenter, theta));
           i++;
         }
         return SolarSystemFeatureNode(children, primaryChild);
       case 3:
-        AssetID primaryChild = (server, reader.readUint64());
+        AssetID primaryChild = AssetID(server, reader.readUint64());
         int childCount = reader.readUint32();
         int i = 0;
         List<OrbitChild> children = [];
@@ -205,28 +228,35 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           double eccentricity = reader.readFloat64();
           double theta0 = reader.readFloat64();
           double omega = reader.readFloat64();
-          AssetID child = (server, reader.readUint64());
-          children.add(OrbitChild(child, semiMajorAxis, eccentricity, theta0, omega));
+          AssetID child = AssetID(server, reader.readUint64());
+          children.add(
+              OrbitChild(child, semiMajorAxis, eccentricity, theta0, omega));
           i++;
         }
         return OrbitFeatureNode(children, primaryChild);
+      case 4:
+        return StructureFeatureNode(reader.readUint32(), reader.readUint32());
       default:
         throw UnimplementedError('Unknown featureID $featureID');
     }
   }
 
+  static const kClientVersion = 4;
+
   void parseSystemServerBinaryMessage(String server, List<int> data) {
-    BinaryReader reader = BinaryReader(data);
+    BinaryReader reader = BinaryReader(data, Endian.little);
     while (!reader.done) {
-      StarIdentifier systemID = parseStarIdentifier(reader.readUint32());
-      AssetID rootAssetID = (server, reader.readUint64());
-      this.data.rootAssetNodes[systemID] = rootAssetID;
+      StarIdentifier systemID = StarIdentifier.parse(reader.readUint32());
+      AssetID rootAssetID = AssetID(server, reader.readUint64());
+      this.data.setRootAssetNode(systemID, rootAssetID);
       while (true) {
-        AssetID assetID = (server, reader.readUint64());
-        if (assetID.$2 == 0) break;
+        AssetID assetID = AssetID(server, reader.readUint64());
+        if (assetID.id == 0) break;
+        AssetClassID classID = AssetClassID(server, reader.readUint64());
         int owner = reader.readUint32();
         double mass = reader.readFloat64();
         double size = reader.readFloat64();
+        String name = reader.readString();
         List<FeatureNode> features = [];
         while (true) {
           int featureID = reader.readUint32();
@@ -234,16 +264,15 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           features.add(parseFeature(featureID, reader, server));
         }
         openErrorDialog('updated asset $assetID with $features', context);
-        //this.data.assetNodes[assetID] = AssetNode(XXX, features, mass, owner, size);
+        this.data.setAssetNode(
+            assetID,
+            AssetNode(classID, features, mass, owner, size,
+                name == '' ? null : name));
       }
     }
   }
 
   void connectToSystemServer(String server) {
-    openErrorDialog(
-      'connecting to system server: $server',
-      context,
-    );
     connect(server).then((socket) async {
       late NetworkConnection systemServer;
       systemServer = NetworkConnection(
@@ -258,19 +287,36 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         () {
           onSystemServerReset(systemServer, server);
         },
+        (e, st) {
+          openErrorDialog(
+            'Network error with system server $server connection: $e',
+            context,
+          );
+        },
       );
+      setupPing(systemServer);
       await onSystemServerReset(systemServer, server);
-      systemServers.add(systemServer);
+      systemServers[server] = systemServer;
     });
   }
 
   Future<void> onSystemServerReset(
-      NetworkConnection systemServer, String server) async {
+      NetworkConnection systemServer, String serverName) async {
     List<String> message = await systemServer.send(['login', data.token!]);
-    openErrorDialog(
-      'login response (from server $server): $message',
-      context,
-    );
+    if (message[0] == 'F') {
+      openErrorDialog(
+          'Error: failed system server $serverName login ($message)', context);
+    } else {
+      assert(message[0] == 'T');
+      assert(message.length == 3);
+      int version = int.parse(message[1]);
+      if (version != kClientVersion) {
+        openErrorDialog(
+            'Warning: server version $version does not match client version kClientVersion',
+            context);
+      }
+      data.setDynastyID(serverName, int.parse(message[2]));
+    }
   }
 
   void parseSuccessfulLoginResponse(List<String> message) {
@@ -284,10 +330,31 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         dynastyServer = NetworkConnection(
           socket,
           (message) {
-            openErrorDialog(
-              'Unexpected message from dynasty server: $message',
-              context,
-            );
+            switch (message.first) {
+              case 'system-servers':
+                int systemServerCount = int.parse(message[1]);
+                if (systemServerCount == 0) {
+                  openErrorDialog(
+                    'Error - No system servers (update)',
+                    context,
+                  );
+                }
+                for (NetworkConnection connection
+                    in this.systemServers.values) {
+                  connection.close();
+                }
+                this.systemServers.clear();
+                Iterable<String> systemServers = message.skip(2);
+                assert(systemServers.length == systemServerCount);
+                for (String server in systemServers) {
+                  connectToSystemServer(server);
+                }
+              default:
+                openErrorDialog(
+                  'Unexpected message from dynasty server: $message',
+                  context,
+                );
+            }
           },
           (data) {
             openErrorDialog(
@@ -296,7 +363,14 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
             );
           },
           onDynastyServerReset,
+          (e, st) {
+            openErrorDialog(
+              'Network error with dynasty server connection: $e',
+              context,
+            );
+          },
         );
+        setupPing(dynastyServer!);
       });
       await onDynastyServerReset();
     });
@@ -308,13 +382,14 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     int systemServerCount = int.parse(message[1]);
     if (systemServerCount == 0) {
       openErrorDialog(
-        'Error - No system servers',
+        'Error - No system servers (login response)',
         context,
       );
     }
-    for (NetworkConnection connection in this.systemServers) {
+    for (NetworkConnection connection in this.systemServers.values) {
       connection.close();
     }
+    this.systemServers.clear();
     Iterable<String> systemServers = message.skip(2);
     assert(systemServers.length == systemServerCount);
     for (String server in systemServers) {
@@ -327,7 +402,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     data.dispose();
     dynastyServer?.close();
     loginServer?.close();
-    for (NetworkConnection server in systemServers) {
+    for (NetworkConnection server in systemServers.values) {
       server.close();
     }
     super.dispose();
@@ -338,7 +413,12 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     return Scaffold(
       appBar: AppBar(
         bottom: TabBar(
-          tabs: [Text('Galaxy'), Text('Debug info'), Text('Star lookup')],
+          tabs: [
+            Text('Galaxy'),
+            Text('Debug info'),
+            Text('Star lookup'),
+            Text('System view')
+          ],
           controller: tabController,
         ),
         actions: [
@@ -440,19 +520,30 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                                   ),
                                 Column(
                                   children: [
-                                    SelectableText(
-                                        'username: "${data.username}"'),
-                                    SelectableText(
-                                        'password: "${data.password}"'),
-                                    SelectableText('token: "${data.token}"'),
-                                    SelectableText(
-                                        'galaxyDiameter: ${data.galaxyDiameter}'),
+                                    if (data.username != null)
+                                      SelectableText(
+                                          'username: "${data.username}"'),
+                                    if (data.password != null)
+                                      SelectableText(
+                                          'password: "${data.password}"'),
+                                    if (data.token != null)
+                                      SelectableText('token: "${data.token}"'),
+                                    if (data.galaxyDiameter != null)
+                                      SelectableText(
+                                          'galaxyDiameter: ${data.galaxyDiameter}'),
+                                    ...data.dynastyIDs.entries.map((e) =>
+                                        SelectableText(
+                                            'Dynasty ID for server ${e.key}: ${e.value}')),
+                                    ...data.rootAssetNodes.entries.map((e) =>
+                                        SelectableText(
+                                            'Root asset ID for system ${e.key.displayName}: ${e.value}'))
                                   ],
                                 ),
                                 StarLookupWidget(
                                   data: data,
                                   dynastyServer: dynastyServer,
                                 ),
+                                SystemSelector(data: data)
                               ],
                             ),
                     );
@@ -464,9 +555,10 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
   void logout() {
     data.removeCredentials();
     dynastyServer?.close();
-    for (NetworkConnection server in systemServers) {
+    for (NetworkConnection server in systemServers.values) {
       server.close();
     }
+    systemServers.clear();
   }
 }
 
@@ -517,13 +609,13 @@ class _StarLookupWidgetState extends State<StarLookupWidget> {
                       'Invalid star ID. All star IDs must be S followed by a hexadecimal integer.';
                   return;
                 }
-                StarIdentifier starID = parseStarIdentifier(integerStarID);
-                if (starID.$1 < 0) {
+                StarIdentifier starID = StarIdentifier.parse(integerStarID);
+                if (starID.category < 0) {
                   errorMessage =
                       'Invalid star ID. Star IDs cannot be negative.';
                   return;
                 }
-                if (starID.$1 > 10) {
+                if (starID.category > 10) {
                   errorMessage =
                       'Invalid star ID. The maximum star category (the first hexadecimal digit) is A.';
                   return;
@@ -532,15 +624,17 @@ class _StarLookupWidgetState extends State<StarLookupWidget> {
                   errorMessage = 'Still loading stars. Try again later.';
                   return;
                 }
-                if (widget.data.stars![starID.$1].length <= starID.$2) {
+                if (widget.data.stars![starID.category].length <=
+                    starID.subindex) {
                   errorMessage =
-                      'Invalid star ID. The maximum value for the last five hexadecimal digits of a star with category ${starID.$1} is ${(widget.data.stars![starID.$1].length - 1).toRadixString(16)}.';
+                      'Invalid star ID. The maximum value for the last five hexadecimal digits of a star with category ${starID.category} is ${(widget.data.stars![starID.category].length - 1).toRadixString(16)}.';
                   return;
                 }
                 errorMessage = null;
                 description = null;
                 selectedStar = starID;
-                starOffset = widget.data.stars![starID.$1][starID.$2];
+                starOffset =
+                    widget.data.stars![starID.category][starID.subindex];
                 if (widget.dynastyServer != null) {
                   if (widget.dynastyServer!.reloading) {
                     errorMessage = 'Dynasty server offline; try again later';
@@ -658,15 +752,15 @@ class GalaxyRenderer extends CustomPainter {
           ..color = (Color(0x5566BBFF).withAlpha((0x55 / zoom).toInt()))
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, 10));
     for (StarIdentifier star in highlightedStars) {
-      Offset starPos = stars[star.$1][star.$2];
+      Offset starPos = stars[star.category][star.subindex];
       canvas.drawCircle(
           calculateScreenPosition(starPos),
-          starCategories[star.$1].strokeWidth *
+          starCategories[star.category].strokeWidth *
               size.shortestSide *
               2 *
               sqrt(zoom) /
               3,
-          Paint.from(starCategories[star.$1])
+          Paint.from(starCategories[star.category])
             ..color = Colors.green
             ..strokeWidth = 0);
     }

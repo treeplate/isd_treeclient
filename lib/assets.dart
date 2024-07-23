@@ -1,13 +1,32 @@
-typedef StarIdentifier = (int category, int subindex);
-typedef AssetID = (String, int); // server, id
-
-StarIdentifier parseStarIdentifier(int value) {
-  return (value >> 20, value & 0xFFFFF);
+extension type StarIdentifier._((int category, int subindex) _value) {
+  int get category => _value.$1;
+  int get subindex => _value.$2;
+  int get value => (_value.$1 << 20) + _value.$2;
+  String get displayName => 'S${value.toRadixString(16).padLeft(6, '0')}';
+  factory StarIdentifier.parse(int value) {
+    return StarIdentifier._((value >> 20, value & 0xFFFFF));
+  }
+  factory StarIdentifier(int category, int subindex) {
+    return StarIdentifier._((category, subindex));
+  }
 }
 
-extension StarIdentifierConversion on StarIdentifier {
-  int get value => ($1 << 20) + $2;
-  String get displayName => 'S${value.toRadixString(16).padLeft(6, '0')}';
+extension type AssetID._((String server, int id) value) {
+  String get server => value.$1;
+  int get id => value.$2;
+
+  factory AssetID(String server, int id) {
+    return AssetID._((server, id));
+  }
+}
+
+extension type AssetClassID._((String server, int id) value) {
+  String get server => value.$1;
+  int get id => value.$2;
+
+  factory AssetClassID(String server, int id) {
+    return AssetClassID._((server, id));
+  }
 }
 
 // from systems.pas
@@ -23,16 +42,17 @@ class AssetClass {
   AssetClass(this.features, this.name, this.description, this.icon);
 }
 
-abstract class FeatureNode {} // XXX maybe name field?
+sealed class FeatureNode {}
 
 class AssetNode {
-  final AssetClass assetClass;
+  final AssetClassID assetClass;
   final int owner;
   final List<FeatureNode> features;
   final double mass; // in kg
   final double size; // in meters
+  final String? name;
 
-  AssetNode(this.assetClass, this.features, this.mass, this.owner, this.size);
+  AssetNode(this.assetClass, this.features, this.mass, this.owner, this.size, this.name);
 }
 
 // from features/orbit.pas
@@ -163,14 +183,4 @@ class StarFeatureNode extends FeatureNode {
   final StarIdentifier starID;
 
   StarFeatureNode(this.starID);
-}
-
-// from features/name.pas
-
-class AssetNameFeatureClass extends FeatureClass {}
-
-class AssetNameFeatureNode extends FeatureNode {
-  final String assetName;
-
-  AssetNameFeatureNode(this.assetName);
 }

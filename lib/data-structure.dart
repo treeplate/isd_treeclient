@@ -23,6 +23,7 @@ class DataStructure with ChangeNotifier {
       systems; // star ID -> system ID (first star in the system)
   Map<StarIdentifier, AssetID> rootAssetNodes = {};
   Map<AssetID, AssetNode> assetNodes = {};
+  Map<String, int> dynastyIDs = {}; // server => dynasty ID
 
   void setCredentials(String username, String password) {
     setCookie(kUsernameCookieName, username);
@@ -98,11 +99,24 @@ class DataStructure with ChangeNotifier {
     systems = {};
     int index = 0;
     while (index < rawSystems32.length) {
-      systems![parseStarIdentifier(rawSystems32[index])] =
-          parseStarIdentifier(rawSystems32[index + 1]);
+      systems![StarIdentifier.parse(rawSystems32[index])] =
+          StarIdentifier.parse(rawSystems32[index + 1]);
       index += 2;
     }
     saveBinaryBlob(kSystemsCookieName, rawSystems);
+    notifyListeners();
+  }
+
+  void setDynastyID(String server, int id) {
+    dynastyIDs[server] = id;
+    notifyListeners();
+  }
+  void setAssetNode(AssetID id, AssetNode node) {
+    assetNodes[id] = node;
+    notifyListeners();
+  }
+  void setRootAssetNode(StarIdentifier system, AssetID id) {
+    rootAssetNodes[system] = id;
     notifyListeners();
   }
 

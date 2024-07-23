@@ -40,9 +40,6 @@ class WebSocketWrapper {
   }
 
   void send(String data) async {
-    if (reloading) {
-      print('called send while reloading');
-    }
     await _doneReloading.future;
     socket.add(data);
   }
