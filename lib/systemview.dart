@@ -78,9 +78,9 @@ String prettifyAsset(DataStructure data, AssetID assetID, [int indent = 0]) {
   AssetNode asset = data.assetNodes[assetID]!;
   StringBuffer buffer = StringBuffer();
   if (asset.name == null) {
-    buffer.writeln('${'  ' * indent}${asset.assetClass}');
+    buffer.writeln('${'  ' * indent}${asset.assetClass.displayName}');
   } else {
-    buffer.writeln('${'  ' * indent}${asset.name} (${asset.assetClass})');
+    buffer.writeln('${'  ' * indent}${asset.name} (${asset.assetClass.displayName})');
   }
   buffer.writeln('${'  ' * indent}  mass: ${asset.mass} kilograms');
   buffer.writeln('${'  ' * indent}  size: ${asset.size} meters');

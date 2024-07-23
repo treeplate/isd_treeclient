@@ -24,14 +24,14 @@ class WebSocketWrapper {
           reloading = true;
           try {
             socket = await WebSocket.connect(name);
+            reloading = false;
+            _doneReloading.complete();
+            if (onReset != null) {
+              onReset();
+            }
           } catch (e, st) {
             if (onError == null) rethrow;
             onError(e, st);
-          }
-          reloading = false;
-          _doneReloading.complete();
-          if (onReset != null) {
-            onReset();
           }
         }
       },

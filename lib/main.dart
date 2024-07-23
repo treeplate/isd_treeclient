@@ -115,7 +115,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           },
         );
       });
-      setupPing(loginServer!);
       onLoginServerReset();
     }, onError: (e, st) {
       setState(() {
@@ -146,20 +145,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
       assert(message.length == 1);
       assert(message[0] == 'T');
     });
-  }
-
-  void setupPing(NetworkConnection server) async {
-    Random r = Random();
-    while (true) {
-      if (server.closed) break;
-      List<String> message = await server.send(['ping']);
-      if (message[0] != 'F') {
-        assert(message[0] == 'T');
-        openErrorDialog('ping response: $message', context);
-      }
-      assert(message.length == 2);
-      await Future.delayed(Duration(milliseconds: r.nextInt(1000) + 500));
-    }
   }
 
   Future<void> onLoginServerReset() async {
@@ -252,7 +237,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
       while (true) {
         AssetID assetID = AssetID(server, reader.readUint64());
         if (assetID.id == 0) break;
-        AssetClassID classID = AssetClassID(server, reader.readUint64());
+        AssetClassID classID = AssetClassID(server, reader.readUint32());
         int owner = reader.readUint32();
         double mass = reader.readFloat64();
         double size = reader.readFloat64();
@@ -294,7 +279,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           );
         },
       );
-      setupPing(systemServer);
       await onSystemServerReset(systemServer, server);
       systemServers[server] = systemServer;
     });
@@ -370,7 +354,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
             );
           },
         );
-        setupPing(dynastyServer!);
       });
       await onDynastyServerReset();
     });
