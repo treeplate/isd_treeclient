@@ -99,21 +99,21 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
       setState(() {
         loginServer = NetworkConnection(
           socket,
-          (message) {
+          unrequestedMessageHandler: (message) {
             openErrorDialog(
               'Unexpected message from login server: $message',
               context,
             );
           },
-          parseLoginServerBinaryMessage,
-          onLoginServerReset,
-          (e, st) {
+          binaryMessageHandler: parseLoginServerBinaryMessage,
+          onError: (e, st) {
             openErrorDialog(
               'Network error with login server connection: $e',
               context,
             );
           },
         );
+        onLoginServerConnect();
       });
     }, onError: (e, st) {
       setState(() {
@@ -146,9 +146,9 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     });
   }
 
-  Future<void> onLoginServerReset(NetworkConnection loginServer) async {
+  Future<void> onLoginServerConnect() async {
     if (data.galaxyDiameter == null) {
-      loginServer.send(['get-constants']).then((message) {
+      loginServer!.send(['get-constants']).then((message) {
         if (message[0] == 'F') {
           assert(message.length == 2);
           openErrorDialog(
@@ -167,7 +167,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     }
     if (data.username != null && data.password != null) {
       List<String> message =
-          await loginServer.send(['login', data.username!, data.password!]);
+          await loginServer!.send(['login', data.username!, data.password!]);
       if (message[0] == 'F') {
         if (message[1] == 'unrecognized credentials') {
           assert(message.length == 2);
@@ -259,17 +259,18 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     connect(server).then((socket) async {
       NetworkConnection systemServer = NetworkConnection(
         socket,
-        (message) {
+        unrequestedMessageHandler: (message) {
           openErrorDialog(
             'Unexpected message from system server $server: $message',
             context,
           );
         },
-        (data) => parseSystemServerBinaryMessage(server, data),
-        (NetworkConnection systemServer) {
+        binaryMessageHandler: (data) =>
+            parseSystemServerBinaryMessage(server, data),
+        onReset: (NetworkConnection systemServer) {
           onSystemServerReset(systemServer, server);
         },
-        (e, st) {
+        onError: (e, st) {
           openErrorDialog(
             'Network error with system server $server connection: $e',
             context,
@@ -309,49 +310,51 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         dynastyServer?.close();
         dynastyServer = NetworkConnection(
           socket,
-          (message) {
-            switch (message.first) {
-              case 'system-servers':
-                int systemServerCount = int.parse(message[1]);
-                if (systemServerCount == 0) {
-                  openErrorDialog(
-                    'Error - No system servers (update)',
-                    context,
-                  );
-                }
-                for (NetworkConnection connection
-                    in this.systemServers.values) {
-                  connection.close();
-                }
-                this.systemServers.clear();
-                Iterable<String> systemServers = message.skip(2);
-                assert(systemServers.length == systemServerCount);
-                for (String server in systemServers) {
-                  connectToSystemServer(server);
-                }
-              default:
-                openErrorDialog(
-                  'Unexpected message from dynasty server: $message',
-                  context,
-                );
-            }
-          },
-          (data) {
+          unrequestedMessageHandler: onDynastyServerMessage,
+          binaryMessageHandler: (data) {
             openErrorDialog(
               'Unexpected binary message from system server: ${data.length <= 10 ? data : '[${data.sublist(0, 10)}, ...${data.length - 10} more]'}',
               context,
             );
           },
-          onDynastyServerReset,
-          (e, st) {
+          onReset: onDynastyServerReset,
+          onError: (e, st) {
             openErrorDialog(
               'Network error with dynasty server connection: $e',
               context,
             );
           },
         );
+        dynastyServer!.send(['get-star-name', '${0x500}']).then((e) => print(e));
       });
     });
+  }
+
+  void onDynastyServerMessage(message) {
+    switch (message.first) {
+      case 'system-servers':
+        int systemServerCount = int.parse(message[1]);
+        if (systemServerCount == 0) {
+          openErrorDialog(
+            'Error - No system servers (update)',
+            context,
+          );
+        }
+        for (NetworkConnection connection in this.systemServers.values) {
+          connection.close();
+        }
+        this.systemServers.clear();
+        Iterable<String> systemServers = message.skip(2);
+        assert(systemServers.length == systemServerCount);
+        for (String server in systemServers) {
+          connectToSystemServer(server);
+        }
+      default:
+        openErrorDialog(
+          'Unexpected message from dynasty server: $message',
+          context,
+        );
+    }
   }
 
   Future<void> onDynastyServerReset(NetworkConnection dynastyServer) async {

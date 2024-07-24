@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 abstract class WebSocketWrapper {
   StreamSubscription<dynamic /*String|List<int>*/> listen(void onData(dynamic /*String|List<int>*/ event)?,
-      {void Function(Object error, StackTrace)? onError, void onReset()?, bool? cancelOnError});
+      {void Function(Object error, StackTrace)? onError, void onReset()?});
 
   void send(String data);
   

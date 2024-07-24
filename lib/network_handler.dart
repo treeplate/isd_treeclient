@@ -4,13 +4,13 @@ import 'sockets_cookies_stub.dart'
     if (dart.library.js_interop) 'sockets_cookies_web.dart';
 
 class NetworkConnection {
-  NetworkConnection(
-      this.socket,
-      void Function(List<String>) unrequestedMessageHandler,
-      void binaryMessageHandler(List<int> data),
-      void Function(NetworkConnection) onReset, void onError(Object error, StackTrace)) {
-    subscription =
-        doListen(unrequestedMessageHandler, binaryMessageHandler, onReset, onError);
+  NetworkConnection(this.socket,
+      {required void Function(List<String>) unrequestedMessageHandler,
+      required void binaryMessageHandler(List<int> data),
+      void Function(NetworkConnection)? onReset,
+      void onError(Object error, StackTrace stackTrace)?}) {
+    subscription = doListen(
+        unrequestedMessageHandler: unrequestedMessageHandler, binaryMessageHandler: binaryMessageHandler, onReset: onReset, onError: onError);
   }
 
   bool get reloading => socket.reloading;
@@ -18,9 +18,10 @@ class NetworkConnection {
   bool get closed => _closed;
 
   StreamSubscription<dynamic> doListen(
-      void unrequestedMessageHandler(List<String> data),
-      void binaryMessageHandler(List<int> data),
-      void Function(NetworkConnection) onReset, void onError(Object error, StackTrace)) {
+      {required void Function(List<String>) unrequestedMessageHandler,
+      required void binaryMessageHandler(List<int> data),
+      void Function(NetworkConnection)? onReset,
+      void onError(Object error, StackTrace stackTrace)?}) {
     return socket.listen(
       (rawMessage) {
         if (rawMessage is String) {
@@ -44,7 +45,7 @@ class NetworkConnection {
           binaryMessageHandler(rawMessage);
         }
       },
-      onReset: () => onReset(this),
+      onReset: onReset == null ? null : () => onReset(this),
       onError: onError,
     );
   }

@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:path_provider/path_provider.dart';
 
-int pingIntervalSeconds = 10;
+Duration pingInterval = Duration(seconds: 10);
 
 class WebSocketWrapper {
   WebSocket socket;
@@ -15,7 +15,6 @@ class WebSocketWrapper {
     void onData(dynamic event), {
     void Function(Object error, StackTrace)? onError,
     void onReset()?,
-    bool? cancelOnError,
   }) {
     if (onReset != null) {
       onReset();
@@ -23,24 +22,28 @@ class WebSocketWrapper {
     return socket.listen(
       onData,
       onError: onError,
-      onDone: () async {
+      onDone: ()  {
         if (!_closed) {
-          _doneReloading = Completer();
-          reloading = true;
-          try {
-            socket = await WebSocket.connect(name);
-            socket.pingInterval = Duration(seconds: pingIntervalSeconds);
-            reloading = false;
-            _doneReloading.complete();
-            listen(onData, onError: onError, onReset: onReset, cancelOnError: cancelOnError);
-          } catch (e, st) {
-            if (onError == null) rethrow;
-            onError(e, st);
-          }
+          reconnect(onData, onError, onReset);
         }
       },
-      cancelOnError: cancelOnError,
     );
+  }
+
+  Future<void> reconnect(void onData(dynamic event), void Function(Object error, StackTrace)? onError,
+    void Function()? onReset,) async {
+    _doneReloading = Completer();
+    reloading = true;
+    try {
+      socket = await WebSocket.connect(name);
+      socket.pingInterval = pingInterval;
+      reloading = false;
+      _doneReloading.complete();
+      listen(onData, onError: onError, onReset: onReset);
+    } catch (e, st) {
+      if (onError == null) rethrow;
+      onError(e, st);
+    }
   }
 
   void send(String data) async {
@@ -57,7 +60,7 @@ class WebSocketWrapper {
   final String name;
 
   WebSocketWrapper(this.socket, this.name) {
-    socket.pingInterval = Duration(seconds: pingIntervalSeconds);
+    socket.pingInterval = pingInterval;
     _doneReloading.complete();
   }
 }
