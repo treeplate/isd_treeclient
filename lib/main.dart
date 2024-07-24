@@ -185,8 +185,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     }
   }
 
-  FeatureNode parseFeature(int featureID, BinaryReader reader, String server) {
-    switch (featureID) {
+  FeatureNode parseFeature(int featureCode, BinaryReader reader, String server) {
+    switch (featureCode) {
       case 1:
         return StarFeatureNode(StarIdentifier.parse(reader.readUint32()));
       case 2:
@@ -221,7 +221,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
       case 4:
         return StructureFeatureNode(reader.readUint32(), reader.readUint32());
       default:
-        throw UnimplementedError('Unknown featureID $featureID');
+        throw UnimplementedError('Unknown featureID $featureCode');
     }
   }
 
@@ -243,9 +243,9 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         String name = reader.readString();
         List<FeatureNode> features = [];
         while (true) {
-          int featureID = reader.readUint32();
-          if (featureID == 0) break;
-          features.add(parseFeature(featureID, reader, server));
+          int featureCode = reader.readUint32();
+          if (featureCode == 0) break;
+          features.add(parseFeature(featureCode, reader, server));
         }
         this.data.setAssetNode(
             assetID,
@@ -325,7 +325,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
             );
           },
         );
-        dynastyServer!.send(['get-star-name', '${0x500}']).then((e) => print(e));
       });
     });
   }
