@@ -26,7 +26,7 @@ class _SystemSelectorState extends State<SystemSelector> {
                     onPressed: () => setState(() {
                       selectedSystem = system;
                     }),
-                    child: SelectableText(system.displayName),
+                    child: Text(system.displayName),
                   )
             ],
           )
@@ -49,7 +49,7 @@ String prettifyFeature(DataStructure data, FeatureNode feature,
       buffer.write(prettifyAsset(data, primaryChild, indent + 2));
       buffer.writeln('${'  ' * indent}  Orbiting:');
       for (OrbitChild child in children) {
-        buffer.write(
+        buffer.writeln(
             '${'  ' * indent}    theta0:${child.theta0}, eccentricity:${child.eccentricity}, omega:${child.omega}, semiMajorAxis:${child.semiMajorAxis}');
         buffer.write(prettifyAsset(data, child.child, indent + 2));
       }
@@ -79,9 +79,9 @@ String prettifyAsset(DataStructure data, AssetID assetID, [int indent = 0]) {
   AssetNode asset = data.assetNodes[assetID]!;
   StringBuffer buffer = StringBuffer();
   if (asset.name == null) {
-    buffer.writeln('${'  ' * indent}${asset.assetClass.displayName}');
+    buffer.writeln('${'  ' * indent}class ${asset.assetClass.displayName}');
   } else {
-    buffer.writeln('${'  ' * indent}${asset.name} (${asset.assetClass.displayName})');
+    buffer.writeln('${'  ' * indent}${asset.name} (class ${asset.assetClass.displayName})');
   }
   buffer.writeln('${'  ' * indent}  mass: ${asset.mass} kilograms');
   buffer.writeln('${'  ' * indent}  size: ${asset.size} meters');
@@ -108,7 +108,7 @@ class SystemView extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 16),
           child: Center(
             child: SelectableText(
-              '${system.displayName}',
+              '${system.displayName} (${data.rootAssetNodes[system]!.server})',
               style: TextStyle(fontSize: 20),
             ),
           ),

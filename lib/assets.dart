@@ -23,7 +23,7 @@ extension type AssetID._((String server, int id) value) {
 extension type AssetClassID._((String server, int id) value) {
   String get server => value.$1;
   int get id => value.$2;
-  String get displayName => '${id << 32 >> 32}{$server}';
+  String get displayName => '${id << 32 >> 32}';
 
   factory AssetClassID(String server, int id) {
     return AssetClassID._((server, id));

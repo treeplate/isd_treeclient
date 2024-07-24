@@ -33,11 +33,15 @@ class DataStructure with ChangeNotifier {
     notifyListeners();
   }
 
-  void removeCredentials() {
+  void logout() {
     setCookie(kUsernameCookieName, null);
     setCookie(kPasswordCookieName, null);
     username = null;
     password = null;
+    token = null;
+    dynastyIDs.clear();
+    assetNodes.clear();
+    rootAssetNodes.clear();
     notifyListeners();
   }
 

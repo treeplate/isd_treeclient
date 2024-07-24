@@ -115,7 +115,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           },
         );
       });
-      onLoginServerReset();
     }, onError: (e, st) {
       setState(() {
         loginServerHadError = true;
@@ -147,9 +146,9 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     });
   }
 
-  Future<void> onLoginServerReset() async {
+  Future<void> onLoginServerReset(NetworkConnection loginServer) async {
     if (data.galaxyDiameter == null) {
-      loginServer!.send(['get-constants']).then((message) {
+      loginServer.send(['get-constants']).then((message) {
         if (message[0] == 'F') {
           assert(message.length == 2);
           openErrorDialog(
@@ -168,7 +167,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     }
     if (data.username != null && data.password != null) {
       List<String> message =
-          await loginServer!.send(['login', data.username!, data.password!]);
+          await loginServer.send(['login', data.username!, data.password!]);
       if (message[0] == 'F') {
         if (message[1] == 'unrecognized credentials') {
           assert(message.length == 2);
@@ -258,8 +257,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
 
   void connectToSystemServer(String server) {
     connect(server).then((socket) async {
-      late NetworkConnection systemServer;
-      systemServer = NetworkConnection(
+      NetworkConnection systemServer = NetworkConnection(
         socket,
         (message) {
           openErrorDialog(
@@ -268,7 +266,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           );
         },
         (data) => parseSystemServerBinaryMessage(server, data),
-        () {
+        (NetworkConnection systemServer) {
           onSystemServerReset(systemServer, server);
         },
         (e, st) {
@@ -278,7 +276,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           );
         },
       );
-      await onSystemServerReset(systemServer, server);
       systemServers[server] = systemServer;
     });
   }
@@ -354,28 +351,33 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           },
         );
       });
-      await onDynastyServerReset();
     });
   }
 
-  Future<void> onDynastyServerReset() async {
-    List<String> message = await dynastyServer!.send(['login', data.token!]);
-    assert(message[0] == 'T');
-    int systemServerCount = int.parse(message[1]);
-    if (systemServerCount == 0) {
+  Future<void> onDynastyServerReset(NetworkConnection dynastyServer) async {
+    List<String> message = await dynastyServer.send(['login', data.token!]);
+    if (message[0] == 'F') {
+      assert(message.length == 2);
       openErrorDialog(
-        'Error - No system servers (login response)',
-        context,
-      );
-    }
-    for (NetworkConnection connection in this.systemServers.values) {
-      connection.close();
-    }
-    this.systemServers.clear();
-    Iterable<String> systemServers = message.skip(2);
-    assert(systemServers.length == systemServerCount);
-    for (String server in systemServers) {
-      connectToSystemServer(server);
+          'response from dynasty server login: ${message[1]}', context);
+    } else {
+      assert(message[0] == 'T');
+      int systemServerCount = int.parse(message[1]);
+      if (systemServerCount == 0) {
+        openErrorDialog(
+          'Error - No system servers (login response)',
+          context,
+        );
+      }
+      for (NetworkConnection connection in this.systemServers.values) {
+        connection.close();
+      }
+      this.systemServers.clear();
+      Iterable<String> systemServers = message.skip(2);
+      assert(systemServers.length == systemServerCount);
+      for (String server in systemServers) {
+        connectToSystemServer(server);
+      }
     }
   }
 
@@ -513,12 +515,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                                     if (data.galaxyDiameter != null)
                                       SelectableText(
                                           'galaxyDiameter: ${data.galaxyDiameter}'),
-                                    ...data.dynastyIDs.entries.map((e) =>
-                                        SelectableText(
-                                            'Dynasty ID for server ${e.key}: ${e.value}')),
-                                    ...data.rootAssetNodes.entries.map((e) =>
-                                        SelectableText(
-                                            'Root asset ID for system ${e.key.displayName}: ${e.value}'))
                                   ],
                                 ),
                                 StarLookupWidget(
@@ -535,7 +531,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
   }
 
   void logout() {
-    data.removeCredentials();
+    data.logout();
     dynastyServer?.close();
     for (NetworkConnection server in systemServers.values) {
       server.close();

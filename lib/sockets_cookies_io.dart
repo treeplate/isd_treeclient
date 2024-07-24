@@ -4,6 +4,8 @@ import 'dart:typed_data';
 
 import 'package:path_provider/path_provider.dart';
 
+int pingIntervalSeconds = 10;
+
 class WebSocketWrapper {
   WebSocket socket;
   bool reloading = false;
@@ -15,6 +17,9 @@ class WebSocketWrapper {
     void onReset()?,
     bool? cancelOnError,
   }) {
+    if (onReset != null) {
+      onReset();
+    }
     return socket.listen(
       onData,
       onError: onError,
@@ -24,11 +29,10 @@ class WebSocketWrapper {
           reloading = true;
           try {
             socket = await WebSocket.connect(name);
+            socket.pingInterval = Duration(seconds: pingIntervalSeconds);
             reloading = false;
             _doneReloading.complete();
-            if (onReset != null) {
-              onReset();
-            }
+            listen(onData, onError: onError, onReset: onReset, cancelOnError: cancelOnError);
           } catch (e, st) {
             if (onError == null) rethrow;
             onError(e, st);
@@ -53,6 +57,7 @@ class WebSocketWrapper {
   final String name;
 
   WebSocketWrapper(this.socket, this.name) {
+    socket.pingInterval = Duration(seconds: pingIntervalSeconds);
     _doneReloading.complete();
   }
 }
@@ -78,17 +83,22 @@ Future<void> getCookiesFromFile() async {
     }
     if (_cookieStorage!.existsSync()) {
       try {
-        _cookieCache = Map.fromEntries(
-          _cookieStorage!.readAsStringSync().split('\n\x00').map(
-            (String line) {
-              List<String> parts = line.split(':\x00');
-              if (parts.length != 2) {
-                throw FormatException('invalid _cookieStorage format');
-              }
-              return MapEntry(parts.first, parts.last);
-            },
-          ),
-        );
+        String fileContents = _cookieStorage!.readAsStringSync();
+        if (fileContents == '') {
+          _cookieCache = {};
+        } else {
+          _cookieCache = Map.fromEntries(
+            fileContents.split('\n\x00').map(
+              (String line) {
+                List<String> parts = line.split(':\x00');
+                if (parts.length != 2) {
+                  throw FormatException('invalid _cookieStorage format');
+                }
+                return MapEntry(parts.first, parts.last);
+              },
+            ),
+          );
+        }
       } catch (e) {
         print('Error "$e" while parsing _cookieStorage');
         _cookieCache = {};

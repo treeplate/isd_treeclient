@@ -8,7 +8,7 @@ class NetworkConnection {
       this.socket,
       void Function(List<String>) unrequestedMessageHandler,
       void binaryMessageHandler(List<int> data),
-      void Function() onReset, void onError(Object error, StackTrace)) {
+      void Function(NetworkConnection) onReset, void onError(Object error, StackTrace)) {
     subscription =
         doListen(unrequestedMessageHandler, binaryMessageHandler, onReset, onError);
   }
@@ -20,7 +20,7 @@ class NetworkConnection {
   StreamSubscription<dynamic> doListen(
       void unrequestedMessageHandler(List<String> data),
       void binaryMessageHandler(List<int> data),
-      void onReset(), void onError(Object error, StackTrace)) {
+      void Function(NetworkConnection) onReset, void onError(Object error, StackTrace)) {
     return socket.listen(
       (rawMessage) {
         if (rawMessage is String) {
@@ -44,10 +44,7 @@ class NetworkConnection {
           binaryMessageHandler(rawMessage);
         }
       },
-      onReset: () {
-        doListen(unrequestedMessageHandler, binaryMessageHandler, onReset, onError);
-        onReset();
-      },
+      onReset: () => onReset(this),
       onError: onError,
     );
   }
@@ -64,7 +61,6 @@ class NetworkConnection {
 
   /// Sends [message] to connected server.
   Future<List<String>> send(List<String> message) {
-    assert(!message.contains('\x00'));
     int index = replies.indexWhere((e) => e.isCompleted);
     Completer<List<String>> reply = Completer();
     if (index == -1) {
