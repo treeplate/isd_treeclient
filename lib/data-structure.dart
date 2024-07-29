@@ -22,8 +22,9 @@ class DataStructure with ChangeNotifier {
   Map<StarIdentifier, StarIdentifier>?
       systems; // star ID -> system ID (first star in the system)
   Map<StarIdentifier, AssetID> rootAssetNodes = {};
-  Map<AssetID, AssetNode> assetNodes = {};
-  Map<String, int> dynastyIDs = {}; // server => dynasty ID
+  Map<StarIdentifier, Offset> systemPositions = {}; // (0, 0) to (1, 1)
+  Map<AssetID, Asset> assetNodes = {};
+  int? dynastyID;
 
   void setCredentials(String username, String password) {
     setCookie(kUsernameCookieName, username);
@@ -39,7 +40,7 @@ class DataStructure with ChangeNotifier {
     username = null;
     password = null;
     token = null;
-    dynastyIDs.clear();
+    dynastyID = null;
     assetNodes.clear();
     rootAssetNodes.clear();
     notifyListeners();
@@ -111,14 +112,21 @@ class DataStructure with ChangeNotifier {
     notifyListeners();
   }
 
-  void setDynastyID(String server, int id) {
-    dynastyIDs[server] = id;
+  void setDynastyID(int id) {
+    dynastyID = id;
     notifyListeners();
   }
-  void setAssetNode(AssetID id, AssetNode node) {
+
+  void setSystemPosition(StarIdentifier system, Offset position) {
+    systemPositions[system] = position;
+    notifyListeners();
+  }
+
+  void setAssetNode(AssetID id, Asset node) {
     assetNodes[id] = node;
     notifyListeners();
   }
+
   void setRootAssetNode(StarIdentifier system, AssetID id) {
     rootAssetNodes[system] = id;
     notifyListeners();

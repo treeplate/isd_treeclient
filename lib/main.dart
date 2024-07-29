@@ -185,10 +185,10 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     }
   }
 
-  FeatureNode parseFeature(int featureCode, BinaryReader reader, String server) {
+  Feature parseFeature(int featureCode, BinaryReader reader, String server) {
     switch (featureCode) {
       case 1:
-        return StarFeatureNode(StarIdentifier.parse(reader.readUint32()));
+        return StarFeature(StarIdentifier.parse(reader.readUint32()));
       case 2:
         AssetID primaryChild = AssetID(server, reader.readUint64());
         int childCount = reader.readUint32();
@@ -201,7 +201,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           children.add(SolarSystemChild(child, distanceFromCenter, theta));
           i++;
         }
-        return SolarSystemFeatureNode(children, primaryChild);
+        return SolarSystemFeature(children, primaryChild);
       case 3:
         AssetID primaryChild = AssetID(server, reader.readUint64());
         int childCount = reader.readUint32();
@@ -217,15 +217,19 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
               OrbitChild(child, semiMajorAxis, eccentricity, theta0, omega));
           i++;
         }
-        return OrbitFeatureNode(children, primaryChild);
+        return OrbitFeature(children, primaryChild);
       case 4:
-        return StructureFeatureNode(reader.readUint32(), reader.readUint32());
+        return StructureFeature(reader.readUint32(), reader.readUint32());
+      case 5:
+        return SpaceSensorFeature(reader.readUint32(), reader.readUint32(), reader.readUint32(), reader.readFloat64());
+      case 6:
+        return SpaceSensorStatusFeature(AssetID(server, reader.readUint64()), AssetID(server, reader.readUint64()), reader.readUint32());
       default:
         throw UnimplementedError('Unknown featureID $featureCode');
     }
   }
 
-  static const kClientVersion = 4;
+  static const kClientVersion = 6;
 
   void parseSystemServerBinaryMessage(String server, List<int> data) {
     BinaryReader reader = BinaryReader(data, Endian.little);
@@ -233,15 +237,19 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
       StarIdentifier systemID = StarIdentifier.parse(reader.readUint32());
       AssetID rootAssetID = AssetID(server, reader.readUint64());
       this.data.setRootAssetNode(systemID, rootAssetID);
+      Offset position = Offset(reader.readFloat64(), reader.readFloat64());
+      this.data.setSystemPosition(systemID, position / this.data.galaxyDiameter!);
       while (true) {
         AssetID assetID = AssetID(server, reader.readUint64());
         if (assetID.id == 0) break;
-        AssetClassID classID = AssetClassID(server, reader.readUint32());
         int owner = reader.readUint32();
         double mass = reader.readFloat64();
         double size = reader.readFloat64();
         String name = reader.readString();
-        List<FeatureNode> features = [];
+        String icon = reader.readString();
+        String className = reader.readString();
+        String description = reader.readString();
+        List<Feature> features = [];
         while (true) {
           int featureCode = reader.readUint32();
           if (featureCode == 0) break;
@@ -249,8 +257,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         }
         this.data.setAssetNode(
             assetID,
-            AssetNode(classID, features, mass, owner, size,
-                name == '' ? null : name));
+            Asset(features, mass, owner, size,
+                name == '' ? null : name, icon, className, description));
       }
     }
   }
@@ -289,14 +297,13 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           'Error: failed system server $serverName login ($message)', context);
     } else {
       assert(message[0] == 'T');
-      assert(message.length == 3);
+      assert(message.length == 2);
       int version = int.parse(message[1]);
       if (version != kClientVersion) {
         openErrorDialog(
-            'Warning: server version $version does not match client version kClientVersion',
+            'Warning: server version $version does not match client version $kClientVersion',
             context);
       }
-      data.setDynastyID(serverName, int.parse(message[2]));
     }
   }
 
@@ -364,7 +371,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           'response from dynasty server login: ${message[1]}', context);
     } else {
       assert(message[0] == 'T');
-      int systemServerCount = int.parse(message[1]);
+      data.setDynastyID(int.parse(message[1]));
+      int systemServerCount = int.parse(message[2]);
       if (systemServerCount == 0) {
         openErrorDialog(
           'Error - No system servers (login response)',
@@ -375,7 +383,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         connection.close();
       }
       this.systemServers.clear();
-      Iterable<String> systemServers = message.skip(2);
+      Iterable<String> systemServers = message.skip(3);
       assert(systemServers.length == systemServerCount);
       for (String server in systemServers) {
         connectToSystemServer(server);

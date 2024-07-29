@@ -20,43 +20,21 @@ extension type AssetID._((String server, int id) value) {
   }
 }
 
-extension type AssetClassID._((String server, int id) value) {
-  String get server => value.$1;
-  int get id => value.$2;
-  String get displayName => '${id << 32 >> 32}';
+sealed class Feature {}
 
-  factory AssetClassID(String server, int id) {
-    return AssetClassID._((server, id));
-  }
-}
-
-// from systems.pas
-
-abstract class FeatureClass<T extends FeatureNode> {}
-
-class AssetClass {
-  final List<FeatureClass> features;
-  final String name;
-  final String description;
-  final String icon;
-
-  AssetClass(this.features, this.name, this.description, this.icon);
-}
-
-sealed class FeatureNode {}
-
-class AssetNode {
-  final AssetClassID assetClass;
+class Asset {
   final int owner;
-  final List<FeatureNode> features;
+  final List<Feature> features;
   final double mass; // in kg
   final double size; // in meters
   final String? name;
+  final String icon;
+  final String className;
+  final String description;
 
-  AssetNode(this.assetClass, this.features, this.mass, this.owner, this.size, this.name);
+  Asset(this.features, this.mass, this.owner, this.size, this.name,
+      this.icon, this.className, this.description);
 }
-
-// from features/orbit.pas
 
 class OrbitChild {
   final AssetID child;
@@ -74,19 +52,15 @@ class OrbitChild {
   );
 }
 
-class OrbitFeatureClass extends FeatureClass<OrbitFeatureNode> {}
-
-class OrbitFeatureNode extends FeatureNode {
+class OrbitFeature extends Feature {
   final List<OrbitChild> orbitingChildren;
   final AssetID primaryChild;
 
-  OrbitFeatureNode(
+  OrbitFeature(
     this.orbitingChildren,
     this.primaryChild,
   );
 }
-
-// from features/space.pas
 
 class EmptySpaceChild {
   final AssetID child;
@@ -116,19 +90,15 @@ class SolarSystemChild {
   SolarSystemChild(this.child, this.distanceFromCenter, this.theta);
 }
 
-class SolarSystemFeatureClass extends FeatureClass<SolarSystemFeatureNode> {}
-
-class SolarSystemFeatureNode extends FeatureNode {
+class SolarSystemFeature extends Feature {
   final List<SolarSystemChild> children;
   final AssetID primaryChild;
 
-  SolarSystemFeatureNode(
+  SolarSystemFeature(
     this.children,
     this.primaryChild,
   );
 }
-
-// from features/structure.pas
 
 class Material {
   final String name;
@@ -156,32 +126,34 @@ class MaterialLineItem {
   MaterialLineItem(this.componentName, this.material, this.quantity);
 }
 
-class StructureFeatureClass extends FeatureClass {
-  final List<MaterialLineItem> materialBill;
-  final int minimumFunctionalQuantity;
-  int get totalQuantity => materialBill.fold(0, (a, b) => a + b.quantity);
-
-  StructureFeatureClass(
-    this.materialBill,
-    this.minimumFunctionalQuantity,
-  );
-}
-
-class StructureFeatureNode extends FeatureNode {
+class StructureFeature extends Feature {
   final int materialsQuantity;
   final int structuralIntegrity;
-  StructureFeatureNode(
+  StructureFeature(
     this.materialsQuantity,
     this.structuralIntegrity,
   );
 }
 
-// from features/stellar.pas
-
-class StarFeatureClass extends FeatureClass {}
-
-class StarFeatureNode extends FeatureNode {
+class StarFeature extends Feature {
   final StarIdentifier starID;
 
-  StarFeatureNode(this.starID);
+  StarFeature(this.starID);
+}
+
+class SpaceSensorFeature extends Feature {
+  final int reach; // max steps up tree to nearest orbit
+  final int up; // distance that the sensors reach up the tree from the nearest orbit
+  final int down; // distance down the tree that the sensors reach
+  final double resolution; // the minimum size of assets that these sensors can detect (in meters)
+
+  SpaceSensorFeature(this.reach, this.up, this.down, this.resolution); 
+}
+
+class SpaceSensorStatusFeature extends Feature {
+  final AssetID nearestOrbit;
+  final AssetID topOrbit;
+  final int count;
+
+  SpaceSensorStatusFeature(this.nearestOrbit, this.topOrbit, this.count);
 }

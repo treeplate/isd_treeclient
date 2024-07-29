@@ -36,11 +36,11 @@ class _SystemSelectorState extends State<SystemSelector> {
 
 // ends with newline
 // first line has no indent
-String prettifyFeature(DataStructure data, FeatureNode feature,
+String prettifyFeature(DataStructure data, Feature feature,
     [int indent = 0]) {
-      StringBuffer buffer = StringBuffer();
+  StringBuffer buffer = StringBuffer();
   switch (feature) {
-    case OrbitFeatureNode(
+    case OrbitFeature(
         orbitingChildren: List<OrbitChild> children,
         primaryChild: AssetID primaryChild
       ):
@@ -53,7 +53,7 @@ String prettifyFeature(DataStructure data, FeatureNode feature,
             '${'  ' * indent}    theta0:${child.theta0}, eccentricity:${child.eccentricity}, omega:${child.omega}, semiMajorAxis:${child.semiMajorAxis}');
         buffer.write(prettifyAsset(data, child.child, indent + 2));
       }
-    case SolarSystemFeatureNode(
+    case SolarSystemFeature(
         children: List<SolarSystemChild> children,
         primaryChild: AssetID primaryChild
       ):
@@ -66,29 +66,40 @@ String prettifyFeature(DataStructure data, FeatureNode feature,
             '${'  ' * indent}    theta:${child.theta}, distanceFromCenter:${child.distanceFromCenter}');
         buffer.write(prettifyAsset(data, child.child, indent + 2));
       }
-    case StructureFeatureNode(materialsQuantity: int materialsQuantity, structuralIntegrity: int structuralIntegrity):
-      buffer.writeln('Structure feature (materialsQuantity: $materialsQuantity, structuralIntegrity: $structuralIntegrity)');
-    case StarFeatureNode(starID: StarIdentifier id):
+    case StructureFeature(
+        materialsQuantity: int materialsQuantity,
+        structuralIntegrity: int structuralIntegrity
+      ):
+      buffer.writeln(
+          'Structure feature (materialsQuantity: $materialsQuantity, structuralIntegrity: $structuralIntegrity)');
+    case StarFeature(starID: StarIdentifier id):
       buffer.writeln('Star ID: ${id.displayName}');
+    case SpaceSensorFeature(reach: int reach, up: int up, down: int down, resolution: double resolution):
+      buffer.writeln('Space Sensor: Up $reach to orbit, up $up more, down $down, anything larger than $resolution meters');
+    case SpaceSensorStatusFeature(topOrbit: AssetID topOrbit, nearestOrbit: AssetID nearestOrbit, count: int count):
+      buffer.writeln('Sensor status: Went up to ${data.assetNodes[nearestOrbit]!.name ?? 'an unnamed orbit'}, then continued up to ${data.assetNodes[topOrbit]!.name ?? 'an unnamed orbit'}. Found a total of $count assets.');
   }
   return buffer.toString();
 }
 
 // ends with newline
 String prettifyAsset(DataStructure data, AssetID assetID, [int indent = 0]) {
-  AssetNode asset = data.assetNodes[assetID]!;
+  Asset asset = data.assetNodes[assetID]!;
   StringBuffer buffer = StringBuffer();
   if (asset.name == null) {
-    buffer.writeln('${'  ' * indent}class ${asset.assetClass.displayName}');
+    buffer.writeln('${'  ' * indent}${asset.className}');
   } else {
-    buffer.writeln('${'  ' * indent}${asset.name} (class ${asset.assetClass.displayName})');
+    buffer.writeln(
+        '${'  ' * indent}${asset.name} (${asset.className})');
   }
   buffer.writeln('${'  ' * indent}  mass: ${asset.mass} kilograms');
   buffer.writeln('${'  ' * indent}  size: ${asset.size} meters');
+  buffer.writeln('${'  ' * indent}  icon: ${asset.icon}');
+  buffer.writeln('${'  ' * indent}  description: ${asset.description}');
   buffer.writeln(
-      '${'  ' * indent}  owner: ${asset.owner == 0 ? 'nobody' : asset.owner == data.dynastyIDs[assetID.server] ? 'you' : asset.owner}');
+      '${'  ' * indent}  owner: ${asset.owner == 0 ? 'nobody' : asset.owner == data.dynastyID ? 'you' : asset.owner}');
   buffer.writeln('${'  ' * indent}  features:');
-  for (FeatureNode feature in asset.features) {
+  for (Feature feature in asset.features) {
     buffer.write('${'  ' * indent}  - ');
     buffer.write(prettifyFeature(data, feature, indent + 1));
   }
@@ -113,7 +124,17 @@ class SystemView extends StatelessWidget {
             ),
           ),
         ),
-        Center(child: SelectableText(prettifyAsset(data, data.rootAssetNodes[system]!))),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Center(
+            child: SelectableText(
+              'position: (${data.systemPositions[system]!.dx}, ${data.systemPositions[system]!.dy})',
+            ),
+          ),
+        ),
+        Center(
+            child: SelectableText(
+                prettifyAsset(data, data.rootAssetNodes[system]!))),
       ],
     );
   }
