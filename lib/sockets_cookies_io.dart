@@ -31,9 +31,10 @@ class WebSocketWrapper {
   }
 
   Future<void> reconnect(void onData(dynamic event), void Function(Object error, StackTrace)? onError,
-    void Function()? onReset,) async {
+    void Function()? onReset, [Duration waitingTime = const Duration(milliseconds: 100)]) async {
     _doneReloading = Completer();
     reloading = true;
+    do {
     try {
       socket = await WebSocket.connect(name);
       socket.pingInterval = pingInterval;
@@ -41,9 +42,17 @@ class WebSocketWrapper {
       _doneReloading.complete();
       listen(onData, onError: onError, onReset: onReset);
     } catch (e, st) {
+      try {
       if (onError == null) rethrow;
       onError(e, st);
+      } finally {
+        waitingTime *= 2;
+        print('waiting $waitingTime...');
+        await Future.delayed(waitingTime);
+        continue;
+      }
     }
+    } while(false);
   }
 
   void send(String data) async {

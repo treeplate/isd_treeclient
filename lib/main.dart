@@ -219,7 +219,17 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         }
         return OrbitFeature(children, primaryChild);
       case 4:
-        return StructureFeature(reader.readUint32(), reader.readUint32());
+        List<MaterialLineItem> materials = [];
+        while (reader.readUint32() != 0) {
+          int quantity = reader.readUint32();
+          int max = reader.readUint32();
+          String componentName = reader.readString();
+          String materialDescription = reader.readString();
+          MaterialID materialID = MaterialID(server, reader.readUint32());
+          materials.add(MaterialLineItem(componentName == '' ? null : componentName, materialID, quantity, max, materialDescription));
+        }
+        int minHP = reader.readUint32();
+        return StructureFeature(materials, reader.readUint32(), minHP == 0 ? null : minHP);
       case 5:
         return SpaceSensorFeature(reader.readUint32(), reader.readUint32(), reader.readUint32(), reader.readFloat64());
       case 6:
@@ -236,7 +246,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     while (!reader.done) {
       StarIdentifier systemID = StarIdentifier.parse(reader.readUint32());
       AssetID rootAssetID = AssetID(server, reader.readUint64());
-      this.data.setRootAssetNode(systemID, rootAssetID);
+      this.data.setRootAsset(systemID, rootAssetID);
       Offset position = Offset(reader.readFloat64(), reader.readFloat64());
       this.data.setSystemPosition(systemID, position / this.data.galaxyDiameter!);
       while (true) {

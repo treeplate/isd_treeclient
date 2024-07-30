@@ -189,3 +189,7 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
     });
   }
 }
+
+Color getColorForDynastyID(int dynastyID) {
+  return Color(0xFF000000 | (dynastyID * 0x543642));
+}

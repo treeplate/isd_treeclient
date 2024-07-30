@@ -6,6 +6,7 @@ class BinaryReader {
   final ByteData _data;
   final List<int> _rawData;
   final Endian endian;
+  final Map<int, String> stringTable = {};
 
   bool get done => _index >= _rawData.length;
 
@@ -16,6 +17,7 @@ class BinaryReader {
     _index += 4;
     return _data.getUint32(_index - 4, endian);
   }
+
   int readUint64() {
     if (_index > _rawData.length - 8)
       throw StateError(
@@ -33,13 +35,20 @@ class BinaryReader {
   }
 
   String readString() {
+    int code = readUint32();
+    String? result = stringTable[code];
+    if (result != null) {
+      return result;
+    }
     int length = readUint32();
     if (_index > _rawData.length - length)
       throw StateError(
           'called readString without enough bytes to read a string of that length ($length)');
     List<int> rawString = _rawData.sublist(_index, _index + length);
     _index += length;
-    return utf8.decode(rawString);
+    result = utf8.decode(rawString);
+    stringTable[code] = result;
+    return result;
   }
 
   BinaryReader(this._rawData, this.endian)

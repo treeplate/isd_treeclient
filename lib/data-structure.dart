@@ -21,9 +21,9 @@ class DataStructure with ChangeNotifier {
   List<List<Offset>>? stars;
   Map<StarIdentifier, StarIdentifier>?
       systems; // star ID -> system ID (first star in the system)
-  Map<StarIdentifier, AssetID> rootAssetNodes = {};
+  Map<StarIdentifier, AssetID> rootAssets = {};
   Map<StarIdentifier, Offset> systemPositions = {}; // (0, 0) to (1, 1)
-  Map<AssetID, Asset> assetNodes = {};
+  Map<AssetID, Asset> assets = {};
   int? dynastyID;
 
   void setCredentials(String username, String password) {
@@ -41,8 +41,8 @@ class DataStructure with ChangeNotifier {
     password = null;
     token = null;
     dynastyID = null;
-    assetNodes.clear();
-    rootAssetNodes.clear();
+    assets.clear();
+    rootAssets.clear();
     notifyListeners();
   }
 
@@ -123,12 +123,12 @@ class DataStructure with ChangeNotifier {
   }
 
   void setAssetNode(AssetID id, Asset node) {
-    assetNodes[id] = node;
+    assets[id] = node;
     notifyListeners();
   }
 
-  void setRootAssetNode(StarIdentifier system, AssetID id) {
-    rootAssetNodes[system] = id;
+  void setRootAsset(StarIdentifier system, AssetID id) {
+    rootAssets[system] = id;
     notifyListeners();
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:isd_treeclient/ui-core.dart';
 import 'data-structure.dart';
 import 'assets.dart';
 
@@ -18,10 +19,10 @@ class _SystemSelectorState extends State<SystemSelector> {
     return selectedSystem == null
         ? ListView(
             children: [
-              if (widget.data.rootAssetNodes.isEmpty)
+              if (widget.data.rootAssets.isEmpty)
                 Center(child: Text('No visible systems.'))
               else
-                for (StarIdentifier system in widget.data.rootAssetNodes.keys)
+                for (StarIdentifier system in widget.data.rootAssets.keys)
                   TextButton(
                     onPressed: () => setState(() {
                       selectedSystem = system;
@@ -34,76 +35,276 @@ class _SystemSelectorState extends State<SystemSelector> {
   }
 }
 
-// ends with newline
-// first line has no indent
-String prettifyFeature(DataStructure data, Feature feature,
-    [int indent = 0]) {
-  StringBuffer buffer = StringBuffer();
+Widget renderFeature(Feature feature, DataStructure data) {
   switch (feature) {
-    case OrbitFeature(
-        orbitingChildren: List<OrbitChild> children,
-        primaryChild: AssetID primaryChild
-      ):
-      buffer.writeln('Orbit feature');
-      buffer.writeln('${'  ' * indent}  Center:');
-      buffer.write(prettifyAsset(data, primaryChild, indent + 2));
-      buffer.writeln('${'  ' * indent}  Orbiting:');
-      for (OrbitChild child in children) {
-        buffer.writeln(
-            '${'  ' * indent}    theta0:${child.theta0}, eccentricity:${child.eccentricity}, omega:${child.omega}, semiMajorAxis:${child.semiMajorAxis}');
-        buffer.write(prettifyAsset(data, child.child, indent + 2));
-      }
-    case SolarSystemFeature(
-        children: List<SolarSystemChild> children,
-        primaryChild: AssetID primaryChild
-      ):
-      buffer.writeln('Solar system feature');
-      buffer.writeln('${'  ' * indent}  Center:');
-      buffer.write(prettifyAsset(data, primaryChild, indent + 2));
-      buffer.writeln('${'  ' * indent}  Around:');
-      for (SolarSystemChild child in children) {
-        buffer.write(
-            '${'  ' * indent}    theta:${child.theta}, distanceFromCenter:${child.distanceFromCenter}');
-        buffer.write(prettifyAsset(data, child.child, indent + 2));
-      }
-    case StructureFeature(
-        materialsQuantity: int materialsQuantity,
-        structuralIntegrity: int structuralIntegrity
-      ):
-      buffer.writeln(
-          'Structure feature (materialsQuantity: $materialsQuantity, structuralIntegrity: $structuralIntegrity)');
-    case StarFeature(starID: StarIdentifier id):
-      buffer.writeln('Star ID: ${id.displayName}');
-    case SpaceSensorFeature(reach: int reach, up: int up, down: int down, resolution: double resolution):
-      buffer.writeln('Space Sensor: Up $reach to orbit, up $up more, down $down, anything larger than $resolution meters');
-    case SpaceSensorStatusFeature(topOrbit: AssetID topOrbit, nearestOrbit: AssetID nearestOrbit, count: int count):
-      buffer.writeln('Sensor status: Went up to ${data.assetNodes[nearestOrbit]!.name ?? 'an unnamed orbit'}, then continued up to ${data.assetNodes[topOrbit]!.name ?? 'an unnamed orbit'}. Found a total of $count assets.');
+    case OrbitFeature():
+      return OrbitFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case SolarSystemFeature():
+      return SolarSystemFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case StructureFeature():
+      return StructureFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case StarFeature():
+      return StarFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case SpaceSensorFeature():
+      return SpaceSensorFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case SpaceSensorStatusFeature():
+      return SpaceSensorStatusFeatureWidget(
+        feature: feature,
+        data: data,
+      );
   }
-  return buffer.toString();
 }
 
-// ends with newline
-String prettifyAsset(DataStructure data, AssetID assetID, [int indent = 0]) {
-  Asset asset = data.assetNodes[assetID]!;
-  StringBuffer buffer = StringBuffer();
-  if (asset.name == null) {
-    buffer.writeln('${'  ' * indent}${asset.className}');
-  } else {
-    buffer.writeln(
-        '${'  ' * indent}${asset.name} (${asset.className})');
+class SolarSystemFeatureWidget extends StatelessWidget {
+  const SolarSystemFeatureWidget(
+      {super.key, required this.feature, required this.data});
+  final SolarSystemFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Center'),
+        Padding(
+          padding: EdgeInsets.only(left: 16),
+          child: AssetWidget(asset: feature.primaryChild, data: data),
+        ),
+        Text('Around'),
+        ...feature.children.map(
+          (e) => Padding(
+            padding: EdgeInsets.only(left: 16),
+            child: AssetWidget(asset: e.child, data: data),
+          ),
+        ),
+      ],
+    );
   }
-  buffer.writeln('${'  ' * indent}  mass: ${asset.mass} kilograms');
-  buffer.writeln('${'  ' * indent}  size: ${asset.size} meters');
-  buffer.writeln('${'  ' * indent}  icon: ${asset.icon}');
-  buffer.writeln('${'  ' * indent}  description: ${asset.description}');
-  buffer.writeln(
-      '${'  ' * indent}  owner: ${asset.owner == 0 ? 'nobody' : asset.owner == data.dynastyID ? 'you' : asset.owner}');
-  buffer.writeln('${'  ' * indent}  features:');
-  for (Feature feature in asset.features) {
-    buffer.write('${'  ' * indent}  - ');
-    buffer.write(prettifyFeature(data, feature, indent + 1));
+}
+
+class OrbitFeatureWidget extends StatelessWidget {
+  const OrbitFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final OrbitFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Center'),
+        Padding(
+          padding: EdgeInsets.only(left: 16),
+          child: AssetWidget(asset: feature.primaryChild, data: data),
+        ),
+        Text('Orbiting'),
+        ...feature.orbitingChildren.map(
+          (e) => Padding(
+            padding: EdgeInsets.only(left: 16),
+            child: AssetWidget(asset: e.child, data: data),
+          ),
+        ),
+      ],
+    );
   }
-  return buffer.toString();
+}
+
+class StructureFeatureWidget extends StatelessWidget {
+  const StructureFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final StructureFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Components (total: ${feature.hp}/${feature.minHP ?? '???'}/${feature.maxHP ?? '???'})'),
+        ...feature.materials.map((e) => Text('  ${e.material.id.toRadixString(16)} ${e.componentName == null ? '' : '${e.componentName} '}(${e.materialDescription}) ${e.quantity}/${e.requiredQuantity}'))
+      ],
+    );
+  }
+}
+
+class StarFeatureWidget extends StatelessWidget {
+  const StarFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final StarFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SelectableText('ID: ${feature.starID.displayName}'),
+      ],
+    );
+  }
+}
+
+class SpaceSensorFeatureWidget extends StatelessWidget {
+  const SpaceSensorFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final SpaceSensorFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Space sensor'),
+        Text('  Maximum steps up to an orbit: ${feature.reach}'),
+        Text('  Maximum steps up after orbit: ${feature.up}'),
+        Text('  Maximum steps down after going up: ${feature.down}'),
+        Text('  Smallest detectable object: ${feature.resolution}'),
+      ],
+    );
+  }
+}
+
+class SpaceSensorStatusFeatureWidget extends StatelessWidget {
+  const SpaceSensorStatusFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final SpaceSensorStatusFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    Asset nearestOrbit = data.assets[feature.nearestOrbit]!;
+    Asset topAsset = data.assets[feature.topAsset]!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+            '  Enclosing orbit: ${nearestOrbit.name ?? 'an unnamed ${nearestOrbit.className}'}'),
+        Text(
+            '  Top asset reached: ${topAsset.name ?? 'an unnamed ${topAsset.className}'}'),
+        Text('  Count of reached assets: ${feature.count}'),
+      ],
+    );
+  }
+}
+
+class AssetWidget extends StatelessWidget {
+  const AssetWidget({super.key, required this.asset, required this.data});
+
+  final AssetID asset;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    Asset asset = data.assets[this.asset]!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextButton(
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) {
+                return Dialog(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        asset.name ?? asset.className,
+                        style: TextStyle(fontSize: 20),
+                      ),
+                      if (asset.name != null)
+                        Text(
+                          asset.className,
+                          style: TextStyle(fontSize: 10),
+                        ),
+                      Text(asset.description),
+                      Text(
+                          'Owner: ${asset.owner == 0 ? 'nobody' : asset.owner == data.dynastyID ? 'you' : asset.owner}'),
+                      SelectableText('Mass: ${asset.mass} kilograms'),
+                      SelectableText('Diameter: ${asset.size} meters'),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+          child: Container(
+            decoration: BoxDecoration(border: asset.owner == data.dynastyID ? Border.all(color: Theme.of(context).colorScheme.primary, width: 5) : null,),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ColoredBox(
+                  color: Colors.grey,
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Image.asset(
+                      'icons/${asset.icon}.png',
+                      width: 32,
+                      height: 32,
+                      fit: BoxFit.cover,
+                      filterQuality: FilterQuality.none,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${asset.name ?? asset.className}',
+                  style: asset.owner == 0
+                      ? DefaultTextStyle.of(context).style
+                      : TextStyle(
+                          color: getColorForDynastyID(asset.owner),
+                        ),
+                )
+              ],
+            ),
+          ),
+        ),
+        ...asset.features.map(
+          (e) => Padding(
+            padding: EdgeInsets.only(left: 16),
+            child: renderFeature(e, data),
+          ),
+        )
+      ],
+    );
+  }
 }
 
 class SystemView extends StatelessWidget {
@@ -119,7 +320,7 @@ class SystemView extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 16),
           child: Center(
             child: SelectableText(
-              '${system.displayName} (${data.rootAssetNodes[system]!.server})',
+              '${system.displayName} (${data.rootAssets[system]!.server})',
               style: TextStyle(fontSize: 20),
             ),
           ),
@@ -132,9 +333,7 @@ class SystemView extends StatelessWidget {
             ),
           ),
         ),
-        Center(
-            child: SelectableText(
-                prettifyAsset(data, data.rootAssetNodes[system]!))),
+        AssetWidget(data: data, asset: data.rootAssets[system]!),
       ],
     );
   }

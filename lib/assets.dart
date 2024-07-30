@@ -20,6 +20,15 @@ extension type AssetID._((String server, int id) value) {
   }
 }
 
+extension type MaterialID._((String server, int id) value) {
+  String get server => value.$1;
+  int get id => value.$2;
+
+  factory MaterialID(String server, int id) {
+    return MaterialID._((server, id));
+  }
+}
+
 sealed class Feature {}
 
 class Asset {
@@ -32,8 +41,16 @@ class Asset {
   final String className;
   final String description;
 
-  Asset(this.features, this.mass, this.owner, this.size, this.name,
-      this.icon, this.className, this.description);
+  Asset(
+    this.features,
+    this.mass,
+    this.owner,
+    this.size,
+    this.name,
+    this.icon,
+    this.className,
+    this.description,
+  );
 }
 
 class OrbitChild {
@@ -119,20 +136,31 @@ class Material {
 }
 
 class MaterialLineItem {
-  final String componentName;
-  final Material material;
+  final String? componentName;
+  final String materialDescription;
   final int quantity;
+  final int? requiredQuantity;
+  final MaterialID material;
 
-  MaterialLineItem(this.componentName, this.material, this.quantity);
+  MaterialLineItem(this.componentName, this.material, this.quantity,
+      this.requiredQuantity, this.materialDescription);
 }
 
 class StructureFeature extends Feature {
-  final int materialsQuantity;
-  final int structuralIntegrity;
-  StructureFeature(
-    this.materialsQuantity,
-    this.structuralIntegrity,
-  );
+  final List<MaterialLineItem> materials;
+
+  int? get maxHP {
+    double result = materials.fold(
+      0,
+      (a, b) => a + (b.requiredQuantity ?? double.nan),
+    );
+    if (result.isNaN) return null;
+    return result.toInt();
+  }
+
+  final int hp;
+  final int? minHP;
+  StructureFeature(this.materials, this.hp, this.minHP);
 }
 
 class StarFeature extends Feature {
@@ -142,18 +170,24 @@ class StarFeature extends Feature {
 }
 
 class SpaceSensorFeature extends Feature {
-  final int reach; // max steps up tree to nearest orbit
-  final int up; // distance that the sensors reach up the tree from the nearest orbit
-  final int down; // distance down the tree that the sensors reach
-  final double resolution; // the minimum size of assets that these sensors can detect (in meters)
+  /// Max steps up tree to nearest orbit.
+  final int reach;
 
-  SpaceSensorFeature(this.reach, this.up, this.down, this.resolution); 
+  /// Distance that the sensors reach up the tree from the nearest orbit.
+  final int up;
+
+  /// Distance down the tree that the sensors reach.
+  final int down;
+
+  /// The minimum size of assets that these sensors can detect (in meters).
+  final double resolution;
+  SpaceSensorFeature(this.reach, this.up, this.down, this.resolution);
 }
 
 class SpaceSensorStatusFeature extends Feature {
   final AssetID nearestOrbit;
-  final AssetID topOrbit;
+  final AssetID topAsset;
   final int count;
 
-  SpaceSensorStatusFeature(this.nearestOrbit, this.topOrbit, this.count);
+  SpaceSensorStatusFeature(this.nearestOrbit, this.topAsset, this.count);
 }
