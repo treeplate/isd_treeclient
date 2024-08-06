@@ -29,4 +29,4 @@ Future<Uint8List?> getBinaryBlob(String name) async {
 
 
 void setCookie(String name, String? value) {}
-void saveBinaryBlob(String name, List<int> data) {}
+Future<void> saveBinaryBlob(String name, ByteBuffer data) async {}

@@ -9,9 +9,9 @@ import 'binaryreader.dart';
 import 'network_handler.dart';
 import 'account.dart';
 import 'assets.dart';
-import 'sockets_cookies_stub.dart'
-    if (dart.library.io) 'sockets_cookies_io.dart'
-    if (dart.library.js_interop) 'sockets_cookies_web.dart';
+import 'platform_specific_stub.dart'
+    if (dart.library.io) 'platform_specific_io.dart'
+    if (dart.library.js_interop) 'platform_specific_web.dart';
 import 'data-structure.dart';
 import 'ui-core.dart';
 
@@ -122,13 +122,14 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     });
   }
 
-  void parseLoginServerBinaryMessage(List<int> data) {
-    int fileID = data[0];
+  void parseLoginServerBinaryMessage(ByteBuffer data) {
+    Uint32List uint32s = data.asUint32List();
+    int fileID = uint32s[0];
     switch (fileID) {
       case 1:
-        this.data.parseStars(data.skip(4).toList());
+        this.data.parseStars(uint32s, data);
       case 2:
-        this.data.parseSystems(data.skip(4).toList());
+        this.data.parseSystems(uint32s, data);
       default:
         openErrorDialog('Error - Unrecognised file ID: $fileID', context);
     }
@@ -226,14 +227,33 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           String componentName = reader.readString();
           String materialDescription = reader.readString();
           MaterialID materialID = MaterialID(server, reader.readUint32());
-          materials.add(MaterialLineItem(componentName == '' ? null : componentName, materialID, quantity, max, materialDescription));
+          materials.add(MaterialLineItem(
+            componentName == '' ? null : componentName,
+            materialID,
+            quantity,
+            max,
+            materialDescription,
+          ));
         }
         int minHP = reader.readUint32();
-        return StructureFeature(materials, reader.readUint32(), minHP == 0 ? null : minHP);
+        return StructureFeature(
+          materials,
+          reader.readUint32(),
+          minHP == 0 ? null : minHP,
+        );
       case 5:
-        return SpaceSensorFeature(reader.readUint32(), reader.readUint32(), reader.readUint32(), reader.readFloat64());
+        return SpaceSensorFeature(
+          reader.readUint32(),
+          reader.readUint32(),
+          reader.readUint32(),
+          reader.readFloat64(),
+        );
       case 6:
-        return SpaceSensorStatusFeature(AssetID(server, reader.readUint64()), AssetID(server, reader.readUint64()), reader.readUint32());
+        return SpaceSensorStatusFeature(
+          AssetID(server, reader.readUint64()),
+          AssetID(server, reader.readUint64()),
+          reader.readUint32(),
+        );
       default:
         throw UnimplementedError('Unknown featureID $featureCode');
     }
@@ -241,17 +261,19 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
 
   static const kClientVersion = 6;
 
-  void parseSystemServerBinaryMessage(String server, List<int> data) {
+  void parseSystemServerBinaryMessage(String server, ByteBuffer data) {
     BinaryReader reader = BinaryReader(data, Endian.little);
     while (!reader.done) {
       StarIdentifier systemID = StarIdentifier.parse(reader.readUint32());
       AssetID rootAssetID = AssetID(server, reader.readUint64());
       this.data.setRootAsset(systemID, rootAssetID);
       Offset position = Offset(reader.readFloat64(), reader.readFloat64());
-      this.data.setSystemPosition(systemID, position / this.data.galaxyDiameter!);
+      this
+          .data
+          .setSystemPosition(systemID, position / this.data.galaxyDiameter!);
       while (true) {
         AssetID assetID = AssetID(server, reader.readUint64());
-        if (assetID.id == 0) break;
+        if (assetID.id.isZero) break;
         int owner = reader.readUint32();
         double mass = reader.readFloat64();
         double size = reader.readFloat64();
@@ -267,8 +289,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         }
         this.data.setAssetNode(
             assetID,
-            Asset(features, mass, owner, size,
-                name == '' ? null : name, icon, className, description));
+            Asset(features, mass, owner, size, name == '' ? null : name, icon,
+                className, description));
       }
     }
   }
@@ -323,26 +345,28 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     assert(message.length == 3);
     data.setToken(message[2]);
     connect(message[1]).then((socket) async {
-      setState(() {
-        dynastyServer?.close();
-        dynastyServer = NetworkConnection(
-          socket,
-          unrequestedMessageHandler: onDynastyServerMessage,
-          binaryMessageHandler: (data) {
-            openErrorDialog(
-              'Unexpected binary message from system server: ${data.length <= 10 ? data : '[${data.sublist(0, 10)}, ...${data.length - 10} more]'}',
-              context,
-            );
-          },
-          onReset: onDynastyServerReset,
-          onError: (e, st) {
-            openErrorDialog(
-              'Network error with dynasty server connection: $e',
-              context,
-            );
-          },
-        );
-      });
+      if (mounted)
+        setState(() {
+          dynastyServer?.close();
+          dynastyServer = NetworkConnection(
+            socket,
+            unrequestedMessageHandler: onDynastyServerMessage,
+            binaryMessageHandler: (data) {
+              Uint8List bytes = data.asUint8List();
+              openErrorDialog(
+                'Unexpected binary message from system server: ${bytes.length <= 10 ? bytes : '[${bytes.sublist(0, 10)}, ...${bytes.length - 10} more]'}',
+                context,
+              );
+            },
+            onReset: onDynastyServerReset,
+            onError: (e, st) {
+              openErrorDialog(
+                'Network error with dynasty server connection: $e',
+                context,
+              );
+            },
+          );
+        });
     });
   }
 

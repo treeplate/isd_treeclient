@@ -144,9 +144,9 @@ Future<Uint8List?> getBinaryBlob(String name) async {
   return file.existsSync() ? file.readAsBytesSync() : null;
 }
 
-void saveBinaryBlob(String name, List<int> data) async {
+Future<void> saveBinaryBlob(String name, ByteBuffer data) async {
   if (_binaryDataDirectory == null) {
     _binaryDataDirectory = await getApplicationCacheDirectory();
   }
-  File('${_binaryDataDirectory!.path}/$name.bin').writeAsBytesSync(data);
+  await File('${_binaryDataDirectory!.path}/$name.bin').writeAsBytes(data.asUint8List());
 }

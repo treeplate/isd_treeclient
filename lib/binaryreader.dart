@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'core.dart';
 
 class BinaryReader {
   int _index = 0;
   final ByteData _data;
-  final List<int> _rawData;
+  final Uint8List _rawData;
   final Endian endian;
   final Map<int, String> stringTable = {};
 
@@ -18,12 +19,8 @@ class BinaryReader {
     return _data.getUint32(_index - 4, endian);
   }
 
-  int readUint64() {
-    if (_index > _rawData.length - 8)
-      throw StateError(
-          'called readUint64 without enough bytes to read a uint64');
-    _index += 8;
-    return _data.getUint64(_index - 8, endian);
+  Uint64 readUint64() {
+    return Uint64((readUint32(), readUint32()));
   }
 
   double readFloat64() {
@@ -51,6 +48,7 @@ class BinaryReader {
     return result;
   }
 
-  BinaryReader(this._rawData, this.endian)
-      : _data = Uint8List.fromList(_rawData).buffer.asByteData();
+  BinaryReader(ByteBuffer buffer, this.endian)
+      : _rawData = buffer.asUint8List(),
+        _data = buffer.asByteData();
 }

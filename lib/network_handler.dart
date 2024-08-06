@@ -1,16 +1,20 @@
 import 'dart:async';
-import 'sockets_cookies_stub.dart'
-    if (dart.library.io) 'sockets_cookies_io.dart'
-    if (dart.library.js_interop) 'sockets_cookies_web.dart';
+import 'dart:typed_data';
+import 'platform_specific_stub.dart'
+    if (dart.library.io) 'platform_specific_io.dart'
+    if (dart.library.js_interop) 'platform_specific_web.dart';
 
 class NetworkConnection {
   NetworkConnection(this.socket,
       {required void Function(List<String>) unrequestedMessageHandler,
-      required void binaryMessageHandler(List<int> data),
+      required void binaryMessageHandler(ByteBuffer data),
       void Function(NetworkConnection)? onReset,
       void onError(Object error, StackTrace stackTrace)?}) {
     subscription = doListen(
-        unrequestedMessageHandler: unrequestedMessageHandler, binaryMessageHandler: binaryMessageHandler, onReset: onReset, onError: onError);
+        unrequestedMessageHandler: unrequestedMessageHandler,
+        binaryMessageHandler: binaryMessageHandler,
+        onReset: onReset,
+        onError: onError);
   }
 
   bool get reloading => socket.reloading;
@@ -19,7 +23,7 @@ class NetworkConnection {
 
   StreamSubscription<dynamic> doListen(
       {required void Function(List<String>) unrequestedMessageHandler,
-      required void binaryMessageHandler(List<int> data),
+      required void binaryMessageHandler(ByteBuffer data),
       void Function(NetworkConnection)? onReset,
       void onError(Object error, StackTrace stackTrace)?}) {
     return socket.listen(
@@ -42,7 +46,13 @@ class NetworkConnection {
             unrequestedMessageHandler(message.sublist(0, message.length - 1));
           }
         } else {
-          binaryMessageHandler(rawMessage);
+          if (rawMessage is List<int>) {
+            binaryMessageHandler(Uint8List.fromList(rawMessage).buffer);
+          } else if (rawMessage is ByteBuffer) {
+            binaryMessageHandler(rawMessage);
+          } else {
+            print(rawMessage.runtimeType);
+          }
         }
       },
       onReset: onReset == null ? null : () => onReset(this),

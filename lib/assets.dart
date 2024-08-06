@@ -1,3 +1,5 @@
+import 'core.dart';
+
 extension type StarIdentifier._((int category, int subindex) _value) {
   int get category => _value.$1;
   int get subindex => _value.$2;
@@ -11,11 +13,11 @@ extension type StarIdentifier._((int category, int subindex) _value) {
   }
 }
 
-extension type AssetID._((String server, int id) value) {
+extension type AssetID._((String server, Uint64 id) value) {
   String get server => value.$1;
-  int get id => value.$2;
+  Uint64 get id => value.$2;
 
-  factory AssetID(String server, int id) {
+  factory AssetID(String server, Uint64 id) {
     return AssetID._((server, id));
   }
 }
