@@ -142,7 +142,7 @@ class _LoginDialogState extends State<LoginDialog> {
                   if (message[0] == 'F') {
                     if (message[1] == 'unrecognized credentials') {
                       setState(() {
-                        errorMessage = 'Username or password incorrect';
+                        errorMessage = 'Username or password incorrect.';
                       });
                     } else {
                       if (mounted) {
