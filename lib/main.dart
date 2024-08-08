@@ -4,16 +4,18 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+
 import 'systemview.dart';
 import 'binaryreader.dart';
 import 'network_handler.dart';
 import 'account.dart';
 import 'assets.dart';
+import 'data-structure.dart';
+import 'ui-core.dart';
+import 'core.dart';
 import 'platform_specific_stub.dart'
     if (dart.library.io) 'platform_specific_io.dart'
     if (dart.library.js_interop) 'platform_specific_web.dart';
-import 'data-structure.dart';
-import 'ui-core.dart';
 
 const String loginServerURL = "wss://interstellar-dynasties.space:10024/";
 void main() async {
@@ -265,12 +267,16 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     BinaryReader reader = BinaryReader(data, Endian.little);
     while (!reader.done) {
       StarIdentifier systemID = StarIdentifier.parse(reader.readUint32());
+      (DateTime, Uint64) time0 = (DateTime.now(), reader.readUint64());
+      double timeFactor = reader.readFloat64();
       AssetID rootAssetID = AssetID(server, reader.readUint64());
       this.data.setRootAsset(systemID, rootAssetID);
       Offset position = Offset(reader.readFloat64(), reader.readFloat64());
       this
           .data
           .setSystemPosition(systemID, position / this.data.galaxyDiameter!);
+      this.data.setTime0(systemID, time0);
+      this.data.setTimeFactor(systemID, timeFactor);
       while (true) {
         AssetID assetID = AssetID(server, reader.readUint64());
         if (assetID.id.isZero) break;

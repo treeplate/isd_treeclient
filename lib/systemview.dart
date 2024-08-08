@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:isd_treeclient/ui-core.dart';
 import 'data-structure.dart';
 import 'assets.dart';
+import 'core.dart';
 import 'platform_specific_stub.dart'
     if (dart.library.io) 'platform_specific_io.dart'
     if (dart.library.js_interop) 'platform_specific_web.dart';
@@ -384,6 +385,19 @@ class SystemView extends StatefulWidget {
   State<SystemView> createState() => _SystemViewState();
 }
 
+String prettyPrintDuration(Uint64 duration) {
+  int milliseconds = (duration % 1000).asInt;
+  int seconds = ((duration / 1000) % 60).floor();
+  int minutes = ((duration / (1000 * 60)) % 60).floor();
+  int hours = ((duration / (1000 * 60 * 60)) % 24).floor();
+  int days = (duration / (1000 * 60 * 60 * 24)).floor();
+  if (days > 0) return '$days days and $hours hours';
+  if (hours > 0) return '$hours:$minutes:$seconds';
+  if (minutes > 0) return '$minutes:$seconds.${(milliseconds / 1000).toString().substring(1)}';
+  if (seconds > 0) return '$seconds.${(milliseconds / 1000).toString().substring(1)} seconds';
+  return '$milliseconds milliseconds';
+}
+
 class _SystemViewState extends State<SystemView> {
   bool collapseOrbits = true;
 
@@ -398,6 +412,7 @@ class _SystemViewState extends State<SystemView> {
 
   @override
   Widget build(BuildContext context) {
+    (DateTime, Uint64) time0 = widget.data.time0s[widget.system]!;
     return ListView(
       children: [
         Row(
@@ -421,6 +436,30 @@ class _SystemViewState extends State<SystemView> {
             child: SelectableText(
               '${widget.system.displayName} (${widget.data.rootAssets[widget.system]!.server})',
               style: TextStyle(fontSize: 20),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Center(
+            child: SelectableText(
+              'position: (${widget.data.systemPositions[widget.system]!.dx}, ${widget.data.systemPositions[widget.system]!.dy})',
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Center(
+            child: SelectableText(
+              'time at ${time0.$1}: ${prettyPrintDuration(time0.$2)}',
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Center(
+            child: SelectableText(
+              'time factor: ${widget.data.timeFactors[widget.system]!}',
             ),
           ),
         ),

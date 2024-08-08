@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'dart:ui' show Offset;
 import 'package:flutter/foundation.dart' show ChangeNotifier;
+import 'core.dart';
 import 'assets.dart';
 import 'platform_specific_stub.dart'
     if (dart.library.io) 'platform_specific_io.dart'
@@ -11,7 +12,6 @@ const String kPasswordCookieName = 'password';
 const String kGalaxyDiameterCookieName = 'galaxy-diameter';
 const String kStarsCookieName = 'stars';
 const String kSystemsCookieName = 'systems';
-const int integerLimit32 = 0x100000000;
 
 class DataStructure with ChangeNotifier {
   String? username;
@@ -23,6 +23,8 @@ class DataStructure with ChangeNotifier {
       systems; // star ID -> system ID (first star in the system)
   Map<StarIdentifier, AssetID> rootAssets = {};
   Map<StarIdentifier, Offset> systemPositions = {}; // (0, 0) to (1, 1)
+  Map<StarIdentifier, (DateTime, Uint64)> time0s = {};
+  Map<StarIdentifier, double> timeFactors = {};
   Map<AssetID, Asset> assets = {};
   int? dynastyID;
 
@@ -118,6 +120,16 @@ class DataStructure with ChangeNotifier {
 
   void setSystemPosition(StarIdentifier system, Offset position) {
     systemPositions[system] = position;
+    notifyListeners();
+  }
+
+  void setTime0(StarIdentifier system, (DateTime, Uint64) time0) {
+    time0s[system] = time0;
+    notifyListeners();
+  }
+
+  void setTimeFactor(StarIdentifier system, double factor) {
+    timeFactors[system] = factor;
     notifyListeners();
   }
 

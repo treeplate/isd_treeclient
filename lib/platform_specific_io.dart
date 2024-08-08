@@ -22,7 +22,7 @@ class WebSocketWrapper {
     return socket.listen(
       onData,
       onError: onError,
-      onDone: ()  {
+      onDone: () {
         if (!_closed) {
           reconnect(onData, onError, onReset);
         }
@@ -30,29 +30,33 @@ class WebSocketWrapper {
     );
   }
 
-  Future<void> reconnect(void onData(dynamic event), void Function(Object error, StackTrace)? onError,
-    void Function()? onReset, [Duration waitingTime = const Duration(milliseconds: 100)]) async {
+  Future<void> reconnect(
+      void onData(dynamic event),
+      void Function(Object error, StackTrace)? onError,
+      void Function()? onReset,
+      [Duration waitingTime = const Duration(milliseconds: 100)]) async {
     _doneReloading = Completer();
     reloading = true;
     do {
-    try {
-      socket = await WebSocket.connect(name);
-      socket.pingInterval = pingInterval;
-      reloading = false;
-      _doneReloading.complete();
-      listen(onData, onError: onError, onReset: onReset);
-    } catch (e, st) {
       try {
-      if (onError == null) rethrow;
-      onError(e, st);
-      } finally {
-        waitingTime *= 2;
-        print('waiting $waitingTime...');
-        await Future.delayed(waitingTime);
-        continue;
+        print('reconnecting...');
+        socket = await WebSocket.connect(name);
+        socket.pingInterval = pingInterval;
+        reloading = false;
+        _doneReloading.complete();
+        listen(onData, onError: onError, onReset: onReset);
+      } catch (e, st) {
+        try {
+          if (onError == null) rethrow;
+          onError(e, st);
+        } finally {
+          waitingTime *= 2;
+          print('waiting $waitingTime...');
+          await Future.delayed(waitingTime);
+          continue;
+        }
       }
-    }
-    } while(false);
+    } while (false);
   }
 
   void send(String data) async {
@@ -148,5 +152,6 @@ Future<void> saveBinaryBlob(String name, ByteBuffer data) async {
   if (_binaryDataDirectory == null) {
     _binaryDataDirectory = await getApplicationCacheDirectory();
   }
-  await File('${_binaryDataDirectory!.path}/$name.bin').writeAsBytes(data.asUint8List());
+  await File('${_binaryDataDirectory!.path}/$name.bin')
+      .writeAsBytes(data.asUint8List());
 }

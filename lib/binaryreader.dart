@@ -20,7 +20,7 @@ class BinaryReader {
   }
 
   Uint64 readUint64() {
-    return Uint64((readUint32(), readUint32()));
+    return Uint64.littleEndian(readUint32(), readUint32());
   }
 
   double readFloat64() {
