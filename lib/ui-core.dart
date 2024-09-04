@@ -1,5 +1,9 @@
+import 'dart:math';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+
+import 'core.dart';
 
 void openErrorDialog(String message, BuildContext context) {
   showDialog(
@@ -108,10 +112,12 @@ class ZoomableCustomPaint extends StatefulWidget {
     required this.painter,
     this.startingZoom = 1,
     this.startingScreenCenter = const Offset(.5, .5),
+    this.onTap,
   });
   final CustomPainter Function(double zoom, Offset screenCenter) painter;
   final double startingZoom;
   final Offset startingScreenCenter;
+  final void Function(Offset)? onTap;
 
   @override
   State<ZoomableCustomPaint> createState() => _ZoomableCustomPaintState();
@@ -124,7 +130,8 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
 
   @override
   void didUpdateWidget(covariant ZoomableCustomPaint oldWidget) {
-    if (oldWidget.startingZoom != widget.startingZoom || oldWidget.startingScreenCenter != widget.startingScreenCenter) {
+    if (oldWidget.startingZoom != widget.startingZoom ||
+        oldWidget.startingScreenCenter != widget.startingScreenCenter) {
       zoom = widget.startingZoom;
       screenCenter = widget.startingScreenCenter;
     }
@@ -146,17 +153,29 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
             });
           }
         },
-        child: GestureDetector(
-          onScaleStart: (details) {
-            lastRelativeScale = 1.0;
-          },
-          onScaleUpdate: (details) {
-            handlePan(details.focalPointDelta, constraints);
-            double scaleMultiplicativeDelta = details.scale / lastRelativeScale;
-            handleZoom(scaleMultiplicativeDelta);
-            lastRelativeScale = details.scale;
-          },
-          child: Center(
+        child: Center(
+          child: GestureDetector(
+            onScaleStart: (details) {
+              lastRelativeScale = 1.0;
+            },
+            onScaleUpdate: (details) {
+              handlePan(details.focalPointDelta, constraints);
+              double scaleMultiplicativeDelta =
+                  details.scale / lastRelativeScale;
+              handleZoom(scaleMultiplicativeDelta);
+              lastRelativeScale = details.scale;
+            },
+            onTapUp: (TapUpDetails details) {
+              Offset topLeft =
+                  Offset(screenCenter.dx - .5, screenCenter.dy - .5);
+              Offset preZoom =
+                  details.localPosition / constraints.biggest.shortestSide;
+              Offset postZoom =
+                  (preZoom - Offset(.5, .5)) / zoom + Offset(.5, .5) + topLeft;
+              if (widget.onTap != null) {
+                widget.onTap!(postZoom);
+              }
+            },
             child: ClipRect(
               child: SizedBox(
                 width: constraints.biggest.shortestSide,
@@ -190,6 +209,40 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
   }
 }
 
+Offset calculateScreenPosition(
+    Offset basePosition, Offset screenCenter, double zoom, Size screenSize) {
+  Offset topLeft = Offset(screenCenter.dx - .5, screenCenter.dy - .5);
+  Offset noZoomPos = (basePosition - topLeft);
+  Offset afterZoomPos =
+      (((noZoomPos - Offset(.5, .5)) * zoom) + Offset(.5, .5));
+  return afterZoomPos.scale(screenSize.width, screenSize.height);
+}
+
 Color getColorForDynastyID(int dynastyID) {
   return Color(0xFF000000 | (dynastyID * 0x543642));
+}
+
+Offset polarToCartesian(double distanceFromCenter, double theta) {
+  return Offset(cos(theta), sin(theta)) * distanceFromCenter;
+}
+
+const double gravitationalConstant = 6.67430e-11; // m*m*m/kg*s*s
+
+// arguments are defined in https://software.hixie.ch/fun/isd/test-2024/servers/src/systems-server/README.md, the section on orbit features.
+Offset calculateOrbit(Uint64 t, double a, double e, bool clockwise, double M, double omega) {
+  const double G = gravitationalConstant;
+  double T = 2*pi*sqrt((a*a*a)/(G*M));
+  print(prettyPrintDuration(Uint64.fromInt(T.toInt())));
+  double tau = (t.asDouble % T) / T;
+  double q = -0.99*pi/4*(e-3*sqrt(e));
+  double theta = 2*pi*(tan(tau*2*q - q) - tan(-q)) / (tan(q)-tan(-q));
+  if(!clockwise) {
+    theta = -theta;
+  }
+  if (e == 0) {
+    theta = 2*pi*tau;
+  }
+  double L = a * (1 - e*e);
+  double r = L / (1 + e * cos(theta));
+  return polarToCartesian(r, theta+omega);
 }

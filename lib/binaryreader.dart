@@ -11,6 +11,14 @@ class BinaryReader {
 
   bool get done => _index >= _rawData.length;
 
+  int readUint8() {
+    if (_index > _rawData.length - 1)
+      throw StateError(
+          'called readUint8 without enough bytes to read a uint32');
+    _index += 1;
+    return _data.getUint8(_index - 1);
+  }
+
   int readUint32() {
     if (_index > _rawData.length - 4)
       throw StateError(

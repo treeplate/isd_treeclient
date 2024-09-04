@@ -5,7 +5,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-import 'systemview.dart';
+import 'debugsystemview.dart' as debugsystemview;
+import 'systemview.dart' as systemview;
 import 'binaryreader.dart';
 import 'network_handler.dart';
 import 'account.dart';
@@ -193,10 +194,13 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
       case 1:
         return StarFeature(StarIdentifier.parse(reader.readUint32()));
       case 2:
+        // according to the docs, the primaryChild shouldn't be special, but the server isn't up to date yet
         AssetID primaryChild = AssetID(server, reader.readUint64());
         int childCount = reader.readUint32();
         int i = 0;
-        List<SolarSystemChild> children = [];
+        List<SolarSystemChild> children = [
+          SolarSystemChild(primaryChild, 0, 0)
+        ];
         while (i < childCount) {
           double distanceFromCenter = reader.readFloat64();
           double theta = reader.readFloat64();
@@ -204,7 +208,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           children.add(SolarSystemChild(child, distanceFromCenter, theta));
           i++;
         }
-        return SolarSystemFeature(children, primaryChild);
+        return SolarSystemFeature(children);
       case 3:
         AssetID primaryChild = AssetID(server, reader.readUint64());
         int childCount = reader.readUint32();
@@ -213,11 +217,18 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         while (i < childCount) {
           double semiMajorAxis = reader.readFloat64();
           double eccentricity = reader.readFloat64();
-          double theta0 = reader.readFloat64();
           double omega = reader.readFloat64();
+          Uint64 time0 = reader.readUint64();
+          int direction = reader.readUint8();
+          if (direction > 0x1) {
+            openErrorDialog(
+                'Unsupported OrbitChild.direction: 0x${direction.toRadixString(16)}',
+                context);
+          }
           AssetID child = AssetID(server, reader.readUint64());
           children.add(
-              OrbitChild(child, semiMajorAxis, eccentricity, theta0, omega));
+            OrbitChild(child, semiMajorAxis, eccentricity, time0, direction & 0x1 > 0, omega),
+          );
           i++;
         }
         return OrbitFeature(children, primaryChild);
@@ -449,9 +460,9 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         bottom: TabBar(
           tabs: [
             Text('Galaxy'),
-            Text('Debug info'),
+            Text('System view'),
             Text('Star lookup'),
-            Text('System view')
+            Text('System view (debug)')
           ],
           controller: tabController,
         ),
@@ -552,26 +563,12 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                                       CircularProgressIndicator(),
                                     ],
                                   ),
-                                Column(
-                                  children: [
-                                    if (data.username != null)
-                                      SelectableText(
-                                          'username: "${data.username}"'),
-                                    if (data.password != null)
-                                      SelectableText(
-                                          'password: "${data.password}"'),
-                                    if (data.token != null)
-                                      SelectableText('token: "${data.token}"'),
-                                    if (data.galaxyDiameter != null)
-                                      SelectableText(
-                                          'galaxyDiameter: ${data.galaxyDiameter}'),
-                                  ],
-                                ),
+                                systemview.SystemSelector(data: data),
                                 StarLookupWidget(
                                   data: data,
                                   dynastyServer: dynastyServer,
                                 ),
-                                SystemSelector(data: data)
+                                debugsystemview.SystemSelector(data: data)
                               ],
                             ),
                     );
@@ -764,14 +761,6 @@ class GalaxyRenderer extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     int category = 0;
     Offset topLeft = Offset(screenCenter.dx - .5, screenCenter.dy - .5);
-
-    Offset calculateScreenPosition(Offset basePosition) {
-      Offset noZoomPos = (basePosition - topLeft);
-      Offset afterZoomPos =
-          (((noZoomPos - Offset(.5, .5)) * zoom) + Offset(.5, .5));
-      return afterZoomPos.scale(size.width, size.height);
-    }
-
     canvas.drawOval(
         (((-topLeft - Offset(.5, .5)) * zoom) + Offset(.5, .5))
                 .scale(size.width, size.height) &
@@ -782,7 +771,7 @@ class GalaxyRenderer extends CustomPainter {
     for (StarIdentifier star in highlightedStars) {
       Offset starPos = stars[star.category][star.subindex];
       canvas.drawCircle(
-          calculateScreenPosition(starPos),
+          calculateScreenPosition(starPos, screenCenter, zoom, size),
           starCategories[star.category].strokeWidth *
               size.shortestSide *
               2 *
@@ -796,7 +785,7 @@ class GalaxyRenderer extends CustomPainter {
       canvas.drawPoints(
           PointMode.points,
           stars[category].map((e) {
-            return calculateScreenPosition(e);
+            return calculateScreenPosition(e, screenCenter, zoom, size);
           }).where((e) {
             return !(e.dx < 0 ||
                 e.dy < 0 ||

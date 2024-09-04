@@ -37,7 +37,25 @@ extension type Uint64((int, int) _value) {
     return Uint64.bigEndian(msh % (divisor >> 32), lsh % divisor);
   }
 
-  Uint64.littleEndian(int lsh, int msh) : _value = (msh, lsh);
-  Uint64.bigEndian(int msh, int lsh) : _value = (msh, lsh);
+  Uint64 operator +(Uint64 addend) {
+    int lshResult = lsh + addend.lsh;
+    return Uint64.bigEndian((msh + addend.msh + (lshResult >> 32)) & (integerLimit32 - 1), lshResult & (integerLimit32 - 1));
+  }
+
+  const Uint64.littleEndian(int lsh, int msh) : _value = (msh, lsh);
+  const Uint64.bigEndian(int msh, int lsh) : _value = (msh, lsh);
   factory Uint64.fromInt(int value) => Uint64.bigEndian(value >> 32, value & (integerLimit32 - 1));
+}
+
+String prettyPrintDuration(Uint64 duration) {
+  int milliseconds = (duration % 1000).asInt;
+  int seconds = ((duration / 1000) % 60).floor();
+  int minutes = ((duration / (1000 * 60)) % 60).floor();
+  int hours = ((duration / (1000 * 60 * 60)) % 24).floor();
+  int days = (duration / (1000 * 60 * 60 * 24)).floor();
+  if (days > 0) return '$days days and $hours hours';
+  if (hours > 0) return '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  if (minutes > 0) return '$minutes:${seconds.toString().padLeft(2, '0')}${(milliseconds / 1000).toString().substring(1)}';
+  if (seconds > 0) return '$seconds${(milliseconds / 1000).toString().substring(1)} seconds';
+  return '$milliseconds milliseconds';
 }

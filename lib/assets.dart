@@ -59,14 +59,16 @@ class OrbitChild {
   final AssetID child;
   final double semiMajorAxis; // in meters
   final double eccentricity;
-  final double theta0; // in radians
+  final Uint64 timeOffset; // in seconds
+  final bool clockwise;
   final double omega; // in radians
 
   OrbitChild(
     this.child,
     this.semiMajorAxis,
     this.eccentricity,
-    this.theta0,
+    this.timeOffset,
+    this.clockwise,
     this.omega,
   );
 }
@@ -81,26 +83,6 @@ class OrbitFeature extends Feature {
   );
 }
 
-class EmptySpaceChild {
-  final AssetID child;
-  final double distanceFromCenter; // in meters
-  final double theta0; // in radians
-  final int time0; // in seconds since epoch
-  final double direction; // in radians
-  final double velocity0; // in meters/second
-  final double acceleration0; // in meters/second^2
-
-  EmptySpaceChild(
-    this.child,
-    this.distanceFromCenter,
-    this.theta0,
-    this.time0,
-    this.direction,
-    this.velocity0,
-    this.acceleration0,
-  );
-}
-
 class SolarSystemChild {
   final AssetID child;
   final double distanceFromCenter; // in meters
@@ -111,11 +93,9 @@ class SolarSystemChild {
 
 class SolarSystemFeature extends Feature {
   final List<SolarSystemChild> children;
-  final AssetID primaryChild;
 
   SolarSystemFeature(
     this.children,
-    this.primaryChild,
   );
 }
 

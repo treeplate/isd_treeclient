@@ -1,11 +1,11 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:isd_treeclient/ui-core.dart';
 import 'data-structure.dart';
 import 'assets.dart';
 import 'core.dart';
-import 'platform_specific_stub.dart'
-    if (dart.library.io) 'platform_specific_io.dart'
-    if (dart.library.js_interop) 'platform_specific_web.dart';
 
 class SystemSelector extends StatefulWidget {
   const SystemSelector({super.key, required this.data});
@@ -39,345 +39,9 @@ class _SystemSelectorState extends State<SystemSelector> {
   }
 }
 
-Widget renderFeature(Feature feature, DataStructure data, bool collapseOrbits) {
-  switch (feature) {
-    case OrbitFeature():
-      return OrbitFeatureWidget(
-        feature: feature,
-        data: data,
-        collapseOrbits: collapseOrbits,
-      );
-    case SolarSystemFeature():
-      return SolarSystemFeatureWidget(
-        feature: feature,
-        data: data,
-        collapseOrbits: collapseOrbits,
-      );
-    case StructureFeature():
-      return StructureFeatureWidget(
-        feature: feature,
-        data: data,
-      );
-    case StarFeature():
-      return StarFeatureWidget(
-        feature: feature,
-        data: data,
-      );
-    case SpaceSensorFeature():
-      return SpaceSensorFeatureWidget(
-        feature: feature,
-        data: data,
-      );
-    case SpaceSensorStatusFeature():
-      return SpaceSensorStatusFeatureWidget(
-        feature: feature,
-        data: data,
-      );
-  }
-}
-
-class SolarSystemFeatureWidget extends StatelessWidget {
-  const SolarSystemFeatureWidget(
-      {super.key,
-      required this.feature,
-      required this.data,
-      required this.collapseOrbits});
-  final SolarSystemFeature feature;
-  final DataStructure data;
-  final bool collapseOrbits;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Center'),
-        Padding(
-          padding: EdgeInsets.only(left: 16),
-          child: AssetWidget(
-            asset: feature.primaryChild,
-            data: data,
-            collapseOrbits: collapseOrbits,
-          ),
-        ),
-        Text('Around'),
-        ...feature.children.map(
-          (e) => Padding(
-            padding: EdgeInsets.only(left: 16),
-            child: AssetWidget(
-              asset: e.child,
-              data: data,
-              collapseOrbits: collapseOrbits,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class OrbitFeatureWidget extends StatelessWidget {
-  const OrbitFeatureWidget({
-    super.key,
-    required this.feature,
-    required this.data,
-    required this.collapseOrbits,
-  });
-
-  final OrbitFeature feature;
-  final DataStructure data;
-  final bool collapseOrbits;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Center'),
-        Padding(
-          padding: EdgeInsets.only(left: 16),
-          child: AssetWidget(
-            asset: feature.primaryChild,
-            data: data,
-            collapseOrbits: collapseOrbits,
-          ),
-        ),
-        Text('Orbiting'),
-        ...feature.orbitingChildren.map(
-          (e) => Padding(
-            padding: EdgeInsets.only(left: 16),
-            child: AssetWidget(
-              asset: e.child,
-              data: data,
-              collapseOrbits: collapseOrbits,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class StructureFeatureWidget extends StatelessWidget {
-  const StructureFeatureWidget({
-    super.key,
-    required this.feature,
-    required this.data,
-  });
-
-  final StructureFeature feature;
-  final DataStructure data;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-            'Components (total: ${feature.hp}/${feature.minHP ?? '???'}/${feature.maxHP ?? '???'})'),
-        ...feature.materials.map((e) => Text(
-            '  ${e.material.id.toRadixString(16)} ${e.componentName == null ? '' : '${e.componentName} '}(${e.materialDescription}) ${e.quantity}/${e.requiredQuantity}'))
-      ],
-    );
-  }
-}
-
-class StarFeatureWidget extends StatelessWidget {
-  const StarFeatureWidget({
-    super.key,
-    required this.feature,
-    required this.data,
-  });
-
-  final StarFeature feature;
-  final DataStructure data;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SelectableText('ID: ${feature.starID.displayName}'),
-      ],
-    );
-  }
-}
-
-class SpaceSensorFeatureWidget extends StatelessWidget {
-  const SpaceSensorFeatureWidget({
-    super.key,
-    required this.feature,
-    required this.data,
-  });
-
-  final SpaceSensorFeature feature;
-  final DataStructure data;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Space sensor'),
-        Text('  Maximum steps up to an orbit: ${feature.reach}'),
-        Text('  Maximum steps up after orbit: ${feature.up}'),
-        Text('  Maximum steps down after going up: ${feature.down}'),
-        Text('  Smallest detectable object: ${feature.resolution}'),
-      ],
-    );
-  }
-}
-
-class SpaceSensorStatusFeatureWidget extends StatelessWidget {
-  const SpaceSensorStatusFeatureWidget({
-    super.key,
-    required this.feature,
-    required this.data,
-  });
-
-  final SpaceSensorStatusFeature feature;
-  final DataStructure data;
-
-  @override
-  Widget build(BuildContext context) {
-    Asset nearestOrbit = data.assets[feature.nearestOrbit]!;
-    Asset topAsset = data.assets[feature.topAsset]!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-            '  Enclosing orbit: ${nearestOrbit.name ?? 'an unnamed ${nearestOrbit.className}'}'),
-        Text(
-            '  Top asset reached: ${topAsset.name ?? 'an unnamed ${topAsset.className}'}'),
-        Text('  Count of reached assets: ${feature.count}'),
-      ],
-    );
-  }
-}
-
-class AssetWidget extends StatelessWidget {
-  const AssetWidget({
-    super.key,
-    required this.asset,
-    required this.data,
-    required this.collapseOrbits,
-  });
-
-  final AssetID asset;
-  final DataStructure data;
-  final bool collapseOrbits;
-
-  @override
-  Widget build(BuildContext context) {
-    Asset asset = data.assets[this.asset]!;
-    if (collapseOrbits &&
-        asset.features.length == 1 &&
-        asset.features.single is OrbitFeature) {
-      OrbitFeature orbit = asset.features.single as OrbitFeature;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AssetWidget(
-            asset: orbit.primaryChild,
-            data: data,
-            collapseOrbits: collapseOrbits,
-          ),
-          if (orbit.orbitingChildren.isNotEmpty) ...[
-            Text(
-              '    Orbiting',
-            ),
-            ...orbit.orbitingChildren.map(
-              (e) => Padding(
-                padding: EdgeInsets.only(left: 16),
-                child: AssetWidget(
-                    asset: e.child, data: data, collapseOrbits: collapseOrbits),
-              ),
-            ),
-          ]
-        ],
-      );
-    } else {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextButton(
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return Dialog(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          asset.name ?? asset.className,
-                          style: TextStyle(fontSize: 20),
-                        ),
-                        if (asset.name != null)
-                          Text(
-                            asset.className,
-                            style: TextStyle(fontSize: 10),
-                          ),
-                        Text(asset.description),
-                        Text(
-                            'Owner: ${asset.owner == 0 ? 'nobody' : asset.owner == data.dynastyID ? 'you' : asset.owner}'),
-                        SelectableText('Mass: ${asset.mass} kilograms'),
-                        SelectableText('Diameter: ${asset.size} meters'),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                border: asset.owner == data.dynastyID
-                    ? Border.all(
-                        color: Theme.of(context).colorScheme.primary, width: 5)
-                    : null,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ColoredBox(
-                    color: Colors.grey,
-                    child: Padding(
-                      padding: const EdgeInsets.all(2),
-                      child: Image.asset(
-                        'icons/${asset.icon}.png',
-                        width: 32,
-                        height: 32,
-                        fit: BoxFit.cover,
-                        filterQuality: FilterQuality.none,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '${asset.name ?? asset.className}',
-                    style: asset.owner == 0
-                        ? DefaultTextStyle.of(context).style
-                        : TextStyle(
-                            color: getColorForDynastyID(asset.owner),
-                          ),
-                  )
-                ],
-              ),
-            ),
-          ),
-          ...asset.features.map(
-            (e) => Padding(
-              padding: EdgeInsets.only(left: 16),
-              child: renderFeature(e, data, collapseOrbits),
-            ),
-          )
-        ],
-      );
-    }
-  }
-}
-
 class SystemView extends StatefulWidget {
   const SystemView({super.key, required this.data, required this.system});
+
   final DataStructure data;
   final StarIdentifier system;
 
@@ -385,98 +49,197 @@ class SystemView extends StatefulWidget {
   State<SystemView> createState() => _SystemViewState();
 }
 
-String prettyPrintDuration(Uint64 duration) {
-  int milliseconds = (duration % 1000).asInt;
-  int seconds = ((duration / 1000) % 60).floor();
-  int minutes = ((duration / (1000 * 60)) % 60).floor();
-  int hours = ((duration / (1000 * 60 * 60)) % 24).floor();
-  int days = (duration / (1000 * 60 * 60 * 24)).floor();
-  if (days > 0) return '$days days and $hours hours';
-  if (hours > 0) return '$hours:$minutes:$seconds';
-  if (minutes > 0) return '$minutes:$seconds.${(milliseconds / 1000).toString().substring(1)}';
-  if (seconds > 0) return '$seconds.${(milliseconds / 1000).toString().substring(1)} seconds';
-  return '$milliseconds milliseconds';
-}
-
-class _SystemViewState extends State<SystemView> {
-  bool collapseOrbits = true;
+class _SystemViewState extends State<SystemView>
+    with SingleTickerProviderStateMixin {
+  late Uint64 systemTime;
+  late final Ticker ticker;
 
   @override
   void initState() {
-    () async {
-      collapseOrbits = await getCookie('collapseOrbits') == true.toString();
-      setState(() {});
-    }();
     super.initState();
+    tick(Duration.zero);
+    ticker = createTicker(tick)..start();
+  }
+
+  void tick(Duration duration) {
+    setState(() {
+      (DateTime, Uint64) time0 = widget.data.time0s[widget.system]!;
+      systemTime = time0.$2;
+      systemTime += Uint64.fromInt(
+          (DateTime.now().difference(time0.$1).inMilliseconds *
+                  widget.data.timeFactors[widget.system]!)
+              .floor());
+    });
+  }
+
+  @override
+  void dispose() {
+    ticker.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    (DateTime, Uint64) time0 = widget.data.time0s[widget.system]!;
-    return ListView(
+    return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('Collapse orbits'),
-            Checkbox(
-              value: collapseOrbits,
-              onChanged: (v) {
-                setState(() {
-                  collapseOrbits = v!;
-                  setCookie('collapseOrbits', v.toString());
-                });
-              },
-            )
-          ],
+        SelectableText(
+          '${widget.system.displayName}',
+          style: TextStyle(fontSize: 20),
         ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Center(
-            child: SelectableText(
-              '${widget.system.displayName} (${widget.data.rootAssets[widget.system]!.server})',
-              style: TextStyle(fontSize: 20),
+        Text('current solar system time: ${prettyPrintDuration(systemTime)}'),
+        Expanded(
+          child: ZoomableCustomPaint(
+            startingZoom: 15000,
+            painter: (zoom, screenCenter) => SystemRenderer(
+              zoom,
+              screenCenter,
+              widget.data,
+              widget.system,
+              systemTime,
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Center(
-            child: SelectableText(
-              'position: (${widget.data.systemPositions[widget.system]!.dx}, ${widget.data.systemPositions[widget.system]!.dy})',
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Center(
-            child: SelectableText(
-              'time at ${time0.$1}: ${prettyPrintDuration(time0.$2)}',
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Center(
-            child: SelectableText(
-              'time factor: ${widget.data.timeFactors[widget.system]!}',
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Center(
-            child: SelectableText(
-              'position: (${widget.data.systemPositions[widget.system]!.dx}, ${widget.data.systemPositions[widget.system]!.dy})',
-            ),
-          ),
-        ),
-        AssetWidget(
-          data: widget.data,
-          asset: widget.data.rootAssets[widget.system]!,
-          collapseOrbits: collapseOrbits,
         ),
       ],
     );
+  }
+}
+
+class SystemRenderer extends CustomPainter {
+  final double zoom;
+  final Offset screenCenter;
+  final DataStructure data;
+  final StarIdentifier system;
+  final Uint64 systemTime;
+  final double sizeScaleFactor;
+  SystemRenderer(
+    this.zoom,
+    this.screenCenter,
+    this.data,
+    this.system,
+    this.systemTime, [
+    this.sizeScaleFactor = 100,
+  ]);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    Asset rootAsset = data.assets[data.rootAssets[system]!]!;
+    Rect r = Offset.zero & size;
+    canvas.drawLine(
+        r.topLeft,
+        r.topRight,
+        Paint()
+          ..color = Colors.grey
+          ..strokeWidth = 2);
+    canvas.drawLine(
+        r.bottomLeft,
+        r.bottomRight,
+        Paint()
+          ..color = Colors.grey
+          ..strokeWidth = 2);
+    canvas.drawLine(
+        r.topLeft,
+        r.bottomLeft,
+        Paint()
+          ..color = Colors.grey
+          ..strokeWidth = 2);
+    canvas.drawLine(
+        r.topRight,
+        r.bottomRight,
+        Paint()
+          ..color = Colors.grey
+          ..strokeWidth = 2);
+    canvas.drawOval(
+        calculateScreenPosition(Offset.zero, screenCenter, zoom, size) &
+            size * zoom,
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.stroke);
+    SolarSystemFeature solarSystemFeature =
+        (rootAsset.features.single as SolarSystemFeature);
+    for (SolarSystemChild solarSystemChild in solarSystemFeature.children) {
+      Asset orbit = data.assets[solarSystemChild.child]!;
+      OrbitFeature orbitFeature = (orbit.features.single as OrbitFeature);
+      Asset star = data.assets[orbitFeature.primaryChild]!;
+      double starDiameter = (star.size / rootAsset.size) * sizeScaleFactor;
+      Offset starCenter = (polarToCartesian(
+                  solarSystemChild.distanceFromCenter, solarSystemChild.theta) /
+              rootAsset.size) +
+          Offset(.5, .5);
+      canvas.drawOval(
+          calculateScreenPosition(
+                  starCenter - Offset(starDiameter / 2, starDiameter / 2),
+                  screenCenter,
+                  zoom,
+                  size) &
+              size * zoom * starDiameter,
+          Paint()
+            ..color = Colors.green
+            ..style = PaintingStyle.stroke);
+      drawOrbits(orbitFeature, rootAsset, star, starCenter, canvas, size);
+    }
+    canvas.drawRect(size.center(Offset.zero) - Offset(1, 1) & Size.square(2),
+        Paint()..color = Colors.white);
+  }
+
+  void drawOrbits(OrbitFeature orbitFeature, Asset rootAsset, Asset primaryChild, Offset primaryChildPosition, Canvas canvas, Size size) {
+    for (OrbitChild orbitChild in orbitFeature.orbitingChildren) {
+      Asset orbit = data.assets[orbitChild.child]!;
+      OrbitFeature childOrbitFeature = (orbit.features.single as OrbitFeature);
+      Asset asset =
+          data.assets[childOrbitFeature.primaryChild]!;
+      double assetDiameter = (asset.size / rootAsset.size) * sizeScaleFactor;
+      Offset assetCenter = (calculateOrbit(
+                  systemTime + orbitChild.timeOffset * 1000,
+                  orbitChild.semiMajorAxis,
+                  orbitChild.eccentricity,
+                  orbitChild.clockwise,
+                  primaryChild.mass,
+                  orbitChild.omega)) /
+              rootAsset.size +
+          primaryChildPosition;
+      assert(!assetCenter.dx.isNaN && !assetCenter.dy.isNaN);
+      Size orbitSize = Size(
+              orbitChild.semiMajorAxis * 2,
+              orbitChild.semiMajorAxis *
+                  sqrt(
+                      1 - orbitChild.eccentricity * orbitChild.eccentricity) *
+                  2) /
+          rootAsset.size;
+      canvas.save();
+      Offset orbitCenter = primaryChildPosition +
+          Offset(orbitChild.eccentricity * orbitChild.semiMajorAxis, 0);
+      canvas.translate(orbitCenter.dx, orbitCenter.dy);
+      canvas.rotate(orbitChild.omega);
+      canvas.translate(-orbitCenter.dx, -orbitCenter.dy);
+      canvas.drawOval(
+          calculateScreenPosition(
+                  primaryChildPosition - (orbitSize / 2).bottomRight(Offset.zero),
+                  screenCenter,
+                  zoom,
+                  size) &
+              Size(size.width * orbitSize.width,
+                      size.height * orbitSize.height) *
+                  zoom,
+          Paint()
+            ..color = Colors.cyan
+            ..style = PaintingStyle.stroke);
+      canvas.restore();
+      canvas.drawOval(
+          calculateScreenPosition(
+                  assetCenter - Offset(assetDiameter / 2, assetDiameter / 2),
+                  screenCenter,
+                  zoom,
+                  size) &
+              size * zoom * assetDiameter,
+          Paint()
+            ..color = Colors.blue
+            ..style = PaintingStyle.stroke);
+      drawOrbits(childOrbitFeature, rootAsset, asset, assetCenter, canvas, size);
+    }
+  }
+
+  @override
+  bool shouldRepaint(SystemRenderer oldDelegate) {
+    return true;
   }
 }

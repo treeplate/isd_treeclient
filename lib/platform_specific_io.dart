@@ -45,6 +45,7 @@ class WebSocketWrapper {
         reloading = false;
         _doneReloading.complete();
         listen(onData, onError: onError, onReset: onReset);
+        print('reconnected');
       } catch (e, st) {
         try {
           if (onError == null) rethrow;
@@ -53,10 +54,12 @@ class WebSocketWrapper {
           waitingTime *= 2;
           print('waiting $waitingTime...');
           await Future.delayed(waitingTime);
+          print('done waiting');
           continue;
         }
       }
     } while (false);
+    print('done reconnecting');
   }
 
   void send(String data) async {
