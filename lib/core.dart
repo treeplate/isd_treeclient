@@ -42,6 +42,19 @@ extension type Uint64((int, int) _value) {
     return Uint64.bigEndian((msh + addend.msh + (lshResult >> 32)) & (integerLimit32 - 1), lshResult & (integerLimit32 - 1));
   }
 
+  Uint64 operator -(Uint64 addend) {
+    int newLsh = lsh - addend.lsh;
+    int newMsh = msh - addend.msh;
+    if (newLsh < 0) {
+      newMsh--;
+      newLsh += 1 << 32;
+    }
+    if (newMsh < 0) {
+      return Uint64.bigEndian(integerLimit32, integerLimit32) - Uint64.bigEndian(newMsh, 0) + Uint64.bigEndian(0, newLsh) + Uint64.bigEndian(0, 1);
+    }
+    return Uint64.bigEndian(newMsh, newLsh);
+  }
+
   const Uint64.littleEndian(int lsh, int msh) : _value = (msh, lsh);
   const Uint64.bigEndian(int msh, int lsh) : _value = (msh, lsh);
   factory Uint64.fromInt(int value) => Uint64.bigEndian(value >> 32, value & (integerLimit32 - 1));

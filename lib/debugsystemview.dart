@@ -167,7 +167,7 @@ class StructureFeatureWidget extends StatelessWidget {
         Text(
             'Components (total: ${feature.hp}/${feature.minHP ?? '???'}/${feature.maxHP ?? '???'})'),
         ...feature.materials.map((e) => Text(
-            '  ${e.material.id.toRadixString(16)} ${e.componentName == null ? '' : '${e.componentName} '}(${e.materialDescription}) ${e.quantity}/${e.requiredQuantity}'))
+            '  #${e.material.id.toRadixString(16)} ${e.componentName == null ? '' : '${e.componentName} '}(${e.materialDescription}) ${e.quantity}/${e.requiredQuantity ?? '???'}'))
       ],
     );
   }

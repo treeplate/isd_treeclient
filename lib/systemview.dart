@@ -53,6 +53,7 @@ class _SystemViewState extends State<SystemView>
     with SingleTickerProviderStateMixin {
   late Uint64 systemTime;
   late final Ticker ticker;
+  ZoomController systemZoomController = ZoomController(zoom: 15000);
 
   @override
   void initState() {
@@ -66,7 +67,7 @@ class _SystemViewState extends State<SystemView>
       (DateTime, Uint64) time0 = widget.data.time0s[widget.system]!;
       systemTime = time0.$2;
       systemTime += Uint64.fromInt(
-          (DateTime.now().difference(time0.$1).inMilliseconds *
+          (DateTime.timestamp().difference(time0.$1).inMilliseconds *
                   widget.data.timeFactors[widget.system]!)
               .floor());
     });
@@ -80,6 +81,10 @@ class _SystemViewState extends State<SystemView>
 
   @override
   Widget build(BuildContext context) {
+    Asset rootAsset =
+        widget.data.assets[widget.data.rootAssets[widget.system]!]!;
+    SolarSystemFeature solarSystemFeature =
+        (rootAsset.features.single as SolarSystemFeature);
     return Column(
       children: [
         SelectableText(
@@ -88,15 +93,49 @@ class _SystemViewState extends State<SystemView>
         ),
         Text('current solar system time: ${prettyPrintDuration(systemTime)}'),
         Expanded(
-          child: ZoomableCustomPaint(
-            startingZoom: 15000,
-            painter: (zoom, screenCenter) => SystemRenderer(
-              zoom,
-              screenCenter,
-              widget.data,
-              widget.system,
-              systemTime,
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(),
+              ),
+              Expanded(
+                flex: 2,
+                child: ZoomableCustomPaint(
+                  controller: systemZoomController,
+                  painter: (zoom, screenCenter) => SystemRenderer(
+                    zoom,
+                    screenCenter,
+                    widget.data,
+                    widget.system,
+                    systemTime,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  children: [
+                    Text('Center on star'),
+                    ...solarSystemFeature.children.map(
+                      (e) => TextButton(
+                        onPressed: () {
+                          setState(() {
+                            systemZoomController.zoom = 15000;
+                            systemZoomController.screenCenter =
+                                polarToCartesian(
+                                        e.distanceFromCenter / rootAsset.size,
+                                        e.theta) +
+                                    Offset(.5, .5);
+                          });
+                        },
+                        child: Text(
+                          '${widget.data.getAssetIdentifyingName(e.child)}',
+                        ),
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -160,6 +199,7 @@ class SystemRenderer extends CustomPainter {
       Asset orbit = data.assets[solarSystemChild.child]!;
       OrbitFeature orbitFeature = (orbit.features.single as OrbitFeature);
       Asset star = data.assets[orbitFeature.primaryChild]!;
+      StarFeature starFeature = star.features.whereType().single;
       double starDiameter = (star.size / rootAsset.size) * sizeScaleFactor;
       Offset starCenter = (polarToCartesian(
                   solarSystemChild.distanceFromCenter, solarSystemChild.theta) /
@@ -172,24 +212,27 @@ class SystemRenderer extends CustomPainter {
                   zoom,
                   size) &
               size * zoom * starDiameter,
-          Paint()
-            ..color = Colors.green
-            ..style = PaintingStyle.stroke);
+          Paint()..color = starCategories[starFeature.starID.category].color);
       drawOrbits(orbitFeature, rootAsset, star, starCenter, canvas, size);
     }
     canvas.drawRect(size.center(Offset.zero) - Offset(1, 1) & Size.square(2),
         Paint()..color = Colors.white);
   }
 
-  void drawOrbits(OrbitFeature orbitFeature, Asset rootAsset, Asset primaryChild, Offset primaryChildPosition, Canvas canvas, Size size) {
+  void drawOrbits(
+      OrbitFeature orbitFeature,
+      Asset rootAsset,
+      Asset primaryChild,
+      Offset primaryChildPosition,
+      Canvas canvas,
+      Size size) {
     for (OrbitChild orbitChild in orbitFeature.orbitingChildren) {
       Asset orbit = data.assets[orbitChild.child]!;
       OrbitFeature childOrbitFeature = (orbit.features.single as OrbitFeature);
-      Asset asset =
-          data.assets[childOrbitFeature.primaryChild]!;
+      Asset asset = data.assets[childOrbitFeature.primaryChild]!;
       double assetDiameter = (asset.size / rootAsset.size) * sizeScaleFactor;
       Offset assetCenter = (calculateOrbit(
-                  systemTime + orbitChild.timeOffset * 1000,
+                  systemTime - orbitChild.timeOffset * 1000,
                   orbitChild.semiMajorAxis,
                   orbitChild.eccentricity,
                   orbitChild.clockwise,
@@ -201,8 +244,7 @@ class SystemRenderer extends CustomPainter {
       Size orbitSize = Size(
               orbitChild.semiMajorAxis * 2,
               orbitChild.semiMajorAxis *
-                  sqrt(
-                      1 - orbitChild.eccentricity * orbitChild.eccentricity) *
+                  sqrt(1 - orbitChild.eccentricity * orbitChild.eccentricity) *
                   2) /
           rootAsset.size;
       canvas.save();
@@ -213,7 +255,8 @@ class SystemRenderer extends CustomPainter {
       canvas.translate(-orbitCenter.dx, -orbitCenter.dy);
       canvas.drawOval(
           calculateScreenPosition(
-                  primaryChildPosition - (orbitSize / 2).bottomRight(Offset.zero),
+                  primaryChildPosition -
+                      (orbitSize / 2).bottomRight(Offset.zero),
                   screenCenter,
                   zoom,
                   size) &
@@ -231,10 +274,15 @@ class SystemRenderer extends CustomPainter {
                   zoom,
                   size) &
               size * zoom * assetDiameter,
-          Paint()
-            ..color = Colors.blue
-            ..style = PaintingStyle.stroke);
-      drawOrbits(childOrbitFeature, rootAsset, asset, assetCenter, canvas, size);
+          Paint()..color = Colors.blue);
+      drawOrbits(
+        childOrbitFeature,
+        rootAsset,
+        asset,
+        assetCenter,
+        canvas,
+        size,
+      );
     }
   }
 

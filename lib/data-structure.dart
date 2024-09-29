@@ -143,6 +143,23 @@ class DataStructure with ChangeNotifier {
     notifyListeners();
   }
 
+  String getAssetIdentifyingName(AssetID id) {
+    Asset? asset = assets[id];
+    if (asset == null) {
+      throw StateError('getAssetIdentifyingName called with invalid asset id');
+    }
+    for (Feature feature in asset.features) {
+      switch(feature) {
+        case OrbitFeature(primaryChild: AssetID child):
+          return getAssetIdentifyingName(child);
+        case StarFeature(starID: StarIdentifier id):
+          return '${id.displayName}';
+        default:
+      }
+    }
+    return asset.name ?? 'unnamed "${asset.className}"';
+  }
+
   DataStructure() {
     getCookie(kUsernameCookieName).then((e) {
       username = e;

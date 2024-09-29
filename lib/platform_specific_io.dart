@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:path_provider/path_provider.dart';
@@ -10,6 +11,7 @@ class WebSocketWrapper {
   WebSocket socket;
   bool reloading = false;
   Completer<void> _doneReloading = Completer();
+  Random _random = Random();
 
   StreamSubscription<dynamic> listen(
     void onData(dynamic event), {
@@ -39,27 +41,25 @@ class WebSocketWrapper {
     reloading = true;
     do {
       try {
-        print('reconnecting...');
         socket = await WebSocket.connect(name);
         socket.pingInterval = pingInterval;
         reloading = false;
         _doneReloading.complete();
         listen(onData, onError: onError, onReset: onReset);
-        print('reconnected');
       } catch (e, st) {
         try {
           if (onError == null) rethrow;
           onError(e, st);
         } finally {
-          waitingTime *= 2;
-          print('waiting $waitingTime...');
-          await Future.delayed(waitingTime);
-          print('done waiting');
+          if (waitingTime < Duration(minutes: 1)) {
+            waitingTime *= 2;
+          }
+          await Future.delayed(waitingTime + waitingTime * (_random.nextDouble() - .5));
           continue;
         }
       }
-    } while (false);
-    print('done reconnecting');
+      break;
+    } while (true);
   }
 
   void send(String data) async {
@@ -119,8 +119,9 @@ Future<void> getCookiesFromFile() async {
           );
         }
       } catch (e) {
-        print('Error "$e" while parsing _cookieStorage');
-        _cookieCache = {};
+        _cookieCache = {
+          'previousError': '$e',
+        };
       }
     } else {
       _cookieCache = {};

@@ -106,17 +106,22 @@ class _TextFieldDialogState extends State<TextFieldDialog> {
   }
 }
 
+class ZoomController {
+  double zoom;
+  Offset screenCenter;
+
+  ZoomController({this.zoom = 1, this.screenCenter = const Offset(.5, .5)});
+}
+
 class ZoomableCustomPaint extends StatefulWidget {
   const ZoomableCustomPaint({
     super.key,
     required this.painter,
-    this.startingZoom = 1,
-    this.startingScreenCenter = const Offset(.5, .5),
+    required this.controller,
     this.onTap,
   });
   final CustomPainter Function(double zoom, Offset screenCenter) painter;
-  final double startingZoom;
-  final Offset startingScreenCenter;
+  final ZoomController controller;
   final void Function(Offset)? onTap;
 
   @override
@@ -124,19 +129,7 @@ class ZoomableCustomPaint extends StatefulWidget {
 }
 
 class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
-  late double zoom = widget.startingZoom; // 1..infinity
-  late Offset screenCenter = widget.startingScreenCenter; // (0, 0)..(1, 1)
   double lastRelativeScale = 1.0;
-
-  @override
-  void didUpdateWidget(covariant ZoomableCustomPaint oldWidget) {
-    if (oldWidget.startingZoom != widget.startingZoom ||
-        oldWidget.startingScreenCenter != widget.startingScreenCenter) {
-      zoom = widget.startingZoom;
-      screenCenter = widget.startingScreenCenter;
-    }
-    super.didUpdateWidget(oldWidget);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -167,11 +160,11 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
             },
             onTapUp: (TapUpDetails details) {
               Offset topLeft =
-                  Offset(screenCenter.dx - .5, screenCenter.dy - .5);
+                  Offset(widget.controller.screenCenter.dx - .5, widget.controller.screenCenter.dy - .5);
               Offset preZoom =
                   details.localPosition / constraints.biggest.shortestSide;
               Offset postZoom =
-                  (preZoom - Offset(.5, .5)) / zoom + Offset(.5, .5) + topLeft;
+                  (preZoom - Offset(.5, .5)) / widget.controller.zoom + Offset(.5, .5) + topLeft;
               if (widget.onTap != null) {
                 widget.onTap!(postZoom);
               }
@@ -182,7 +175,7 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
                 height: constraints.biggest.shortestSide,
                 child: CustomPaint(
                   size: Size.square(constraints.biggest.shortestSide),
-                  painter: widget.painter(zoom, screenCenter),
+                  painter: widget.painter(widget.controller.zoom, widget.controller.screenCenter),
                 ),
               ),
             ),
@@ -193,17 +186,17 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
   }
 
   void handleZoom(double scaleMultiplicativeDelta) {
-    if (zoom >= 1 / scaleMultiplicativeDelta) {
-      zoom *= scaleMultiplicativeDelta;
+    if (widget.controller.zoom >= 1 / scaleMultiplicativeDelta) {
+      widget.controller.zoom *= scaleMultiplicativeDelta;
     }
   }
 
   void handlePan(Offset delta, BoxConstraints constraints) {
     setState(() {
-      screenCenter -= (delta / constraints.biggest.shortestSide) / zoom;
-      screenCenter = Offset(
-        screenCenter.dx.clamp(0, 1),
-        screenCenter.dy.clamp(0, 1),
+      widget.controller.screenCenter -= (delta / constraints.biggest.shortestSide) / widget.controller.zoom;
+      widget.controller.screenCenter = Offset(
+        widget.controller.screenCenter.dx.clamp(0, 1),
+        widget.controller.screenCenter.dy.clamp(0, 1),
       );
     });
   }
@@ -229,10 +222,10 @@ Offset polarToCartesian(double distanceFromCenter, double theta) {
 const double gravitationalConstant = 6.67430e-11; // m*m*m/kg*s*s
 
 // arguments are defined in https://software.hixie.ch/fun/isd/test-2024/servers/src/systems-server/README.md, the section on orbit features.
+// [t] is in milliseconds.
 Offset calculateOrbit(Uint64 t, double a, double e, bool clockwise, double M, double omega) {
   const double G = gravitationalConstant;
-  double T = 2*pi*sqrt((a*a*a)/(G*M));
-  print(prettyPrintDuration(Uint64.fromInt(T.toInt())));
+  double T = 2*pi*sqrt((a*a*a)/(G*M)) * 1000; // this multiplies by 1000 to convert seconds to milliseconds
   double tau = (t.asDouble % T) / T;
   double q = -0.99*pi/4*(e-3*sqrt(e));
   double theta = 2*pi*(tan(tau*2*q - q) - tan(-q)) / (tan(q)-tan(-q));
@@ -246,3 +239,40 @@ Offset calculateOrbit(Uint64 t, double a, double e, bool clockwise, double M, do
   double r = L / (1 + e * cos(theta));
   return polarToCartesian(r, theta+omega);
 }
+
+final List<Paint> starCategories = [
+  // multiply strokeWidth by size of unit square
+  Paint()
+    ..color = Color(0x7FFFFFFF)
+    ..strokeWidth = 0.0040,
+  Paint()
+    ..color = Color(0xCFCCBBAA)
+    ..strokeWidth = 0.0025,
+  Paint()
+    ..color = Color(0xDFFF0000)
+    ..strokeWidth = 0.0005,
+  Paint()
+    ..color = Color(0xCFFF9900)
+    ..strokeWidth = 0.0007,
+  Paint()
+    ..color = Color(0xBFFFFFFF)
+    ..strokeWidth = 0.0005,
+  Paint()
+    ..color = Color(0xAFFFFFFF)
+    ..strokeWidth = 0.0012,
+  Paint()
+    ..color = Color(0x2F0099FF)
+    ..strokeWidth = 0.0010,
+  Paint()
+    ..color = Color(0x2F0000FF)
+    ..strokeWidth = 0.0005,
+  Paint()
+    ..color = Color(0x4FFF9900)
+    ..strokeWidth = 0.0005,
+  Paint()
+    ..color = Color(0x2FFFFFFF)
+    ..strokeWidth = 0.0005,
+  Paint()
+    ..color = Color(0x5FFF2200)
+    ..strokeWidth = 0.0200,
+];

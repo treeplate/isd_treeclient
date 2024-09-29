@@ -51,7 +51,7 @@ class NetworkConnection {
           } else if (rawMessage is ByteBuffer) {
             binaryMessageHandler(rawMessage);
           } else {
-            print(rawMessage.runtimeType);
+            unrequestedMessageHandler(['internal client error - unexpected socket message type ${rawMessage.runtimeType} ($rawMessage)']);
           }
         }
       },
