@@ -111,7 +111,7 @@ const List<LoginState> cannotCloseLoginServer = [
 ];
 
 class _ScaffoldWidgetState extends State<ScaffoldWidget>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final DataStructure data = DataStructure();
   NetworkConnection? loginServer;
   NetworkConnection? dynastyServer;
@@ -355,7 +355,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
 
   static const kClientVersion = 6;
 
-  ZoomController galaxyZoomController = ZoomController();
+  late final ZoomController galaxyZoomController = ZoomController(vsync: this);
 
   void parseSystemServerBinaryMessage(String server, ByteBuffer data) {
     BinaryReader reader = BinaryReader(data, Endian.little);
@@ -566,6 +566,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     for (NetworkConnection server in systemServers.values) {
       server.close();
     }
+    galaxyZoomController.dispose();
     super.dispose();
   }
 
@@ -714,11 +715,10 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                           if (data.stars != null)
                             ZoomableCustomPaint(
                               controller: galaxyZoomController,
-                              painter: (zoom, screenCenter) => GalaxyRenderer(
+                              painter: GalaxyRenderer(
                                 data.stars!,
-                                zoom,
-                                screenCenter,
                                 data.systems?.values.toSet() ?? {},
+                                galaxyZoomController,
                               ),
                             )
                           else
@@ -831,12 +831,19 @@ class StarLookupWidget extends StatefulWidget {
   State<StarLookupWidget> createState() => _StarLookupWidgetState();
 }
 
-class _StarLookupWidgetState extends State<StarLookupWidget> {
+class _StarLookupWidgetState extends State<StarLookupWidget>
+    with TickerProviderStateMixin {
   final TextEditingController textFieldController = TextEditingController();
   String? errorMessage;
   String? description;
   StarIdentifier? selectedStar;
   ZoomController? galaxyZoomController;
+
+  @override
+  void dispose() {
+    galaxyZoomController?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -891,10 +898,16 @@ class _StarLookupWidgetState extends State<StarLookupWidget> {
                 errorMessage = null;
                 description = null;
                 selectedStar = starID;
-                galaxyZoomController ??= ZoomController();
-                galaxyZoomController!.screenCenter =
-                    widget.data.stars![starID.category][starID.subindex];
-                galaxyZoomController!.zoom = 100;
+                galaxyZoomController ??= ZoomController(
+                  vsync: this,
+                  zoom: 100,
+                  screenCenter: widget.data.stars![starID.category]
+                      [starID.subindex],
+                );
+                galaxyZoomController!.animateTo(
+                  100,
+                  widget.data.stars![starID.category][starID.subindex],
+                );
                 if (widget.dynastyServer != null) {
                   if (widget.dynastyServer!.reloading) {
                     errorMessage = 'Dynasty server offline; try again later';
@@ -932,11 +945,10 @@ class _StarLookupWidgetState extends State<StarLookupWidget> {
         if (galaxyZoomController != null)
           Expanded(
             child: ZoomableCustomPaint(
-              painter: (zoom, screenCenter) => GalaxyRenderer(
+              painter: GalaxyRenderer(
                 widget.data.stars!,
-                zoom,
-                screenCenter,
                 {selectedStar!},
+                galaxyZoomController!,
               ),
               controller: galaxyZoomController!,
             ),
@@ -948,14 +960,15 @@ class _StarLookupWidgetState extends State<StarLookupWidget> {
 
 class GalaxyRenderer extends CustomPainter {
   final List<List<Offset>> stars;
-  final double zoom;
-  final Offset screenCenter;
   final Set<StarIdentifier> highlightedStars;
-  GalaxyRenderer(
-      this.stars, this.zoom, this.screenCenter, this.highlightedStars);
+  final ZoomController zoomController;
+  const GalaxyRenderer(this.stars, this.highlightedStars, this.zoomController)
+      : super(repaint: zoomController);
 
   @override
   void paint(Canvas canvas, Size size) {
+    Offset screenCenter = zoomController.realScreenCenter;
+    double zoom = zoomController.realZoom;
     int category = 0;
     Offset topLeft = Offset(screenCenter.dx - .5, screenCenter.dy - .5);
     canvas.drawOval(

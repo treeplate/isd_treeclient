@@ -49,11 +49,11 @@ class SystemView extends StatefulWidget {
   State<SystemView> createState() => _SystemViewState();
 }
 
-class _SystemViewState extends State<SystemView>
-    with SingleTickerProviderStateMixin {
+class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
   late Uint64 systemTime;
   late final Ticker ticker;
-  ZoomController systemZoomController = ZoomController(zoom: 15000);
+  late final ZoomController systemZoomController =
+      ZoomController(zoom: 15000, vsync: this);
 
   @override
   void initState() {
@@ -76,6 +76,7 @@ class _SystemViewState extends State<SystemView>
   @override
   void dispose() {
     ticker.dispose();
+    systemZoomController.dispose();
     super.dispose();
   }
 
@@ -102,12 +103,11 @@ class _SystemViewState extends State<SystemView>
                 flex: 2,
                 child: ZoomableCustomPaint(
                   controller: systemZoomController,
-                  painter: (zoom, screenCenter) => SystemRenderer(
-                    zoom,
-                    screenCenter,
+                  painter: SystemRenderer(
                     widget.data,
                     widget.system,
                     systemTime,
+                    systemZoomController,
                   ),
                 ),
               ),
@@ -119,12 +119,13 @@ class _SystemViewState extends State<SystemView>
                       (e) => TextButton(
                         onPressed: () {
                           setState(() {
-                            systemZoomController.zoom = 15000;
-                            systemZoomController.screenCenter =
-                                polarToCartesian(
-                                        e.distanceFromCenter / rootAsset.size,
-                                        e.theta) +
-                                    Offset(.5, .5);
+                            systemZoomController.animateTo(
+                              15000,
+                              polarToCartesian(
+                                      e.distanceFromCenter / rootAsset.size,
+                                      e.theta) +
+                                  Offset(.5, .5),
+                            );
                           });
                         },
                         child: Text(
@@ -144,23 +145,23 @@ class _SystemViewState extends State<SystemView>
 }
 
 class SystemRenderer extends CustomPainter {
-  final double zoom;
-  final Offset screenCenter;
   final DataStructure data;
   final StarIdentifier system;
   final Uint64 systemTime;
   final double sizeScaleFactor;
+  final ZoomController zoomController;
   SystemRenderer(
-    this.zoom,
-    this.screenCenter,
     this.data,
     this.system,
-    this.systemTime, [
+    this.systemTime,
+    this.zoomController, [
     this.sizeScaleFactor = 100,
-  ]);
+  ]) : super(repaint: zoomController);
 
   @override
   void paint(Canvas canvas, Size size) {
+    Offset screenCenter = zoomController.realScreenCenter;
+    double zoom = zoomController.realZoom;
     Asset rootAsset = data.assets[data.rootAssets[system]!]!;
     Rect r = Offset.zero & size;
     canvas.drawLine(
@@ -226,6 +227,8 @@ class SystemRenderer extends CustomPainter {
       Offset primaryChildPosition,
       Canvas canvas,
       Size size) {
+    Offset screenCenter = zoomController.realScreenCenter;
+    double zoom = zoomController.realZoom;
     for (OrbitChild orbitChild in orbitFeature.orbitingChildren) {
       Asset orbit = data.assets[orbitChild.child]!;
       OrbitFeature childOrbitFeature = (orbit.features.single as OrbitFeature);

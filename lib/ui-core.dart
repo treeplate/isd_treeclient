@@ -106,11 +106,33 @@ class _TextFieldDialogState extends State<TextFieldDialog> {
   }
 }
 
-class ZoomController {
+class ZoomController extends ChangeNotifier {
   double zoom;
+  late double oldZoom = zoom;
+  double get realZoom => Curves.easeInOutQuint.transform(animation.value) * (zoom - oldZoom) + oldZoom;
   Offset screenCenter;
+  late Offset oldScreenCenter = screenCenter;
+  Offset get realScreenCenter => (screenCenter - oldScreenCenter) * Curves.easeOutExpo.transform(animation.value) + oldScreenCenter;
+  late final AnimationController animation;
 
-  ZoomController({this.zoom = 1, this.screenCenter = const Offset(.5, .5)});
+  void animateTo(double newZoom, Offset newScreenCenter) {
+    oldZoom = realZoom;
+    oldScreenCenter = realScreenCenter;
+    zoom = newZoom;
+    screenCenter = newScreenCenter;
+    animation.reset();
+    animation.animateTo(1);
+  }
+
+  void dispose() {
+    animation.dispose();
+    super.dispose();
+  }
+
+  ZoomController({this.zoom = 1, this.screenCenter = const Offset(.5, .5), required TickerProvider vsync}) {
+    animation = AnimationController(vsync: vsync, duration: Duration(seconds: 1), value: 1);
+    animation.addListener(notifyListeners);
+  }
 }
 
 class ZoomableCustomPaint extends StatefulWidget {
@@ -120,7 +142,7 @@ class ZoomableCustomPaint extends StatefulWidget {
     required this.controller,
     this.onTap,
   });
-  final CustomPainter Function(double zoom, Offset screenCenter) painter;
+  final CustomPainter painter;
   final ZoomController controller;
   final void Function(Offset)? onTap;
 
@@ -160,11 +182,11 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
             },
             onTapUp: (TapUpDetails details) {
               Offset topLeft =
-                  Offset(widget.controller.screenCenter.dx - .5, widget.controller.screenCenter.dy - .5);
+                  Offset(widget.controller.realScreenCenter.dx - .5, widget.controller.realScreenCenter.dy - .5);
               Offset preZoom =
                   details.localPosition / constraints.biggest.shortestSide;
               Offset postZoom =
-                  (preZoom - Offset(.5, .5)) / widget.controller.zoom + Offset(.5, .5) + topLeft;
+                  (preZoom - Offset(.5, .5)) / widget.controller.realZoom + Offset(.5, .5) + topLeft;
               if (widget.onTap != null) {
                 widget.onTap!(postZoom);
               }
@@ -175,7 +197,7 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
                 height: constraints.biggest.shortestSide,
                 child: CustomPaint(
                   size: Size.square(constraints.biggest.shortestSide),
-                  painter: widget.painter(widget.controller.zoom, widget.controller.screenCenter),
+                  painter: widget.painter,
                 ),
               ),
             ),
