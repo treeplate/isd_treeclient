@@ -6,6 +6,7 @@ import 'package:isd_treeclient/ui-core.dart';
 import 'data-structure.dart';
 import 'assets.dart';
 import 'core.dart';
+import 'dart:ui' as ui;
 
 class SystemSelector extends StatefulWidget {
   const SystemSelector({super.key, required this.data});
@@ -114,6 +115,7 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
       ZoomController(zoom: 15000, vsync: this);
   AssetLocationInformation? screenFocus;
   double assetScale = 1;
+  Map<String, ui.Image> icons = {};
 
   @override
   void initState() {
@@ -129,6 +131,16 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
   }
 
   void tick(Duration duration) {
+    // TODO: this should really just walk this system's tree
+    for (Asset asset in widget.data.assets.values) {
+      if (!icons.containsKey(asset.icon)) {
+        print('finding ${asset.icon}');
+        AssetImage('icons/${asset.icon}.png')
+            .resolve(ImageConfiguration())
+            .addListener(ImageStreamListener(
+                (info, sync) => icons[asset.icon] = info.image));
+      }
+    }
     setState(() {
       (DateTime, Uint64) time0 = widget.data.time0s[widget.system]!;
       systemTime = time0.$2;
@@ -201,6 +213,7 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
                     widget.system,
                     systemTime,
                     systemZoomController,
+                    icons,
                     assetScale,
                   ),
                 ),
@@ -217,7 +230,9 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
                             RootAssetLocationInformation eInfo =
                                 RootAssetLocationInformation(e);
                             systemZoomController.animateTo(
-                              rootAsset.size / eInfo.getSize(widget.data)/assetScale,
+                              rootAsset.size /
+                                  eInfo.getSize(widget.data) /
+                                  assetScale,
                               eInfo.calculatePositionAtTime(
                                           systemTime, widget.data) /
                                       rootAsset.size +
@@ -244,7 +259,9 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
                               setState(() {
                                 screenFocus = e;
                                 systemZoomController.animateTo(
-                                  rootAsset.size / e.getSize(widget.data)/assetScale,
+                                  rootAsset.size /
+                                      e.getSize(widget.data) /
+                                      assetScale,
                                   calculateOrbitForScreenFocus(),
                                 );
                               });
@@ -271,11 +288,13 @@ class SystemRenderer extends CustomPainter {
   final Uint64 systemTime;
   final double sizeScaleFactor;
   final ZoomController zoomController;
+  final Map<String, ui.Image> icons;
   SystemRenderer(
     this.data,
     this.system,
     this.systemTime,
-    this.zoomController, [
+    this.zoomController,
+    this.icons, [
     this.sizeScaleFactor = 1,
   ]) : super(repaint: zoomController);
 
@@ -321,24 +340,49 @@ class SystemRenderer extends CustomPainter {
       Asset orbit = data.assets[solarSystemChild.child]!;
       OrbitFeature orbitFeature = (orbit.features.single as OrbitFeature);
       Asset star = data.assets[orbitFeature.primaryChild]!;
-      StarFeature starFeature = star.features.whereType().single;
       double starDiameter = (star.size / rootAsset.size) * sizeScaleFactor;
       Offset starCenter = (polarToCartesian(
                   solarSystemChild.distanceFromCenter, solarSystemChild.theta) /
               rootAsset.size) +
           Offset(.5, .5);
-      canvas.drawOval(
+      drawAsset(
+          star,
+          canvas,
           calculateScreenPosition(
                   starCenter - Offset(starDiameter / 2, starDiameter / 2),
                   screenCenter,
                   zoom,
                   size) &
-              size * zoom * starDiameter,
-          Paint()..color = starCategories[starFeature.starID.category].color);
+              size * zoom * starDiameter);
       drawOrbits(orbitFeature, rootAsset, star, starCenter, canvas, size);
     }
     canvas.drawRect(size.center(Offset.zero) - Offset(1, 1) & Size.square(2),
         Paint()..color = Colors.white);
+  }
+
+  void drawAsset(Asset asset, Canvas canvas, Rect rect) {
+    for (Feature feature in asset.features) {
+      switch (feature) {
+        case OrbitFeature():
+          throw ArgumentError(
+              'drawAsset does not support orbits, try drawOrbits');
+        case StarFeature(starID: StarIdentifier id):
+          canvas.drawOval(
+              rect, Paint()..color = starCategories[id.category].color);
+          return;
+        default:
+      }
+    }
+    canvas.drawOval(
+        rect,
+        Paint()
+          ..color = asset.owner == null
+              ? Colors.grey
+              : getColorForDynastyID(asset.owner!));
+    final ui.Image? icon = icons[asset.icon];
+    if (icon != null) {
+      canvas.drawImageNine(icon, rect, rect, Paint());
+    }
   }
 
   void drawOrbits(
@@ -391,14 +435,16 @@ class SystemRenderer extends CustomPainter {
             ..color = Colors.cyan
             ..style = PaintingStyle.stroke);
       canvas.restore();
-      canvas.drawOval(
-          calculateScreenPosition(
-                  assetCenter - Offset(assetDiameter / 2, assetDiameter / 2),
-                  screenCenter,
-                  zoom,
-                  size) &
-              size * zoom * assetDiameter,
-          Paint()..color = Colors.blue);
+      drawAsset(
+        asset,
+        canvas,
+        calculateScreenPosition(
+                assetCenter - Offset(assetDiameter / 2, assetDiameter / 2),
+                screenCenter,
+                zoom,
+                size) &
+            size * zoom * assetDiameter,
+      );
       drawOrbits(
         childOrbitFeature,
         rootAsset,

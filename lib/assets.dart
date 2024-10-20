@@ -34,7 +34,7 @@ extension type MaterialID._((String server, int id) value) {
 sealed class Feature {}
 
 class Asset {
-  final int owner;
+  final int? owner;
   final List<Feature> features;
   final double mass; // in kg
   final double size; // in meters

@@ -345,10 +345,10 @@ class AssetWidget extends StatelessWidget {
                   ),
                   Text(
                     '${asset.name ?? asset.className}',
-                    style: asset.owner == 0
+                    style: asset.owner == null
                         ? DefaultTextStyle.of(context).style
                         : TextStyle(
-                            color: getColorForDynastyID(asset.owner),
+                            color: getColorForDynastyID(asset.owner!),
                           ),
                   )
                 ],

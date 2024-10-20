@@ -388,7 +388,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         }
         this.data.setAssetNode(
             assetID,
-            Asset(features, mass, owner, size, name == '' ? null : name, icon,
+            Asset(features, mass, owner == 0 ? null : owner, size, name == '' ? null : name, icon,
                 className, description));
       }
     }
