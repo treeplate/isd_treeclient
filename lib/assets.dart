@@ -99,6 +99,7 @@ class SolarSystemFeature extends Feature {
   );
 }
 
+// the server does not currently have any way of sending this class, and as such it is not in the documentation
 class Material {
   final String name;
   final String description;
