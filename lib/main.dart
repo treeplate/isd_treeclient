@@ -267,7 +267,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
       case 1:
         return StarFeature(StarIdentifier.parse(reader.readUint32()));
       case 2:
-        // according to the docs, the primaryChild shouldn't be special, but the server isn't up to date yet
         AssetID primaryChild = AssetID(server, reader.readUint64());
         int childCount = reader.readUint32();
         int i = 0;
@@ -967,8 +966,8 @@ class GalaxyRenderer extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    Offset screenCenter = zoomController.realScreenCenter;
-    double zoom = zoomController.realZoom;
+    Offset screenCenter = zoomController.screenCenter;
+    double zoom = zoomController.zoom;
     int category = 0;
     Offset topLeft = Offset(screenCenter.dx - .5, screenCenter.dy - .5);
     canvas.drawOval(

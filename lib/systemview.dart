@@ -49,17 +49,83 @@ class SystemView extends StatefulWidget {
   State<SystemView> createState() => _SystemViewState();
 }
 
+abstract class AssetLocationInformation {
+  Offset calculatePositionAtTime(Uint64 systemTime, DataStructure data);
+  double getMass(DataStructure data);
+  double getSize(DataStructure data);
+  Asset getAsset(AssetID orbit, DataStructure data) {
+    return data.assets[
+        (data.assets[orbit]!.features.single as OrbitFeature).primaryChild]!;
+  }
+}
+
+class RootAssetLocationInformation extends AssetLocationInformation {
+  final SolarSystemChild child;
+
+  RootAssetLocationInformation(this.child);
+  @override
+  Offset calculatePositionAtTime(Uint64 systemTime, DataStructure data) {
+    return polarToCartesian(
+      child.distanceFromCenter,
+      child.theta,
+    );
+  }
+
+  double getMass(DataStructure data) {
+    return getAsset(child.child, data).mass;
+  }
+
+  double getSize(DataStructure data) {
+    return getAsset(child.child, data).size;
+  }
+}
+
+class OrbitAssetLocationInformation extends AssetLocationInformation {
+  final OrbitChild child;
+  final AssetLocationInformation parent;
+
+  OrbitAssetLocationInformation(this.child, this.parent);
+  @override
+  Offset calculatePositionAtTime(Uint64 systemTime, DataStructure data) {
+    return calculateOrbit(
+          systemTime - (child.timeOffset * 1000),
+          child.semiMajorAxis,
+          child.eccentricity,
+          child.clockwise,
+          parent.getMass(data),
+          child.omega,
+        ) +
+        parent.calculatePositionAtTime(systemTime, data);
+  }
+
+  double getMass(DataStructure data) {
+    return getAsset(child.child, data).mass;
+  }
+
+  double getSize(DataStructure data) {
+    return getAsset(child.child, data).size;
+  }
+}
+
 class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
   late Uint64 systemTime;
   late final Ticker ticker;
   late final ZoomController systemZoomController =
       ZoomController(zoom: 15000, vsync: this);
+  AssetLocationInformation? screenFocus;
+  double assetScale = 1;
 
   @override
   void initState() {
     super.initState();
     tick(Duration.zero);
     ticker = createTicker(tick)..start();
+  }
+
+  Offset calculateOrbitForScreenFocus() {
+    return (screenFocus!.calculatePositionAtTime(systemTime, widget.data) /
+            widget.data.assets[widget.data.rootAssets[widget.system]]!.size) +
+        Offset(.5, .5);
   }
 
   void tick(Duration duration) {
@@ -70,6 +136,10 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
           (DateTime.timestamp().difference(time0.$1).inMilliseconds *
                   widget.data.timeFactors[widget.system]!)
               .floor());
+      if (screenFocus != null) {
+        systemZoomController.modifyAnimation(
+            screenCenter: calculateOrbitForScreenFocus());
+      }
     });
   }
 
@@ -97,7 +167,30 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
           child: Row(
             children: [
               Expanded(
-                child: Container(),
+                child: Column(
+                  children: [
+                    Text('Asset size multiplier'),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('1'),
+                        Slider(
+                          min: 1,
+                          max: 100,
+                          value: assetScale,
+                          onChanged: (newValue) {
+                            setState(
+                              () {
+                                assetScale = newValue;
+                              },
+                            );
+                          },
+                        ),
+                        Text('100'),
+                      ],
+                    )
+                  ],
+                ),
               ),
               Expanded(
                 flex: 2,
@@ -108,22 +201,26 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
                     widget.system,
                     systemTime,
                     systemZoomController,
+                    assetScale,
                   ),
                 ),
               ),
               Expanded(
-                child: Column(
+                child: ListView(
                   children: [
-                    Text('Center on star'),
+                    Text('Center on root asset'),
                     ...solarSystemFeature.children.map(
                       (e) => TextButton(
                         onPressed: () {
                           setState(() {
+                            screenFocus = null;
+                            RootAssetLocationInformation eInfo =
+                                RootAssetLocationInformation(e);
                             systemZoomController.animateTo(
-                              15000,
-                              polarToCartesian(
-                                      e.distanceFromCenter / rootAsset.size,
-                                      e.theta) +
+                              rootAsset.size / eInfo.getSize(widget.data)/assetScale,
+                              eInfo.calculatePositionAtTime(
+                                          systemTime, widget.data) /
+                                      rootAsset.size +
                                   Offset(.5, .5),
                             );
                           });
@@ -132,7 +229,31 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
                           '${widget.data.getAssetIdentifyingName(e.child)}',
                         ),
                       ),
-                    )
+                    ),
+                    Text('Center on asset orbiting root asset'),
+                    ...solarSystemFeature.children
+                        .expand((e) => widget.data.assets[e.child]!.features
+                            .whereType<OrbitFeature>()
+                            .single
+                            .orbitingChildren
+                            .map((f) => OrbitAssetLocationInformation(
+                                f, RootAssetLocationInformation(e))))
+                        .map(
+                          (e) => TextButton(
+                            onPressed: () {
+                              setState(() {
+                                screenFocus = e;
+                                systemZoomController.animateTo(
+                                  rootAsset.size / e.getSize(widget.data)/assetScale,
+                                  calculateOrbitForScreenFocus(),
+                                );
+                              });
+                            },
+                            child: Text(
+                              '${widget.data.getAssetIdentifyingName(e.child.child)}',
+                            ),
+                          ),
+                        ),
                   ],
                 ),
               ),
@@ -155,13 +276,13 @@ class SystemRenderer extends CustomPainter {
     this.system,
     this.systemTime,
     this.zoomController, [
-    this.sizeScaleFactor = 100,
+    this.sizeScaleFactor = 1,
   ]) : super(repaint: zoomController);
 
   @override
   void paint(Canvas canvas, Size size) {
-    Offset screenCenter = zoomController.realScreenCenter;
-    double zoom = zoomController.realZoom;
+    Offset screenCenter = zoomController.screenCenter;
+    double zoom = zoomController.zoom;
     Asset rootAsset = data.assets[data.rootAssets[system]!]!;
     Rect r = Offset.zero & size;
     canvas.drawLine(
@@ -227,8 +348,8 @@ class SystemRenderer extends CustomPainter {
       Offset primaryChildPosition,
       Canvas canvas,
       Size size) {
-    Offset screenCenter = zoomController.realScreenCenter;
-    double zoom = zoomController.realZoom;
+    Offset screenCenter = zoomController.screenCenter;
+    double zoom = zoomController.zoom;
     for (OrbitChild orbitChild in orbitFeature.orbitingChildren) {
       Asset orbit = data.assets[orbitChild.child]!;
       OrbitFeature childOrbitFeature = (orbit.features.single as OrbitFeature);

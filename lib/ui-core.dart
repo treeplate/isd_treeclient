@@ -107,31 +107,50 @@ class _TextFieldDialogState extends State<TextFieldDialog> {
 }
 
 class ZoomController extends ChangeNotifier {
-  double zoom;
-  late double oldZoom = zoom;
-  double get realZoom => Curves.easeInOutQuint.transform(animation.value) * (zoom - oldZoom) + oldZoom;
-  Offset screenCenter;
-  late Offset oldScreenCenter = screenCenter;
-  Offset get realScreenCenter => (screenCenter - oldScreenCenter) * Curves.easeOutExpo.transform(animation.value) + oldScreenCenter;
-  late final AnimationController animation;
+  double _zoom;
+  late double _oldZoom = _zoom;
+  double get realZoom => _zoom;
+  double get zoom =>
+      Curves.easeInOutQuint.transform(_animation.value) * (_zoom - _oldZoom) +
+      _oldZoom;
+  Offset _screenCenter;
+  late Offset _oldScreenCenter = _screenCenter;
+  Offset get realScreenCenter => _screenCenter;
+  Offset get screenCenter =>
+      (_screenCenter - _oldScreenCenter) *
+          Curves.easeOutExpo.transform(_animation.value) +
+      _oldScreenCenter;
+
+  late final AnimationController _animation;
 
   void animateTo(double newZoom, Offset newScreenCenter) {
-    oldZoom = realZoom;
-    oldScreenCenter = realScreenCenter;
-    zoom = newZoom;
-    screenCenter = newScreenCenter;
-    animation.reset();
-    animation.animateTo(1);
+    _oldZoom = zoom;
+    _oldScreenCenter = screenCenter;
+    _zoom = newZoom;
+    _screenCenter = newScreenCenter;
+    _animation.reset();
+    _animation.animateTo(1);
+  }
+
+  void modifyAnimation({double? zoom, Offset? screenCenter}) {
+    _zoom = zoom ?? _zoom;
+    _screenCenter = screenCenter ?? _screenCenter;
   }
 
   void dispose() {
-    animation.dispose();
+    _animation.dispose();
     super.dispose();
   }
 
-  ZoomController({this.zoom = 1, this.screenCenter = const Offset(.5, .5), required TickerProvider vsync}) {
-    animation = AnimationController(vsync: vsync, duration: Duration(seconds: 1), value: 1);
-    animation.addListener(notifyListeners);
+  ZoomController(
+      {double zoom = 1,
+      Offset screenCenter = const Offset(.5, .5),
+      required TickerProvider vsync})
+      : _zoom = zoom,
+        _screenCenter = screenCenter {
+    _animation = AnimationController(
+        vsync: vsync, duration: Duration(seconds: 1), value: 1);
+    _animation.addListener(notifyListeners);
   }
 }
 
@@ -181,12 +200,15 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
               lastRelativeScale = details.scale;
             },
             onTapUp: (TapUpDetails details) {
-              Offset topLeft =
-                  Offset(widget.controller.realScreenCenter.dx - .5, widget.controller.realScreenCenter.dy - .5);
+              Offset topLeft = Offset(
+                  widget.controller.screenCenter.dx - .5,
+                  widget.controller.screenCenter.dy - .5);
               Offset preZoom =
                   details.localPosition / constraints.biggest.shortestSide;
               Offset postZoom =
-                  (preZoom - Offset(.5, .5)) / widget.controller.realZoom + Offset(.5, .5) + topLeft;
+                  (preZoom - Offset(.5, .5)) / widget.controller.zoom +
+                      Offset(.5, .5) +
+                      topLeft;
               if (widget.onTap != null) {
                 widget.onTap!(postZoom);
               }
@@ -208,17 +230,22 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
   }
 
   void handleZoom(double scaleMultiplicativeDelta) {
-    if (widget.controller.zoom >= 1 / scaleMultiplicativeDelta) {
-      widget.controller.zoom *= scaleMultiplicativeDelta;
+    if (widget.controller.realZoom >= 1 / scaleMultiplicativeDelta) {
+      widget.controller.modifyAnimation(
+          zoom: widget.controller.realZoom * scaleMultiplicativeDelta);
     }
   }
 
   void handlePan(Offset delta, BoxConstraints constraints) {
     setState(() {
-      widget.controller.screenCenter -= (delta / constraints.biggest.shortestSide) / widget.controller.zoom;
-      widget.controller.screenCenter = Offset(
-        widget.controller.screenCenter.dx.clamp(0, 1),
-        widget.controller.screenCenter.dy.clamp(0, 1),
+      Offset newScreenCenter = widget.controller.realScreenCenter -
+          (delta / constraints.biggest.shortestSide) /
+              widget.controller.realZoom;
+      widget.controller.modifyAnimation(
+        screenCenter: Offset(
+          newScreenCenter.dx.clamp(0, 1),
+          newScreenCenter.dy.clamp(0, 1),
+        ),
       );
     });
   }
@@ -245,21 +272,25 @@ const double gravitationalConstant = 6.67430e-11; // m*m*m/kg*s*s
 
 // arguments are defined in https://software.hixie.ch/fun/isd/test-2024/servers/src/systems-server/README.md, the section on orbit features.
 // [t] is in milliseconds.
-Offset calculateOrbit(Uint64 t, double a, double e, bool clockwise, double M, double omega) {
+Offset calculateOrbit(
+    Uint64 t, double a, double e, bool clockwise, double M, double omega) {
   const double G = gravitationalConstant;
-  double T = 2*pi*sqrt((a*a*a)/(G*M)) * 1000; // this multiplies by 1000 to convert seconds to milliseconds
+  double T = 2 *
+      pi *
+      sqrt((a * a * a) / (G * M)) *
+      1000; // this multiplies by 1000 to convert seconds to milliseconds
   double tau = (t.asDouble % T) / T;
-  double q = -0.99*pi/4*(e-3*sqrt(e));
-  double theta = 2*pi*(tan(tau*2*q - q) - tan(-q)) / (tan(q)-tan(-q));
-  if(!clockwise) {
+  double q = -0.99 * pi / 4 * (e - 3 * sqrt(e));
+  double theta = 2 * pi * (tan(tau * 2 * q - q) - tan(-q)) / (tan(q) - tan(-q));
+  if (!clockwise) {
     theta = -theta;
   }
   if (e == 0) {
-    theta = 2*pi*tau;
+    theta = 2 * pi * tau;
   }
-  double L = a * (1 - e*e);
+  double L = a * (1 - e * e);
   double r = L / (1 + e * cos(theta));
-  return polarToCartesian(r, theta+omega);
+  return polarToCartesian(r, theta + omega);
 }
 
 final List<Paint> starCategories = [
