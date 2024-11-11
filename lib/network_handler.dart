@@ -4,6 +4,8 @@ import 'platform_specific_stub.dart'
     if (dart.library.io) 'platform_specific_io.dart'
     if (dart.library.js_interop) 'platform_specific_web.dart';
 
+const String loginServerURL = "wss://interstellar-dynasties.space:10024/";
+
 class NetworkConnection {
   NetworkConnection(this.socket,
       {required void Function(List<String>) unrequestedMessageHandler,
@@ -15,6 +17,27 @@ class NetworkConnection {
         binaryMessageHandler: binaryMessageHandler,
         onReset: onReset,
         onError: onError);
+  }
+
+  static Future<NetworkConnection> fromURL(
+    String url, {
+    required void Function(List<String>) unrequestedMessageHandler,
+    required void binaryMessageHandler(ByteBuffer data),
+    void Function(NetworkConnection)? onReset,
+    void onError(Object error, StackTrace stackTrace)?,
+  }) {
+    Completer<NetworkConnection> result = Completer();
+    connect(url).then((socket) {
+      result.complete(NetworkConnection(
+        socket,
+        unrequestedMessageHandler: unrequestedMessageHandler,
+        binaryMessageHandler: binaryMessageHandler,
+        onError: onError,
+      ));
+    }, onError: (e, st) {
+      result.completeError(e);
+    });
+    return result.future;
   }
 
   bool get reloading => socket.reloading;
@@ -51,7 +74,9 @@ class NetworkConnection {
           } else if (rawMessage is ByteBuffer) {
             binaryMessageHandler(rawMessage);
           } else {
-            unrequestedMessageHandler(['internal client error - unexpected socket message type ${rawMessage.runtimeType} ($rawMessage)']);
+            unrequestedMessageHandler([
+              'internal client error - unexpected socket message type ${rawMessage.runtimeType} ($rawMessage)'
+            ]);
           }
         }
       },

@@ -26,6 +26,12 @@ class WebSocketWrapper {
       onError: onError,
       onDone: () {
         if (!_closed) {
+          if (onError != null) {
+            onError(
+                Exception(
+                    'Connection terminated without error, reconnecting...'),
+                StackTrace.current);
+          }
           reconnect(onData, onError, onReset);
         }
       },
@@ -54,7 +60,9 @@ class WebSocketWrapper {
           if (waitingTime < Duration(minutes: 1)) {
             waitingTime *= 2;
           }
-          await Future.delayed(waitingTime + waitingTime * (_random.nextDouble() - .5));
+          await Future.delayed(
+            waitingTime + waitingTime * (_random.nextDouble() - .5),
+          );
           continue;
         }
       }

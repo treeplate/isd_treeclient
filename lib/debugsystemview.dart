@@ -73,6 +73,26 @@ Widget renderFeature(Feature feature, DataStructure data, bool collapseOrbits) {
         feature: feature,
         data: data,
       );
+    case PlanetFeature():
+      return PlanetFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case PlotControlFeature():
+      return PlotControlFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case SurfaceFeature():
+      return SurfaceFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case GridFeature():
+      return GridFeatureWidget(
+        feature: feature,
+        data: data,
+      );
   }
 }
 
@@ -102,6 +122,73 @@ class SolarSystemFeatureWidget extends StatelessWidget {
             ),
           ),
         ),
+      ],
+    );
+  }
+}
+
+class SurfaceFeatureWidget extends StatelessWidget {
+  const SurfaceFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+  final SurfaceFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Regions'),
+        ...feature.regions.map(
+          (e) => Padding(
+            padding: EdgeInsets.only(left: 16),
+            child: AssetWidget(
+              asset: e,
+              data: data,
+              collapseOrbits: false,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class GridFeatureWidget extends StatelessWidget {
+  const GridFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+  final GridFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+            '${feature.width}x${feature.height} grid of cells each with diameter ${feature.cellSize}'),
+        ...feature.cells
+            .map(
+              (e) => e == null
+                  ? null
+                  : Padding(
+                      padding: EdgeInsets.only(left: 16),
+                      child: e == null
+                          ? Text('<empty>')
+                          : AssetWidget(
+                              asset: e,
+                              data: data,
+                              collapseOrbits: false,
+                            ),
+                    ),
+            )
+            .whereType<Widget>(),
       ],
     );
   }
@@ -168,6 +255,48 @@ class StructureFeatureWidget extends StatelessWidget {
             'Components (total: ${feature.hp}/${feature.minHP ?? '???'}/${feature.maxHP ?? '???'})'),
         ...feature.materials.map((e) => Text(
             '  #${e.material.id.toRadixString(16)} ${e.componentName == null ? '' : '${e.componentName} '}(${e.materialDescription}) ${e.quantity}/${e.requiredQuantity ?? '???'}'))
+      ],
+    );
+  }
+}
+
+class PlanetFeatureWidget extends StatelessWidget {
+  const PlanetFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final PlanetFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('HP: ${feature.hp}'),
+      ],
+    );
+  }
+}
+
+class PlotControlFeatureWidget extends StatelessWidget {
+  const PlotControlFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final PlotControlFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (feature.isColonyShip) Text('This is the colony ship.'),
       ],
     );
   }
@@ -375,6 +504,7 @@ class SystemView extends StatefulWidget {
   @override
   State<SystemView> createState() => _SystemViewState();
 }
+
 class _SystemViewState extends State<SystemView> {
   bool collapseOrbits = true;
 

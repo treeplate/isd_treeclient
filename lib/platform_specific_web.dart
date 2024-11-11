@@ -13,6 +13,12 @@ class WebSocketWrapper {
     if (onReset != null) {
       onReset();
     }
+    socket.onError.listen((Event event) {
+      if (onError == null) {
+        throw event;
+      }
+      onError(event, StackTrace.current);
+    });
     return socket.onMessage.map((MessageEvent message) => message.data).listen(
           (message) {
             if (message is String)
@@ -27,6 +33,12 @@ class WebSocketWrapper {
           onError: onError,
           onDone: () async {
             if (!_closed) {
+              if (onError != null) {
+                onError(
+                    Exception(
+                        'Connection terminated without error, reconnecting...'),
+                    StackTrace.current);
+              }
               _doneReloading = Completer();
               reloading = true;
               socket = WebSocket(name);

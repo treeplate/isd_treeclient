@@ -46,6 +46,8 @@ flutter:
     - icons/orbit.png
     - icons/outer-space.png
     - icons/placeholder.png
+    - icons/planet.png
+    - icons/region.png
     - icons/star2.png
     - icons/star3.png
     - icons/star4.png

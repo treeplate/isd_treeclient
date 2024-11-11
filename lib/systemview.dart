@@ -56,10 +56,12 @@ abstract class AssetInformation {
   static OrbitFeature _getOrbitFeature(AssetID orbit, DataStructure data) {
     return (data.assets[orbit]!.features.single as OrbitFeature);
   }
+
   @protected
   Iterable<AssetInformation> _getChildren(AssetID orbit, DataStructure data) {
-    return 
-        _getOrbitFeature(orbit, data).orbitingChildren.map((e) => OrbitAssetInformation(e, this));
+    return _getOrbitFeature(orbit, data)
+        .orbitingChildren
+        .map((e) => OrbitAssetInformation(e, this));
   }
 
   AssetID getAsset(DataStructure data);
@@ -81,9 +83,10 @@ class RootAssetInformation extends AssetInformation {
   AssetID getAsset(DataStructure data) {
     return AssetInformation._getOrbitFeature(child.child, data).primaryChild;
   }
-  
+
   @override
-  Iterable<AssetInformation> getChildren(DataStructure data) => _getChildren(child.child, data);
+  Iterable<AssetInformation> getChildren(DataStructure data) =>
+      _getChildren(child.child, data);
 }
 
 class OrbitAssetInformation extends AssetInformation {
@@ -107,8 +110,10 @@ class OrbitAssetInformation extends AssetInformation {
   AssetID getAsset(DataStructure data) {
     return AssetInformation._getOrbitFeature(child.child, data).primaryChild;
   }
+
   @override
-  Iterable<AssetInformation> getChildren(DataStructure data) => _getChildren(child.child, data);
+  Iterable<AssetInformation> getChildren(DataStructure data) =>
+      _getChildren(child.child, data);
 }
 
 class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
@@ -118,6 +123,7 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
       ZoomController(zoom: 15000, vsync: this);
   AssetInformation? screenFocus;
   double assetScale = 1;
+  double maxAssetSize = 1;
   Map<String, ui.Image> icons = {};
 
   @override
@@ -137,7 +143,6 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
     for (AssetInformation assetInfo in flattenAssetTree()) {
       Asset asset = widget.data.assets[assetInfo.getAsset(widget.data)]!;
       if (!icons.containsKey(asset.icon)) {
-        print('finding ${asset.icon}');
         AssetImage('icons/${asset.icon}.png')
             .resolve(ImageConfiguration())
             .addListener(ImageStreamListener(
@@ -165,11 +170,14 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  List<AssetInformation> flattenAssetTree() {Asset rootAsset =
+  List<AssetInformation> flattenAssetTree() {
+    Asset rootAsset =
         widget.data.assets[widget.data.rootAssets[widget.system]!]!;
     SolarSystemFeature solarSystemFeature =
         (rootAsset.features.single as SolarSystemFeature);
-    List<AssetInformation> frontier = solarSystemFeature.children.map<AssetInformation>((e) => RootAssetInformation(e)).toList();
+    List<AssetInformation> frontier = solarSystemFeature.children
+        .map<AssetInformation>((e) => RootAssetInformation(e))
+        .toList();
     List<AssetInformation> result = [];
     while (frontier.isNotEmpty) {
       AssetInformation parent = frontier.last;
@@ -184,86 +192,117 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     Asset rootAsset =
         widget.data.assets[widget.data.rootAssets[widget.system]!]!;
-    return Column(
-      children: [
-        SelectableText(
-          '${widget.system.displayName}',
-          style: TextStyle(fontSize: 20),
-        ),
-        Text('current solar system time: ${prettyPrintDuration(systemTime)}'),
-        Expanded(
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    Text('Asset size multiplier'),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('1'),
-                        Slider(
-                          min: 1,
-                          max: 100,
-                          value: assetScale,
-                          onChanged: (newValue) {
-                            setState(
-                              () {
-                                assetScale = newValue;
-                              },
-                            );
-                          },
-                        ),
-                        Text('100'),
-                      ],
-                    )
-                  ],
-                ),
-              ),
-              Expanded(
-                flex: 2,
-                child: ZoomableCustomPaint(
-                  controller: systemZoomController,
-                  painter: SystemRenderer(
-                    widget.data,
-                    widget.system,
-                    systemTime,
-                    systemZoomController,
-                    icons,
-                    assetScale,
+    return LayoutBuilder(builder: (context, constraints) {
+      return Column(
+        children: [
+          SelectableText(
+            '${widget.system.displayName}',
+            style: TextStyle(fontSize: 20),
+          ),
+          Text('current solar system time: ${prettyPrintDuration(systemTime)}'),
+          Expanded(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text('Asset size multiplier'),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('10^0'),
+                          Slider(
+                            min: 0,
+                            max: 10,
+                            value: log(assetScale) / log(10),
+                            onChanged: (newValue) {
+                              setState(
+                                () {
+                                  assetScale = pow(10, newValue).toDouble();
+                                },
+                              );
+                            },
+                          ),
+                          Text('10^10'),
+                        ],
+                      ),
+                      Text('Max asset size'),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('1/10^0'),
+                          Slider(
+                            min: 0,
+                            max: 10,
+                            value: log(1/maxAssetSize) / log(10),
+                            onChanged: (newValue) {
+                              setState(
+                                () {
+                                  maxAssetSize = 1/pow(10, newValue);
+                                },
+                              );
+                            },
+                          ),
+                          Text('1/10^10'),
+                        ],
+                      )
+                    ],
                   ),
                 ),
-              ),
-              Expanded(
-                child: ListView(
-                  children: [
-                    Text('Center on asset'),
-                    ...flattenAssetTree().map(
-                          (e) => TextButton(
+                Expanded(
+                  flex: 2,
+                  child: ZoomableCustomPaint(
+                    controller: systemZoomController,
+                    painter: SystemRenderer(
+                      widget.data,
+                      widget.system,
+                      systemTime,
+                      systemZoomController,
+                      icons,
+                      assetScale,
+                      maxAssetSize,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    children: [
+                      if (screenFocus != null)
+                        TextButton(
                             onPressed: () {
-                              setState(() {
-                                screenFocus = e;
-                                systemZoomController.animateTo(
-                                  rootAsset.size /
-                                      widget.data.assets[e.getAsset(widget.data)]!.size /
-                                      assetScale,
-                                  calculateOrbitForScreenFocus(),
-                                );
-                              });
+                              screenFocus = null;
                             },
                             child: Text(
-                              '${widget.data.getAssetIdentifyingName(e.getAsset(widget.data))}',
-                            ),
+                                'Stop following ${widget.data.getAssetIdentifyingName(screenFocus!.getAsset(widget.data))}')),
+                      Text('Center on asset'),
+                      ...flattenAssetTree().map(
+                        (e) => TextButton(
+                          onPressed: () {
+                            setState(() {
+                              screenFocus = e;
+                              systemZoomController.animateTo(
+                                rootAsset.size /
+                                    widget.data.assets[e.getAsset(widget.data)]!
+                                        .size /
+                                    assetScale,
+                                calculateOrbitForScreenFocus(),
+                              );
+                            });
+                          },
+                          child: Text(
+                            '${widget.data.getAssetIdentifyingName(e.getAsset(widget.data))}',
                           ),
                         ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
+    });
   }
 }
 
@@ -272,6 +311,7 @@ class SystemRenderer extends CustomPainter {
   final StarIdentifier system;
   final Uint64 systemTime;
   final double sizeScaleFactor;
+  final double maxAssetSize;
   final ZoomController zoomController;
   final Map<String, ui.Image> icons;
   SystemRenderer(
@@ -281,6 +321,7 @@ class SystemRenderer extends CustomPainter {
     this.zoomController,
     this.icons, [
     this.sizeScaleFactor = 1,
+    this.maxAssetSize=double.infinity,
   ]) : super(repaint: zoomController);
 
   @override
@@ -326,7 +367,7 @@ class SystemRenderer extends CustomPainter {
       Asset orbit = data.assets[solarSystemChild.child]!;
       OrbitFeature orbitFeature = (orbit.features.single as OrbitFeature);
       Asset star = data.assets[orbitFeature.primaryChild]!;
-      double starDiameter = (star.size / rootAsset.size) * sizeScaleFactor;
+      double starDiameter = min((star.size / rootAsset.size) * sizeScaleFactor, maxAssetSize);
       Offset starCenter = (polarToCartesian(
                   solarSystemChild.distanceFromCenter, solarSystemChild.theta) /
               rootAsset.size) +
@@ -375,7 +416,7 @@ class SystemRenderer extends CustomPainter {
       OrbitFeature orbitFeature,
       Asset rootAsset,
       Asset primaryChild,
-      Offset primaryChildPosition,
+      Offset primaryChildPosition, //(0,0)..(1,1)
       Canvas canvas,
       Size size) {
     Offset screenCenter = zoomController.screenCenter;
@@ -384,7 +425,7 @@ class SystemRenderer extends CustomPainter {
       Asset orbit = data.assets[orbitChild.child]!;
       OrbitFeature childOrbitFeature = (orbit.features.single as OrbitFeature);
       Asset asset = data.assets[childOrbitFeature.primaryChild]!;
-      double assetDiameter = (asset.size / rootAsset.size) * sizeScaleFactor;
+      double assetDiameter = min((asset.size / rootAsset.size) * sizeScaleFactor, maxAssetSize);
       Offset assetCenter = (calculateOrbit(
                   systemTime - orbitChild.timeOffset * 1000,
                   orbitChild.semiMajorAxis,
@@ -402,15 +443,18 @@ class SystemRenderer extends CustomPainter {
                   2) /
           rootAsset.size;
       canvas.save();
-      Offset orbitCenter = primaryChildPosition +
-          Offset(orbitChild.eccentricity * orbitChild.semiMajorAxis, 0);
-      canvas.translate(orbitCenter.dx, orbitCenter.dy);
+      Offset primaryChildScreenPosition = calculateScreenPosition(
+          primaryChildPosition, screenCenter, zoom, size);
+      canvas.translate(
+          primaryChildScreenPosition.dx, primaryChildScreenPosition.dy);
       canvas.rotate(orbitChild.omega);
-      canvas.translate(-orbitCenter.dx, -orbitCenter.dy);
+      canvas.translate(
+          -primaryChildScreenPosition.dx, -primaryChildScreenPosition.dy);
+      Offset eccentricOffset = Offset(orbitChild.eccentricity*orbitChild.semiMajorAxis/rootAsset.size, 0);
       canvas.drawOval(
           calculateScreenPosition(
-                  primaryChildPosition -
-                      (orbitSize / 2).bottomRight(Offset.zero),
+                  (primaryChildPosition - eccentricOffset) -
+                      orbitSize.center(Offset.zero),
                   screenCenter,
                   zoom,
                   size) &

@@ -18,7 +18,6 @@ import 'platform_specific_stub.dart'
     if (dart.library.io) 'platform_specific_io.dart'
     if (dart.library.js_interop) 'platform_specific_web.dart';
 
-const String loginServerURL = "wss://interstellar-dynasties.space:10024/";
 void main() async {
   runApp(
     MaterialAppWidget(),
@@ -127,60 +126,15 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           Brightness.dark
       : widget.themeMode == ThemeMode.dark;
   late TabController tabController =
-      TabController(length: 4, vsync: this, initialIndex: 3);
+      TabController(length: 3, vsync: this, initialIndex: 0);
 
   void initState() {
     super.initState();
     getCookie('previousError').then((e) {
       if (e != null) openErrorDialog('Cookie error: $e', context);
     });
-    connectToLoginServer().then((server) async {
-      setState(() {
-        loginState = LoginState.notLoggedIn;
-      });
-      if (data.galaxyDiameter == null) {
-        loginServer!.send(['get-constants']).then((message) {
-          if (message[0] == 'F') {
-            assert(message.length == 2);
-            openErrorDialog(
-                'Error: failed to get constants - ${message[1]}', context);
-          }
-          assert(message.length == 2);
-          assert(message[0] == 'T');
-          data.setGalaxyDiameter(double.parse(message[1]));
-        });
-      }
-      if (data.stars == null) {
-        getFile(1);
-      }
-      if (data.systems == null) {
-        getFile(2);
-      }
-      if (data.username != null && data.password != null) {
-        setState(() {
-          loginState = LoginState.waitingOnLoginServer;
-        });
-        List<String> message =
-            await loginServer!.send(['login', data.username!, data.password!]);
-        if (message[0] == 'F') {
-          if (message[1] == 'unrecognized credentials') {
-            assert(message.length == 2);
-            logout();
-          } else {
-            setState(() {
-              loginState = LoginState.loginServerLoginError;
-            });
-            openErrorDialog(
-              'Error when logging in: ${message[1]}',
-              context,
-            );
-          }
-        } else {
-          assert(message[0] == 'T');
-          parseSuccessfulLoginResponse(message);
-        }
-      }
-    }, onError: (e, st) {
+    connectToLoginServer().then((server) => onLoginServerConnect(),
+        onError: (e, st) {
       setState(() {
         loginState = LoginState.loginServerConnectionError;
       });
@@ -237,28 +191,32 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
       getFile(2);
     }
     if (data.username != null && data.password != null) {
-      setState(() {
-        loginState = LoginState.waitingOnLoginServer;
-      });
-      List<String> message =
-          await loginServer!.send(['login', data.username!, data.password!]);
-      if (message[0] == 'F') {
-        if (message[1] == 'unrecognized credentials') {
-          assert(message.length == 2);
-          logout();
-        } else {
-          setState(() {
-            loginState = LoginState.loginServerLoginError;
-          });
-          openErrorDialog(
-            'Error when logging in: ${message[1]}',
-            context,
-          );
-        }
+      login();
+    }
+  }
+
+  Future<void> login() async {
+    setState(() {
+      loginState = LoginState.waitingOnLoginServer;
+    });
+    List<String> message =
+        await loginServer!.send(['login', data.username!, data.password!]);
+    if (message[0] == 'F') {
+      if (message[1] == 'unrecognized credentials') {
+        assert(message.length == 2);
+        logout();
       } else {
-        assert(message[0] == 'T');
-        parseSuccessfulLoginResponse(message);
+        setState(() {
+          loginState = LoginState.loginServerLoginError;
+        });
+        openErrorDialog(
+          'Error when logging in: ${message[1]}',
+          context,
+        );
       }
+    } else {
+      assert(message[0] == 'T');
+      parseSuccessfulLoginResponse(message);
     }
   }
 
@@ -347,14 +305,54 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           AssetID(server, reader.readUint64()),
           reader.readUint32(),
         );
+      case 7:
+        int hp = reader.readUint32();
+        return PlanetFeature(
+          hp,
+        );
+      case 8:
+        int isColonyShip = reader.readUint32();
+        assert(isColonyShip < 2);
+        return PlotControlFeature(
+          isColonyShip == 1,
+        );
+      case 9:
+        int regionCount = reader.readUint32();
+        if (regionCount != 1) {
+          openErrorDialog('surface has $regionCount regions', context);
+        }
+        int i = 0;
+        List<AssetID> regions = [];
+        while (i < regionCount) {
+          AssetID region = AssetID(server, reader.readUint64());
+          regions.add(region);
+          i++;
+        }
+        return SurfaceFeature(regions);
+      case 10:
+        double cellSize = reader.readFloat64();
+        int width = reader.readUint32();
+        int height = reader.readUint32();
+        int cellCount = width * height;
+        int i = 0;
+        List<AssetID?> cells = [];
+        while (i < cellCount) {
+          Uint64 id = reader.readUint64();
+          if (id.isZero) {
+            cells.add(null);
+          } else {
+            AssetID cell = AssetID(server, id);
+            cells.add(cell);
+          }
+          i++;
+        }
+        return GridFeature(cells, width, height, cellSize);
       default:
         throw UnimplementedError('Unknown featureID $featureCode');
     }
   }
 
-  static const kClientVersion = 6;
-
-  late final ZoomController galaxyZoomController = ZoomController(vsync: this);
+  static const kClientVersion = 10;
 
   void parseSystemServerBinaryMessage(String server, ByteBuffer data) {
     BinaryReader reader = BinaryReader(data, Endian.little);
@@ -387,9 +385,18 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           features.add(parseFeature(featureCode, reader, server));
         }
         this.data.setAssetNode(
-            assetID,
-            Asset(features, mass, owner == 0 ? null : owner, size, name == '' ? null : name, icon,
-                className, description));
+              assetID,
+              Asset(
+                features,
+                mass,
+                owner == 0 ? null : owner,
+                size,
+                name == '' ? null : name,
+                icon,
+                className,
+                description,
+              ),
+            );
       }
     }
   }
@@ -439,8 +446,15 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     }
     List<String> message = await systemServer.send(['login', data.token!]);
     if (message[0] == 'F') {
-      openErrorDialog(
-          'Error: failed system server $serverName login ($message)', context);
+      if (message[1] == 'unrecognized credentials') {
+        await login();
+        onSystemServerReset(systemServer, serverName);
+      } else {
+        openErrorDialog(
+            'Error: failed system server $serverName login ($message)',
+            context);
+        loginState = LoginState.systemServerLoginError;
+      }
     } else {
       currentSystemServerLoggedInCount++;
       systemServersLoggedIn.add(serverName);
@@ -565,7 +579,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     for (NetworkConnection server in systemServers.values) {
       server.close();
     }
-    galaxyZoomController.dispose();
     super.dispose();
   }
 
@@ -576,9 +589,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         bottom: loginState == LoginState.ready
             ? TabBar(
                 tabs: [
-                  Text('Galaxy'),
+                  Text('Galaxy view'),
                   Text('System view'),
-                  Text('Star lookup'),
                   Text('System view (debug)')
                 ],
                 controller: tabController,
@@ -686,24 +698,36 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
               LoginState.systemServerLoginError => Center(
                   child: Text('System server had error when logging in.'),
                 ),
-              LoginState.noSystemServers => Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                        'You have no visibility into anything. You should create another account.'),
-                    OutlinedButton(
-                        onPressed: () => openAccountDialog(context),
-                        child: Text('Change username or password')),
-                    OutlinedButton(onPressed: logout, child: Text('Logout'))
-                  ],
-                ),
-              LoginState.notLoggedIn => Center(
-                  child: LoginWidget(
-                    loginServer: loginServer!,
-                    data: data,
-                    parseSuccessfulLoginResponse: parseSuccessfulLoginResponse,
+              LoginState.noSystemServers => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                          'You have no visibility into anything. You should create another account.'),
+                      OutlinedButton(
+                          onPressed: () => openAccountDialog(context),
+                          child: Text('Change username or password')),
+                      OutlinedButton(onPressed: logout, child: Text('Logout'))
+                    ],
                   ),
                 ),
+              LoginState.notLoggedIn => loginServer == null
+                  ? Center(
+                      child: Column(
+                        children: [
+                          Text('connecting to login server...'),
+                          CircularProgressIndicator(),
+                        ],
+                      ),
+                    )
+                  : Center(
+                      child: LoginWidget(
+                        loginServer: loginServer!,
+                        data: data,
+                        parseSuccessfulLoginResponse:
+                            parseSuccessfulLoginResponse,
+                      ),
+                    ),
               LoginState.ready => ListenableBuilder(
                   listenable: data,
                   builder: (context, child) {
@@ -711,22 +735,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                       child: TabBarView(
                         controller: tabController,
                         children: [
-                          if (data.stars != null)
-                            ZoomableCustomPaint(
-                              controller: galaxyZoomController,
-                              painter: GalaxyRenderer(
-                                data.stars!,
-                                data.systems?.values.toSet() ?? {},
-                                galaxyZoomController,
-                              ),
-                            )
-                          else
-                            Column(
-                              children: [
-                                Text('loading starmap...'),
-                                CircularProgressIndicator(),
-                              ],
-                            ),
                           systemview.SystemSelector(data: data),
                           StarLookupWidget(
                             data: data,
@@ -790,31 +798,32 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
   Future<NetworkConnection> connectToLoginServer() async {
     if (loginServer != null) return loginServer!;
     Completer<NetworkConnection> result = Completer();
-    connect(loginServerURL).then((socket) {
-      setState(() {
-        loginServer = NetworkConnection(
-          socket,
-          unrequestedMessageHandler: (message) {
-            openErrorDialog(
-              'Unexpected message from login server: $message',
-              context,
-            );
-          },
-          binaryMessageHandler: parseLoginServerBinaryMessage,
-          onError: (e, st) {
-            setState(() {
-              loginState = LoginState.connectingToLoginServer;
-            });
-          },
+    NetworkConnection.fromURL(
+      loginServerURL,
+      unrequestedMessageHandler: (message) {
+        openErrorDialog(
+          'Unexpected message from login server: $message',
+          context,
         );
-        result.complete(loginServer);
-      });
-    }, onError: (e, st) {
-      setState(() {
-        loginState = LoginState.loginServerConnectionError;
-        result.completeError(e);
-      });
-    });
+      },
+      binaryMessageHandler: parseLoginServerBinaryMessage,
+      onError: (e, st) {
+        connectToLoginServer();
+      },
+    ).then(
+      (server) {
+        setState(() {
+          loginServer = server;
+          result.complete(server);
+        });
+      },
+      onError: (e, st) {
+        setState(() {
+          loginState = LoginState.loginServerConnectionError;
+          result.completeError(e);
+        });
+      },
+    );
     return result.future;
   }
 }
@@ -932,6 +941,21 @@ class _StarLookupWidgetState extends State<StarLookupWidget>
             child: Text('Lookup'),
           ),
         ),
+        OutlinedButton(
+          onPressed: () {
+            setState(() {
+              errorMessage = null;
+              description = null;
+              galaxyZoomController ??= ZoomController(
+                vsync: this,
+                zoom: 1,
+                screenCenter: Offset(0.5, 0.5),
+              );
+              galaxyZoomController!.animateTo(1, Offset(.5, .5));
+            });
+          },
+          child: Text('See full galaxy'),
+        ),
         if (errorMessage != null)
           Text(
             errorMessage!,
@@ -946,7 +970,7 @@ class _StarLookupWidgetState extends State<StarLookupWidget>
             child: ZoomableCustomPaint(
               painter: GalaxyRenderer(
                 widget.data.stars!,
-                {selectedStar!},
+                selectedStar == null ? {} : {selectedStar!},
                 galaxyZoomController!,
               ),
               controller: galaxyZoomController!,

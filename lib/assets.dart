@@ -174,3 +174,31 @@ class SpaceSensorStatusFeature extends Feature {
 
   SpaceSensorStatusFeature(this.nearestOrbit, this.topAsset, this.count);
 }
+
+class PlanetFeature extends Feature {
+  final int hp;
+
+  PlanetFeature(this.hp);
+}
+
+class PlotControlFeature extends Feature {
+  final bool isColonyShip;
+
+  PlotControlFeature(this.isColonyShip);
+}
+
+class SurfaceFeature extends Feature {
+  SurfaceFeature(this.regions);
+
+  final List<AssetID> regions;
+}
+
+class GridFeature extends Feature {
+  GridFeature(this.cells, this.width, this.height, this.cellSize);
+
+  final List<AssetID?> cells;
+  final int width;
+  final int height;
+  // meters
+  final double cellSize;
+}
