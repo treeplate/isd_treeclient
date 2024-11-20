@@ -201,8 +201,9 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
             },
             onTapUp: (TapUpDetails details) {
               Offset topLeft = Offset(
-                  widget.controller.screenCenter.dx - .5,
-                  widget.controller.screenCenter.dy - .5);
+                widget.controller.screenCenter.dx - .5,
+                widget.controller.screenCenter.dy - .5,
+              );
               Offset preZoom =
                   details.localPosition / constraints.biggest.shortestSide;
               Offset postZoom =
@@ -274,6 +275,7 @@ const double gravitationalConstant = 6.67430e-11; // m*m*m/kg*s*s
 // [t] is in milliseconds.
 Offset calculateOrbit(
     Uint64 t, double a, double e, bool clockwise, double M, double omega) {
+  assert(e <= .95, 'invalid eccentricity $e');
   const double G = gravitationalConstant;
   double T = 2 *
       pi *
@@ -282,11 +284,11 @@ Offset calculateOrbit(
   double tau = (t.asDouble % T) / T;
   double q = -0.99 * pi / 4 * (e - 3 * sqrt(e));
   double theta = 2 * pi * (tan(tau * 2 * q - q) - tan(-q)) / (tan(q) - tan(-q));
-  if (!clockwise) {
-    theta = -theta;
-  }
   if (e == 0) {
     theta = 2 * pi * tau;
+  }
+  if (!clockwise) {
+    theta = -theta;
   }
   double L = a * (1 - e * e);
   double r = L / (1 + e * cos(theta));

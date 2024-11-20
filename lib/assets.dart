@@ -13,21 +13,17 @@ extension type StarIdentifier._((int category, int subindex) _value) {
   }
 }
 
-extension type AssetID._((String server, Uint64 id) value) {
-  String get server => value.$1;
-  Uint64 get id => value.$2;
-
-  factory AssetID(String server, Uint64 id) {
-    return AssetID._((server, id));
-  }
-}
-
-extension type MaterialID._((String server, int id) value) {
-  String get server => value.$1;
+extension type AssetID._((StarIdentifier system, int id) value) {
+  StarIdentifier get system => value.$1;
   int get id => value.$2;
 
-  factory MaterialID(String server, int id) {
-    return MaterialID._((server, id));
+  factory AssetID(StarIdentifier system, int id) {
+    assert(id > 0);
+    assert(
+      id <= 0xFFFFFF,
+      'getAssetIdentifyingName assumes the biggest asset id is 6 hexadecimal digits (this is guaranteed by the docs as of this assert being written)',
+    );
+    return AssetID._((system, id));
   }
 }
 
@@ -123,9 +119,9 @@ class MaterialLineItem {
   final String materialDescription;
   final int quantity;
   final int? requiredQuantity;
-  final MaterialID material;
+  final int? materialID;
 
-  MaterialLineItem(this.componentName, this.material, this.quantity,
+  MaterialLineItem(this.componentName, this.materialID, this.quantity,
       this.requiredQuantity, this.materialDescription);
 }
 
@@ -201,4 +197,11 @@ class GridFeature extends Feature {
   final int height;
   // meters
   final double cellSize;
+}
+
+class PopulationFeature extends Feature {
+  final Uint64 population;
+  final double averageHappiness;
+
+  PopulationFeature(this.population, this.averageHappiness);
 }

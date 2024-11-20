@@ -7,7 +7,7 @@ class BinaryReader {
   final ByteData _data;
   final Uint8List _rawData;
   final Endian endian;
-  final Map<int, String> stringTable = {};
+  final Map<int, String> stringTable;
 
   bool get done => _index >= _rawData.length;
 
@@ -56,7 +56,7 @@ class BinaryReader {
     return result;
   }
 
-  BinaryReader(ByteBuffer buffer, this.endian)
+  BinaryReader(ByteBuffer buffer, this.stringTable, this.endian)
       : _rawData = buffer.asUint8List(),
         _data = buffer.asByteData();
 }

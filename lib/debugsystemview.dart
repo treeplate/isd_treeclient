@@ -93,6 +93,11 @@ Widget renderFeature(Feature feature, DataStructure data, bool collapseOrbits) {
         feature: feature,
         data: data,
       );
+    case PopulationFeature():
+      return PopulationFeatureWidget(
+        feature: feature,
+        data: data,
+      );
   }
 }
 
@@ -254,7 +259,7 @@ class StructureFeatureWidget extends StatelessWidget {
         Text(
             'Components (total: ${feature.hp}/${feature.minHP ?? '???'}/${feature.maxHP ?? '???'})'),
         ...feature.materials.map((e) => Text(
-            '  #${e.material.id.toRadixString(16)} ${e.componentName == null ? '' : '${e.componentName} '}(${e.materialDescription}) ${e.quantity}/${e.requiredQuantity ?? '???'}'))
+            '  ${e.materialID == null ? 'unknown material' : 'M${e.materialID!.toRadixString(16).padLeft(8, '0')}'} (${e.materialDescription}) - ${e.componentName == null ? '' : '${e.componentName} '}${e.quantity}/${e.requiredQuantity ?? '???'}'))
       ],
     );
   }
@@ -375,6 +380,27 @@ class SpaceSensorStatusFeatureWidget extends StatelessWidget {
   }
 }
 
+class PopulationFeatureWidget extends StatelessWidget {
+  const PopulationFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final PopulationFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('${feature.population.displayName} people with an average of ${feature.averageHappiness} happiness (${feature.population.asDouble * feature.averageHappiness} total happiness)'),
+      ],
+    );
+  }
+}
+
 class AssetWidget extends StatelessWidget {
   const AssetWidget({
     super.key,
@@ -430,7 +456,7 @@ class AssetWidget extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          asset.name ?? asset.className,
+                          data.getAssetIdentifyingName(this.asset),
                           style: TextStyle(fontSize: 20),
                         ),
                         if (asset.name != null)
@@ -541,7 +567,7 @@ class _SystemViewState extends State<SystemView> {
           padding: const EdgeInsets.only(bottom: 16),
           child: Center(
             child: SelectableText(
-              '${widget.system.displayName} (${widget.data.rootAssets[widget.system]!.server})',
+              '${widget.system.displayName} (${widget.data.rootAssets[widget.system]!.system})',
               style: TextStyle(fontSize: 20),
             ),
           ),

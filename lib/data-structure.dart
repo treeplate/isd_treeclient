@@ -157,7 +157,7 @@ class DataStructure with ChangeNotifier {
         default:
       }
     }
-    return asset.name ?? 'unnamed "${asset.className}"';
+    return asset.name ?? 'A${id.id.toRadixString(16).padLeft(6,'0')} (${asset.className})';
   }
 
   DataStructure() {

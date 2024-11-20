@@ -18,6 +18,13 @@ class SystemSelector extends StatefulWidget {
 
 class _SystemSelectorState extends State<SystemSelector> {
   StarIdentifier? selectedSystem;
+  @override
+  void initState() {
+    if (widget.data.rootAssets.keys.length == 1) {
+      selectedSystem = widget.data.rootAssets.keys.single;
+    }
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -129,11 +136,19 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    for (AssetInformation asset in flattenAssetTree()) {
+      if (widget.data.assets[asset.getAsset(widget.data)]!.features
+          .any((e) => e is PlotControlFeature && e.isColonyShip)) {
+        screenFocus = asset;
+      }
+    }
+
     tick(Duration.zero);
     ticker = createTicker(tick)..start();
   }
 
   Offset calculateOrbitForScreenFocus() {
+    if (widget.data.rootAssets[widget.system] == null) return Offset.zero;
     return (screenFocus!.calculatePositionAtTime(systemTime, widget.data) /
             widget.data.assets[widget.data.rootAssets[widget.system]]!.size) +
         Offset(.5, .5);
@@ -170,7 +185,28 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  void onTap(Offset normalizedPosition) {
+    for (AssetInformation asset in flattenAssetTree()) {
+      Offset assetPos = (asset.calculatePositionAtTime(
+                  systemTime, widget.data) /
+              widget.data.assets[widget.data.rootAssets[widget.system]]!.size) +
+          Offset(.5, .5);
+      double assetRadius = min(
+              maxAssetSize,
+              widget.data.assets[asset.getAsset(widget.data)]!.size *
+                  assetScale / widget.data.assets[widget.data.rootAssets[widget.system]]!.size) /
+          2;
+      if (normalizedPosition.dx > assetPos.dx - assetRadius &&
+          normalizedPosition.dx < assetPos.dx + assetRadius &&
+          normalizedPosition.dy > assetPos.dy - assetRadius &&
+          normalizedPosition.dy < assetPos.dy + assetRadius) {
+        screenFocus = asset;
+      }
+    }
+  }
+
   List<AssetInformation> flattenAssetTree() {
+    if (widget.data.rootAssets[widget.system] == null) return [];
     Asset rootAsset =
         widget.data.assets[widget.data.rootAssets[widget.system]!]!;
     SolarSystemFeature solarSystemFeature =
@@ -234,11 +270,11 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
                           Slider(
                             min: 0,
                             max: 10,
-                            value: log(1/maxAssetSize) / log(10),
+                            value: log(1 / maxAssetSize) / log(10),
                             onChanged: (newValue) {
                               setState(
                                 () {
-                                  maxAssetSize = 1/pow(10, newValue);
+                                  maxAssetSize = 1 / pow(10, newValue);
                                 },
                               );
                             },
@@ -253,6 +289,7 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
                   flex: 2,
                   child: ZoomableCustomPaint(
                     controller: systemZoomController,
+                    onTap: onTap,
                     painter: SystemRenderer(
                       widget.data,
                       widget.system,
@@ -321,7 +358,7 @@ class SystemRenderer extends CustomPainter {
     this.zoomController,
     this.icons, [
     this.sizeScaleFactor = 1,
-    this.maxAssetSize=double.infinity,
+    this.maxAssetSize = double.infinity,
   ]) : super(repaint: zoomController);
 
   @override
@@ -367,7 +404,8 @@ class SystemRenderer extends CustomPainter {
       Asset orbit = data.assets[solarSystemChild.child]!;
       OrbitFeature orbitFeature = (orbit.features.single as OrbitFeature);
       Asset star = data.assets[orbitFeature.primaryChild]!;
-      double starDiameter = min((star.size / rootAsset.size) * sizeScaleFactor, maxAssetSize);
+      double starDiameter =
+          min((star.size / rootAsset.size) * sizeScaleFactor, maxAssetSize);
       Offset starCenter = (polarToCartesian(
                   solarSystemChild.distanceFromCenter, solarSystemChild.theta) /
               rootAsset.size) +
@@ -425,7 +463,8 @@ class SystemRenderer extends CustomPainter {
       Asset orbit = data.assets[orbitChild.child]!;
       OrbitFeature childOrbitFeature = (orbit.features.single as OrbitFeature);
       Asset asset = data.assets[childOrbitFeature.primaryChild]!;
-      double assetDiameter = min((asset.size / rootAsset.size) * sizeScaleFactor, maxAssetSize);
+      double assetDiameter =
+          min((asset.size / rootAsset.size) * sizeScaleFactor, maxAssetSize);
       Offset assetCenter = (calculateOrbit(
                   systemTime - orbitChild.timeOffset * 1000,
                   orbitChild.semiMajorAxis,
@@ -450,7 +489,9 @@ class SystemRenderer extends CustomPainter {
       canvas.rotate(orbitChild.omega);
       canvas.translate(
           -primaryChildScreenPosition.dx, -primaryChildScreenPosition.dy);
-      Offset eccentricOffset = Offset(orbitChild.eccentricity*orbitChild.semiMajorAxis/rootAsset.size, 0);
+      Offset eccentricOffset = Offset(
+          orbitChild.eccentricity * orbitChild.semiMajorAxis / rootAsset.size,
+          0);
       canvas.drawOval(
           calculateScreenPosition(
                   (primaryChildPosition - eccentricOffset) -

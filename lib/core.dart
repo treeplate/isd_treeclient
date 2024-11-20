@@ -8,9 +8,7 @@ extension type Uint64((int, int) _value) {
   }
 
   String get hexString {
-    if (msh == 0) return '0x${lsh.toRadixString(16)}';
-    if (msh == -1) return '-0x${lsh.toRadixString(16)}';
-    return '0x${msh.toRadixString(16)}${lsh.toRadixString(16).padLeft(8, '0')}';
+    return '${msh.toRadixString(16).padLeft(8, '0')}${lsh.toRadixString(16).padLeft(8, '0')}';
   }
 
   bool get isZero => _value.$1 == 0 && _value.$2 == 0;

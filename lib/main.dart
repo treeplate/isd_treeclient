@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import 'debugsystemview.dart' as debugsystemview;
 import 'systemview.dart' as systemview;
+import 'planetview.dart' as planetview;
 import 'binaryreader.dart';
 import 'network_handler.dart';
 import 'account.dart';
@@ -126,7 +127,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           Brightness.dark
       : widget.themeMode == ThemeMode.dark;
   late TabController tabController =
-      TabController(length: 3, vsync: this, initialIndex: 0);
+      TabController(length: 4, vsync: this, initialIndex: 1);
 
   void initState() {
     super.initState();
@@ -220,12 +221,14 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     }
   }
 
-  Feature parseFeature(int featureCode, BinaryReader reader, String server) {
+  Feature parseFeature(int featureCode, BinaryReader reader, StarIdentifier systemID) {
     switch (featureCode) {
       case 1:
         return StarFeature(StarIdentifier.parse(reader.readUint32()));
       case 2:
-        AssetID primaryChild = AssetID(server, reader.readUint64());
+      int id = reader.readUint32();
+      assert(id != 0);
+        AssetID primaryChild = AssetID(systemID, id);
         int childCount = reader.readUint32();
         int i = 0;
         List<SolarSystemChild> children = [
@@ -234,13 +237,17 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         while (i < childCount) {
           double distanceFromCenter = reader.readFloat64();
           double theta = reader.readFloat64();
-          AssetID child = AssetID(server, reader.readUint64());
+          int id = reader.readUint32();
+          assert(id != 0);
+          AssetID child = AssetID(systemID, id);
           children.add(SolarSystemChild(child, distanceFromCenter, theta));
           i++;
         }
         return SolarSystemFeature(children);
       case 3:
-        AssetID primaryChild = AssetID(server, reader.readUint64());
+      int id = reader.readUint32();
+      assert(id != 0);
+        AssetID primaryChild = AssetID(systemID, id);
         int childCount = reader.readUint32();
         int i = 0;
         List<OrbitChild> children = [];
@@ -255,7 +262,9 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                 'Unsupported OrbitChild.direction: 0x${direction.toRadixString(16)}',
                 context);
           }
-          AssetID child = AssetID(server, reader.readUint64());
+          int id = reader.readUint32();
+          assert(id != 0);
+          AssetID child = AssetID(systemID, id);
           children.add(
             OrbitChild(
               child,
@@ -276,7 +285,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           int max = reader.readUint32();
           String componentName = reader.readString();
           String materialDescription = reader.readString();
-          MaterialID materialID = MaterialID(server, reader.readUint32());
+          int id = reader.readUint32();
+          int? materialID = id == 0 ? null : id;
           materials.add(MaterialLineItem(
             componentName == '' ? null : componentName,
             materialID,
@@ -301,8 +311,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         );
       case 6:
         return SpaceSensorStatusFeature(
-          AssetID(server, reader.readUint64()),
-          AssetID(server, reader.readUint64()),
+          AssetID(systemID, reader.readUint32()),
+          AssetID(systemID, reader.readUint32()),
           reader.readUint32(),
         );
       case 7:
@@ -324,7 +334,9 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         int i = 0;
         List<AssetID> regions = [];
         while (i < regionCount) {
-          AssetID region = AssetID(server, reader.readUint64());
+          int id = reader.readUint32();
+          assert(id != 0);
+          AssetID region = AssetID(systemID, id);
           regions.add(region);
           i++;
         }
@@ -333,76 +345,92 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         double cellSize = reader.readFloat64();
         int width = reader.readUint32();
         int height = reader.readUint32();
-        int cellCount = width * height;
+        int cellCount = reader.readUint32();
         int i = 0;
-        List<AssetID?> cells = [];
+        List<AssetID?> cells = List.filled(width * height, null);
         while (i < cellCount) {
-          Uint64 id = reader.readUint64();
-          if (id.isZero) {
-            cells.add(null);
-          } else {
-            AssetID cell = AssetID(server, id);
-            cells.add(cell);
-          }
+          int x = reader.readUint32();
+          int y = reader.readUint32();
+          int id = reader.readUint32();
+          assert(id != 0);
+          cells[x + y * width] = AssetID(systemID, id);
           i++;
         }
         return GridFeature(cells, width, height, cellSize);
+      case 11:
+        Uint64 population = reader.readUint64();
+        double averageHappiness = reader.readFloat64();
+        return PopulationFeature(population, averageHappiness);
       default:
         throw UnimplementedError('Unknown featureID $featureCode');
     }
   }
 
-  static const kClientVersion = 10;
+  static const kClientVersion = 11;
 
-  void parseSystemServerBinaryMessage(String server, ByteBuffer data) {
-    BinaryReader reader = BinaryReader(data, Endian.little);
+  void parseSystemServerBinaryMessage(ByteBuffer data, Map<int, String> stringTable) {
+    BinaryReader reader = BinaryReader(data, stringTable, Endian.little);
     while (!reader.done) {
-      StarIdentifier systemID = StarIdentifier.parse(reader.readUint32());
-      (DateTime, Uint64) time0 = (DateTime.timestamp(), reader.readUint64());
-      double timeFactor = reader.readFloat64();
-      AssetID rootAssetID = AssetID(server, reader.readUint64());
-      this.data.setRootAsset(systemID, rootAssetID);
-      Offset position = Offset(reader.readFloat64(), reader.readFloat64());
-      this
-          .data
-          .setSystemPosition(systemID, position / this.data.galaxyDiameter!);
-      this.data.setTime0(systemID, time0);
-      this.data.setTimeFactor(systemID, timeFactor);
-      while (true) {
-        AssetID assetID = AssetID(server, reader.readUint64());
-        if (assetID.id.isZero) break;
-        int owner = reader.readUint32();
-        double mass = reader.readFloat64();
-        double size = reader.readFloat64();
-        String name = reader.readString();
-        String icon = reader.readString();
-        String className = reader.readString();
-        String description = reader.readString();
-        List<Feature> features = [];
+      int id = reader.readUint32();
+      if (id < 0x10000000) {
+        StarIdentifier systemID = StarIdentifier.parse(id);
+
+        (DateTime, Uint64) time0 = (DateTime.timestamp(), reader.readUint64());
+        double timeFactor = reader.readFloat64();
+        id = reader.readUint32();
+        assert(id != 0);
+        AssetID rootAssetID = AssetID(systemID, id);
+        this.data.setRootAsset(systemID, rootAssetID);
+        Offset position = Offset(reader.readFloat64(), reader.readFloat64());
+        this
+            .data
+            .setSystemPosition(systemID, position / this.data.galaxyDiameter!);
+        this.data.setTime0(systemID, time0);
+        this.data.setTimeFactor(systemID, timeFactor);
         while (true) {
-          int featureCode = reader.readUint32();
-          if (featureCode == 0) break;
-          features.add(parseFeature(featureCode, reader, server));
+          int id = reader.readUint32();
+          if (id == 0) break;
+          AssetID assetID = AssetID(systemID, id);
+          int owner = reader.readUint32();
+          double mass = reader.readFloat64();
+          double size = reader.readFloat64();
+          String name = reader.readString();
+          String icon = reader.readString();
+          String className = reader.readString();
+          String description = reader.readString();
+          List<Feature> features = [];
+          while (true) {
+            int featureCode = reader.readUint32();
+            if (featureCode == 0) break;
+            features.add(parseFeature(featureCode, reader, systemID));
+          }
+          this.data.setAssetNode(
+                assetID,
+                Asset(
+                  features,
+                  mass,
+                  owner == 0 ? null : owner,
+                  size,
+                  name == '' ? null : name,
+                  icon,
+                  className,
+                  description,
+                ),
+              );
         }
-        this.data.setAssetNode(
-              assetID,
-              Asset(
-                features,
-                mass,
-                owner == 0 ? null : owner,
-                size,
-                name == '' ? null : name,
-                icon,
-                className,
-                description,
-              ),
-            );
+      } else {
+        switch (id) {
+          default:
+            throw UnimplementedError(
+                'Unknown notification ID 0x${id.toRadixString(16)}');
+        }
       }
     }
   }
 
   void connectToSystemServer(String server) {
     connect(server).then((socket) async {
+      Map<int, String> stringTable = {};
       NetworkConnection systemServer = NetworkConnection(
         socket,
         unrequestedMessageHandler: (message) {
@@ -412,7 +440,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           );
         },
         binaryMessageHandler: (data) =>
-            parseSystemServerBinaryMessage(server, data),
+            parseSystemServerBinaryMessage(data, stringTable),
         onReset: (NetworkConnection systemServer) {
           onSystemServerReset(systemServer, server);
         },
@@ -438,7 +466,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
   Future<void> onSystemServerReset(
       NetworkConnection systemServer, String serverName) async {
     currentSystemServerConnectedCount++;
-    assert(currentSystemServerConnectedCount <= expectedSystemServerCount);
+    assert(currentSystemServerConnectedCount <= expectedSystemServerCount,
+        'more servers connected than expected, expected $expectedSystemServerCount connected, got $currentSystemServerConnectedCount');
     if (currentSystemServerConnectedCount == expectedSystemServerCount) {
       setState(() {
         loginState = LoginState.waitingOnSystemServers;
@@ -447,6 +476,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     List<String> message = await systemServer.send(['login', data.token!]);
     if (message[0] == 'F') {
       if (message[1] == 'unrecognized credentials') {
+        await connectToLoginServer();
         await login();
         onSystemServerReset(systemServer, serverName);
       } else {
@@ -482,6 +512,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     loginServer!.close();
     loginServer = null;
     setState(() {
+      print('logged in succesfully');
       loginState = LoginState.connectingToDynastyServer;
     });
     connect(message[1]).then((socket) async {
@@ -500,6 +531,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
             },
             onReset: onDynastyServerReset,
             onError: (e, st) {
+              print('dynasty server error; reconnecting...');
               setState(() {
                 loginState = LoginState.connectingToDynastyServer;
               });
@@ -557,11 +589,17 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     List<String> message = await dynastyServer.send(['login', data.token!]);
     if (message[0] == 'F') {
       assert(message.length == 2);
-      openErrorDialog(
-          'response from dynasty server login: ${message[1]}', context);
-      setState(() {
-        loginState = LoginState.dynastyServerLoginError;
-      });
+      if (message[1] == 'unrecognized credentials') {
+        await connectToLoginServer();
+        await login();
+        onDynastyServerReset(dynastyServer);
+      } else {
+        openErrorDialog(
+            'response from dynasty server login: ${message[1]}', context);
+        setState(() {
+          loginState = LoginState.dynastyServerLoginError;
+        });
+      }
     } else {
       assert(message[0] == 'T');
       data.setDynastyID(int.parse(message[1]));
@@ -591,7 +629,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                 tabs: [
                   Text('Galaxy view'),
                   Text('System view'),
-                  Text('System view (debug)')
+                  Text('System view (debug)'),
+                  Text('Planet view')
                 ],
                 controller: tabController,
               )
@@ -735,12 +774,13 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                       child: TabBarView(
                         controller: tabController,
                         children: [
-                          systemview.SystemSelector(data: data),
                           StarLookupWidget(
                             data: data,
                             dynastyServer: dynastyServer,
                           ),
-                          debugsystemview.SystemSelector(data: data)
+                          systemview.SystemSelector(data: data),
+                          debugsystemview.SystemSelector(data: data),
+                          planetview.SystemSelector(data: data),
                         ],
                       ),
                     );
