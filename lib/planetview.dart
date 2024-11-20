@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'assets.dart';
 import 'data-structure.dart';
+import 'platform_specific_stub.dart'
+    if (dart.library.io) 'platform_specific_io.dart'
+    if (dart.library.js_interop) 'platform_specific_web.dart';
 
 class SystemSelector extends StatefulWidget {
   const SystemSelector({super.key, required this.data});
@@ -45,6 +48,17 @@ class PlanetSelector extends StatefulWidget {
 
 class _PlanetSelectorState extends State<PlanetSelector> {
   AssetID? selectedPlanet;
+  bool showEmptyPlanets = true;
+
+  @override
+  void initState() {
+    () async {
+      showEmptyPlanets =
+          (await getCookie('showEmptyPlanets') ?? true) == true.toString();
+      setState(() {});
+    }();
+    super.initState();
+  }
 
   List<AssetID> walkTreeForPlanets() {
     Asset rootAsset =
@@ -59,7 +73,14 @@ class _PlanetSelectorState extends State<PlanetSelector> {
       Asset asset = widget.data.assets[frontier.first]!;
       if (asset.features
           .any((e) => e is SurfaceFeature && e.regions.isNotEmpty)) {
-        result.add(frontier.first);
+        if (showEmptyPlanets ||
+            asset.features.whereType<SurfaceFeature>().any((e) => e.regions.any(
+                (f) => (widget.data.assets[f]!.features
+                        .singleWhere((g) => g is GridFeature) as GridFeature)
+                    .cells
+                    .any((g) => g != null)))) {
+          result.add(frontier.first);
+        }
       } else if (asset.features.any((e) => e is OrbitFeature)) {
         OrbitFeature feature = asset.features.single as OrbitFeature;
         frontier.add(feature.primaryChild);
@@ -67,7 +88,7 @@ class _PlanetSelectorState extends State<PlanetSelector> {
       }
       frontier.removeAt(0);
     }
-    return result;
+    return result..sort((a, b) => a.id.compareTo(b.id));
   }
 
   @override
@@ -75,6 +96,21 @@ class _PlanetSelectorState extends State<PlanetSelector> {
     return selectedPlanet == null
         ? ListView(
             children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Show empty planets'),
+                  Checkbox(
+                    value: showEmptyPlanets,
+                    onChanged: (v) {
+                      setState(() {
+                        showEmptyPlanets = v!;
+                        setCookie('showEmptyPlanets', v.toString());
+                      });
+                    },
+                  )
+                ],
+              ),
               if (widget.data.rootAssets.isEmpty)
                 Center(child: Text('No visible planets in system.'))
               else
@@ -129,19 +165,22 @@ class _PlanetViewState extends State<PlanetView> {
       return true;
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return ColoredBox(
-          color: Colors.grey,
-          child: Stack(
-            children: [
-              for (; computeNextI();)
-                Positioned(left: x * constraints.maxWidth/region.width, top: y * constraints.maxHeight/region.height, child: AssetWidget(asset: region.cells[x + y * region.width]!, data: widget.data))
-            ],
-          ),
-        );
-      }
-    );
+    return LayoutBuilder(builder: (context, constraints) {
+      return ColoredBox(
+        color: Colors.grey,
+        child: Stack(
+          children: [
+            for (; computeNextI();)
+              Positioned(
+                  left: x * constraints.maxWidth / region.width,
+                  top: y * constraints.maxHeight / region.height,
+                  child: AssetWidget(
+                      asset: region.cells[x + y * region.width]!,
+                      data: widget.data))
+          ],
+        ),
+      );
+    });
   }
 }
 
