@@ -59,6 +59,7 @@ extension type Uint64((int, int) _value) {
   }
 }
 
+// uses SI units
 String prettyPrintDuration(Uint64 duration) {
   int milliseconds = (duration % 1000).asInt;
   int seconds = ((duration / 1000) % 60).floor();
