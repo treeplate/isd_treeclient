@@ -375,6 +375,10 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         }
         return MessageBoardFeature(messages);
       case 13:
+        StarIdentifier sourceSystem = StarIdentifier.parse(reader.readUint32());
+        int id = reader.readUint32();
+        AssetID? sourceAsset = id == 0 ? AssetID(systemID, id) : null;
+        assert(systemID == sourceSystem || sourceAsset == null);
         Uint64 timestamp = reader.readUint64();
         int isRead = reader.readUint8();
         if (isRead > 0x1) {
@@ -383,7 +387,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
               context);
         }
         String message = reader.readString();
-        return MessageFeature(timestamp, isRead == 0x1, message);
+        return MessageFeature(sourceSystem, sourceAsset, timestamp, isRead == 0x1, message);
       default:
         throw UnimplementedError('Unknown featureID $featureCode');
     }
@@ -672,26 +676,26 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         actions: [
           if (data.rootAssets.length > 0)
             ListenableBuilder(
-              listenable: data,
-              builder: (context, child) {
-                int messageCount = data.rootAssets.values.fold(0, (a,b) => a+findMessages(b, data).length);
-                return Badge.count(
-                  count: messageCount,
-                  isLabelVisible: messageCount > 0,
-                  child: IconButton(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => Dialog(
-                          child: Inbox(data: data),
-                        ),
-                      );
-                    },
-                    icon: Icon(Icons.inbox),
-                  ),
-                );
-              }
-            ),
+                listenable: data,
+                builder: (context, child) {
+                  int messageCount = data.rootAssets.values
+                      .fold(0, (a, b) => a + findMessages(b, data).length);
+                  return Badge.count(
+                    count: messageCount,
+                    isLabelVisible: messageCount > 0,
+                    child: IconButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => Dialog(
+                            child: Inbox(data: data),
+                          ),
+                        );
+                      },
+                      icon: Icon(Icons.inbox),
+                    ),
+                  );
+                }),
           if (data.username != null && data.password != null)
             IconButton(
               icon: Icon(

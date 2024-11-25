@@ -253,7 +253,7 @@ class MessageFeatureWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Message (${feature.isRead ? 'read' : 'unread'})'),
+        Text('Message from ${feature.sourceAsset == null ? feature.sourceSystem : data.getAssetIdentifyingName(feature.sourceAsset!)} (${feature.isRead ? 'read' : 'unread'}): ${feature.message}'),
       ],
     );
   }
