@@ -55,7 +55,7 @@ class OrbitChild {
   final AssetID child;
   final double semiMajorAxis; // in meters
   final double eccentricity;
-  final Uint64 timeOffset; // in seconds
+  final Uint64 timeOrigin; // in milliseconds
   final bool clockwise;
   final double omega; // in radians
 
@@ -63,7 +63,7 @@ class OrbitChild {
     this.child,
     this.semiMajorAxis,
     this.eccentricity,
-    this.timeOffset,
+    this.timeOrigin,
     this.clockwise,
     this.omega,
   );

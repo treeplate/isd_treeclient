@@ -104,7 +104,8 @@ class OrbitAssetInformation extends AssetInformation {
   @override
   Offset calculatePositionAtTime(Uint64 systemTime, DataStructure data) {
     return calculateOrbit(
-          systemTime - (child.timeOffset * 1000),
+          systemTime,
+          child.timeOrigin,
           child.semiMajorAxis,
           child.eccentricity,
           child.clockwise,
@@ -148,7 +149,11 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
   }
 
   Offset calculateOrbitForScreenFocus() {
-    if (widget.data.rootAssets[widget.system] == null) return Offset.zero;
+    if (widget.data.rootAssets[widget.system] == null) return Offset(.5, .5);
+    if(screenFocus is OrbitAssetInformation && widget.data.assets[(screenFocus as OrbitAssetInformation).child.child] == null) {
+      screenFocus = null;
+      return Offset(.5, .5);
+    }
     return (screenFocus!.calculatePositionAtTime(systemTime, widget.data) /
             widget.data.assets[widget.data.rootAssets[widget.system]]!.size) +
         Offset(.5, .5);
@@ -194,7 +199,9 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
       double assetRadius = min(
               maxAssetSize,
               widget.data.assets[asset.getAsset(widget.data)]!.size *
-                  assetScale / widget.data.assets[widget.data.rootAssets[widget.system]]!.size) /
+                  assetScale /
+                  widget.data.assets[widget.data.rootAssets[widget.system]]!
+                      .size) /
           2;
       if (normalizedPosition.dx > assetPos.dx - assetRadius &&
           normalizedPosition.dx < assetPos.dx + assetRadius &&
@@ -207,6 +214,8 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
 
   List<AssetInformation> flattenAssetTree() {
     if (widget.data.rootAssets[widget.system] == null) return [];
+    if (widget.data.assets[widget.data.rootAssets[widget.system]!] == null) {
+      return [];}
     Asset rootAsset =
         widget.data.assets[widget.data.rootAssets[widget.system]!]!;
     SolarSystemFeature solarSystemFeature =
@@ -466,7 +475,8 @@ class SystemRenderer extends CustomPainter {
       double assetDiameter =
           min((asset.size / rootAsset.size) * sizeScaleFactor, maxAssetSize);
       Offset assetCenter = (calculateOrbit(
-                  systemTime - orbitChild.timeOffset * 1000,
+                  systemTime,
+                  orbitChild.timeOrigin,
                   orbitChild.semiMajorAxis,
                   orbitChild.eccentricity,
                   orbitChild.clockwise,

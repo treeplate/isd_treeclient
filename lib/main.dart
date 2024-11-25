@@ -255,7 +255,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           double semiMajorAxis = reader.readFloat64();
           double eccentricity = reader.readFloat64();
           double omega = reader.readFloat64();
-          Uint64 time0 = reader.readUint64();
+          Uint64 timeOrigin = reader.readUint64();
           int direction = reader.readUint8();
           if (direction > 0x1) {
             openErrorDialog(
@@ -270,7 +270,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
               child,
               semiMajorAxis,
               eccentricity,
-              time0,
+              timeOrigin,
               direction & 0x1 > 0,
               omega,
             ),
@@ -404,7 +404,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
             if (featureCode == 0) break;
             features.add(parseFeature(featureCode, reader, systemID));
           }
-          this.data.setAssetNode(
+          this.data.setAsset(
                 assetID,
                 Asset(
                   features,
@@ -473,6 +473,10 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         loginState = LoginState.waitingOnSystemServers;
       });
     }
+    if (data.token == null) {
+      loginState = LoginState.notLoggedIn;
+      return;
+    }
     List<String> message = await systemServer.send(['login', data.token!]);
     if (message[0] == 'F') {
       if (message[1] == 'unrecognized credentials') {
@@ -525,7 +529,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
             binaryMessageHandler: (data) {
               Uint8List bytes = data.asUint8List();
               openErrorDialog(
-                'Unexpected binary message from system server: ${bytes.length <= 10 ? bytes : '[${bytes.sublist(0, 10)}, ...${bytes.length - 10} more]'}',
+                'Unexpected binary message from dynasty server: ${bytes.length <= 10 ? bytes : '[${bytes.sublist(0, 10).join(', ')}, ...${bytes.length - 10} more]'}',
                 context,
               );
             },
@@ -586,6 +590,10 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     setState(() {
       loginState = LoginState.waitingOnDynastyServer;
     });
+    if (data.token == null) {
+      loginState = LoginState.notLoggedIn;
+      return;
+    }
     List<String> message = await dynastyServer.send(['login', data.token!]);
     if (message[0] == 'F') {
       assert(message.length == 2);

@@ -21,10 +21,10 @@ class DataStructure with ChangeNotifier {
   List<List<Offset>>? stars;
   Map<StarIdentifier, StarIdentifier>?
       systems; // star ID -> system ID (first star in the system)
-  Map<StarIdentifier, AssetID> rootAssets = {};
-  Map<StarIdentifier, Offset> systemPositions = {}; // (0, 0) to (1, 1)
-  Map<StarIdentifier, (DateTime, Uint64)> time0s = {};
-  Map<StarIdentifier, double> timeFactors = {};
+  Map<StarIdentifier, AssetID> rootAssets = {}; // system ID -> root asset of system
+  Map<StarIdentifier, Offset> systemPositions = {}; // system ID -> system position in galaxy; (0, 0) to (1, 1)
+  Map<StarIdentifier, (DateTime, Uint64)> time0s = {}; // system ID -> ($1, $2); $2 = system time (in milliseconds) at $1
+  Map<StarIdentifier, double> timeFactors = {}; // system ID -> time factor of system
   Map<AssetID, Asset> assets = {};
   int? dynastyID;
 
@@ -118,26 +118,30 @@ class DataStructure with ChangeNotifier {
     notifyListeners();
   }
 
+  // see [systemPositions]
   void setSystemPosition(StarIdentifier system, Offset position) {
     systemPositions[system] = position;
     notifyListeners();
   }
 
+  // see [time0s]
   void setTime0(StarIdentifier system, (DateTime, Uint64) time0) {
     time0s[system] = time0;
     notifyListeners();
   }
 
+  // see [timeFactors]
   void setTimeFactor(StarIdentifier system, double factor) {
     timeFactors[system] = factor;
     notifyListeners();
   }
 
-  void setAssetNode(AssetID id, Asset node) {
-    assets[id] = node;
+  void setAsset(AssetID id, Asset asset) {
+    assets[id] = asset;
     notifyListeners();
   }
 
+  // see [rootAssets]
   void setRootAsset(StarIdentifier system, AssetID id) {
     rootAssets[system] = id;
     notifyListeners();

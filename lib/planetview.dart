@@ -166,19 +166,21 @@ class _PlanetViewState extends State<PlanetView> {
     }
 
     return LayoutBuilder(builder: (context, constraints) {
-      return ColoredBox(
-        color: Colors.grey,
-        child: Stack(
-          children: [
-            for (; computeNextI();)
-              Positioned(
-                  left: x * constraints.maxWidth / region.width,
-                  top: y * constraints.maxHeight / region.height,
+      return Stack(
+        children: [
+          for (; computeNextI();)
+            Positioned(
+                left: x * constraints.maxWidth / region.width,
+                top: y * constraints.maxHeight / region.height,
+                child: Container(
+                  color: (x + y).isEven ? Colors.blueGrey : Colors.grey,
+                  width: constraints.maxWidth / region.width,
+                  height: constraints.maxHeight / region.height,
                   child: AssetWidget(
                       asset: region.cells[x + y * region.width]!,
-                      data: widget.data))
-          ],
-        ),
+                      data: widget.data),
+                ))
+        ],
       );
     });
   }
