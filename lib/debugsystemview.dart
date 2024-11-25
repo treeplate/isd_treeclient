@@ -98,6 +98,16 @@ Widget renderFeature(Feature feature, DataStructure data, bool collapseOrbits) {
         feature: feature,
         data: data,
       );
+    case MessageBoardFeature():
+      return MessageBoardFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case MessageFeature():
+      return MessageFeatureWidget(
+        feature: feature,
+        data: data,
+      );
   }
 }
 
@@ -194,6 +204,56 @@ class GridFeatureWidget extends StatelessWidget {
                     ),
             )
             .whereType<Widget>(),
+      ],
+    );
+  }
+}
+
+class MessageBoardFeatureWidget extends StatelessWidget {
+  const MessageBoardFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+  final MessageBoardFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Messages'),
+        ...feature.messages.map(
+          (e) => Padding(
+            padding: EdgeInsets.only(left: 16),
+            child: AssetWidget(
+              asset: e,
+              data: data,
+              collapseOrbits: false,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class MessageFeatureWidget extends StatelessWidget {
+  const MessageFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+  final MessageFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Message (${feature.isRead ? 'read' : 'unread'})'),
       ],
     );
   }

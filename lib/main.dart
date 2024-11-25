@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:math';
 import 'dart:typed_data';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
@@ -9,6 +7,7 @@ import 'debugsystemview.dart' as debugsystemview;
 import 'systemview.dart' as systemview;
 import 'planetview.dart' as planetview;
 import 'galaxyview.dart';
+import 'inbox.dart';
 import 'binaryreader.dart';
 import 'network_handler.dart';
 import 'account.dart';
@@ -222,13 +221,14 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     }
   }
 
-  Feature parseFeature(int featureCode, BinaryReader reader, StarIdentifier systemID) {
+  Feature parseFeature(
+      int featureCode, BinaryReader reader, StarIdentifier systemID) {
     switch (featureCode) {
       case 1:
         return StarFeature(StarIdentifier.parse(reader.readUint32()));
       case 2:
-      int id = reader.readUint32();
-      assert(id != 0);
+        int id = reader.readUint32();
+        assert(id != 0);
         AssetID primaryChild = AssetID(systemID, id);
         int childCount = reader.readUint32();
         int i = 0;
@@ -246,8 +246,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         }
         return SolarSystemFeature(children);
       case 3:
-      int id = reader.readUint32();
-      assert(id != 0);
+        int id = reader.readUint32();
+        assert(id != 0);
         AssetID primaryChild = AssetID(systemID, id);
         int childCount = reader.readUint32();
         int i = 0;
@@ -362,14 +362,37 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         Uint64 population = reader.readUint64();
         double averageHappiness = reader.readFloat64();
         return PopulationFeature(population, averageHappiness);
+      case 12:
+        int messageCount = reader.readUint32();
+        int i = 0;
+        List<AssetID> messages = [];
+        while (i < messageCount) {
+          int id = reader.readUint32();
+          assert(id != 0);
+          AssetID message = AssetID(systemID, id);
+          messages.add(message);
+          i++;
+        }
+        return MessageBoardFeature(messages);
+      case 13:
+        Uint64 timestamp = reader.readUint64();
+        int isRead = reader.readUint8();
+        if (isRead > 0x1) {
+          openErrorDialog(
+              'Unsupported MessageFeature.isRead: 0x${isRead.toRadixString(16)}',
+              context);
+        }
+        String message = reader.readString();
+        return MessageFeature(timestamp, isRead == 0x1, message);
       default:
         throw UnimplementedError('Unknown featureID $featureCode');
     }
   }
 
-  static const kClientVersion = 11;
+  static const kClientVersion = 13;
 
-  void parseSystemServerBinaryMessage(ByteBuffer data, Map<int, String> stringTable) {
+  void parseSystemServerBinaryMessage(
+      ByteBuffer data, Map<int, String> stringTable) {
     BinaryReader reader = BinaryReader(data, stringTable, Endian.little);
     while (!reader.done) {
       int id = reader.readUint32();
@@ -381,7 +404,9 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         id = reader.readUint32();
         assert(id != 0);
         AssetID rootAssetID = AssetID(systemID, id);
-        this.data.setRootAsset(systemID, rootAssetID);
+        setState(() {
+          this.data.setRootAsset(systemID, rootAssetID);
+        });
         Offset position = Offset(reader.readFloat64(), reader.readFloat64());
         this
             .data
@@ -645,6 +670,28 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
               )
             : null,
         actions: [
+          if (data.rootAssets.length > 0)
+            ListenableBuilder(
+              listenable: data,
+              builder: (context, child) {
+                int messageCount = data.rootAssets.values.fold(0, (a,b) => a+findMessages(b, data).length);
+                return Badge.count(
+                  count: messageCount,
+                  isLabelVisible: messageCount > 0,
+                  child: IconButton(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => Dialog(
+                          child: Inbox(data: data),
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.inbox),
+                  ),
+                );
+              }
+            ),
           if (data.username != null && data.password != null)
             IconButton(
               icon: Icon(

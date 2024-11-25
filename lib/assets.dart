@@ -205,3 +205,17 @@ class PopulationFeature extends Feature {
 
   PopulationFeature(this.population, this.averageHappiness);
 }
+
+class MessageBoardFeature extends Feature {
+  final List<AssetID> messages;
+
+  MessageBoardFeature(this.messages);
+}
+
+class MessageFeature extends Feature {
+  final Uint64 timestamp;
+  final bool isRead;
+  final String message;
+
+  MessageFeature(this.timestamp, this.isRead, this.message);
+}
