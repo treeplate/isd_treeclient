@@ -252,6 +252,26 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
   }
 }
 
+class ISDIcon extends StatelessWidget {
+  const ISDIcon({
+    super.key,
+    required this.icon,
+  });
+
+  final String icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(
+      'icons/$icon.png',
+      width: 32,
+      height: 32,
+      fit: BoxFit.cover,
+      filterQuality: FilterQuality.none,
+    );
+  }
+}
+
 Offset calculateScreenPosition(
     Offset basePosition, Offset screenCenter, double zoom, Size screenSize) {
   Offset topLeft = Offset(screenCenter.dx - .5, screenCenter.dy - .5);
@@ -273,8 +293,8 @@ const double gravitationalConstant = 6.67430e-11; // m*m*m/kg*s*s
 
 // arguments are defined in https://software.hixie.ch/fun/isd/test-2024/servers/src/systems-server/README.md, the section on orbit features.
 // [t] is in milliseconds.
-Offset calculateOrbit(
-    Uint64 currentTime, Uint64 timeOrigin, double a, double e, bool clockwise, double M, double omega) {
+Offset calculateOrbit(Uint64 currentTime, Uint64 timeOrigin, double a, double e,
+    bool clockwise, double M, double omega) {
   assert(e <= .95, 'invalid eccentricity $e');
   const double G = gravitationalConstant;
   Uint64 t = currentTime - timeOrigin;

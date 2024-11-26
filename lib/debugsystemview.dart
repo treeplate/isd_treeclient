@@ -253,7 +253,13 @@ class MessageFeatureWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Message from ${feature.sourceAsset == null ? feature.sourceSystem : data.getAssetIdentifyingName(feature.sourceAsset!)} (${feature.isRead ? 'read' : 'unread'}): ${feature.message}'),
+        Row(
+          children: [
+            Text('Message from'),
+            ISDIcon(icon: feature.sourceIcon),
+            Text('${feature.sourceAsset == null ? 'a ${feature.sourceClassName} (${feature.sourceDescription}) in ${feature.sourceSystem}' : data.getAssetIdentifyingName(feature.sourceAsset!)} (${feature.isRead ? 'read' : 'unread'}): ${feature.message}'),
+          ],
+        ),
       ],
     );
   }
@@ -549,13 +555,7 @@ class AssetWidget extends StatelessWidget {
                     color: Colors.grey,
                     child: Padding(
                       padding: const EdgeInsets.all(2),
-                      child: Image.asset(
-                        'icons/${asset.icon}.png',
-                        width: 32,
-                        height: 32,
-                        fit: BoxFit.cover,
-                        filterQuality: FilterQuality.none,
-                      ),
+                      child: ISDIcon(icon: asset.icon),
                     ),
                   ),
                   Text(

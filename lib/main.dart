@@ -379,6 +379,9 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         int id = reader.readUint32();
         AssetID? sourceAsset = id == 0 ? AssetID(systemID, id) : null;
         assert(systemID == sourceSystem || sourceAsset == null);
+          String sourceIcon = reader.readString();
+          String sourceClassName = reader.readString();
+          String sourceDescription = reader.readString();
         Uint64 timestamp = reader.readUint64();
         int isRead = reader.readUint8();
         if (isRead > 0x1) {
@@ -387,7 +390,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
               context);
         }
         String message = reader.readString();
-        return MessageFeature(sourceSystem, sourceAsset, timestamp, isRead == 0x1, message);
+        return MessageFeature(sourceSystem, sourceAsset, sourceIcon, sourceClassName, sourceDescription, timestamp, isRead == 0x1, message);
       default:
         throw UnimplementedError('Unknown featureID $featureCode');
     }

@@ -215,9 +215,12 @@ class MessageBoardFeature extends Feature {
 class MessageFeature extends Feature {
   final StarIdentifier sourceSystem;
   final AssetID? sourceAsset;
+  final String sourceIcon;
+  final String sourceClassName;
+  final String sourceDescription;
   final Uint64 timestamp;
   final bool isRead;
   final String message;
 
-  MessageFeature(this.sourceSystem, this.sourceAsset, this.timestamp, this.isRead, this.message);
+  MessageFeature(this.sourceSystem, this.sourceAsset, this.sourceIcon, this.sourceClassName, this.sourceDescription, this.timestamp, this.isRead, this.message);
 }

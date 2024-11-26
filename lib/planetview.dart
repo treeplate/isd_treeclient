@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:isd_treeclient/ui-core.dart';
 import 'assets.dart';
 import 'data-structure.dart';
 import 'platform_specific_stub.dart'
@@ -199,10 +200,6 @@ class AssetWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Asset asset = data.assets[this.asset]!;
-    return Image.asset(
-      'icons/${asset.icon}.png',
-      fit: BoxFit.fill,
-      filterQuality: FilterQuality.none,
-    );
+    return ISDIcon(icon: asset.icon);
   }
 }
