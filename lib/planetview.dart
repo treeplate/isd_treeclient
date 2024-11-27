@@ -150,23 +150,24 @@ class _PlanetViewState extends State<PlanetView> {
         .features
         .whereType<GridFeature>()
         .single;
-    int x = 0;
-    int y = 0;
-    bool computeNextI() {
-      do {
-        x++;
-        if (x >= region.width) {
-          x = 0;
-          y++;
-          if (y >= region.height) {
-            return false;
-          }
-        }
-      } while (region.cells[x + y * region.width] == null);
-      return true;
-    }
 
     return LayoutBuilder(builder: (context, constraints) {
+      int x = 0;
+      int y = 0;
+      bool computeNextI() {
+        do {
+          x++;
+          if (x >= region.width) {
+            x = 0;
+            y++;
+            if (y >= region.height) {
+              return false;
+            }
+          }
+        } while (region.cells[x + y * region.width] == null);
+        return true;
+      }
+
       return Stack(
         children: [
           for (; computeNextI();)
@@ -175,9 +176,9 @@ class _PlanetViewState extends State<PlanetView> {
                 top: y * constraints.maxHeight / region.height,
                 child: Container(
                   color: (x + y).isEven ? Colors.blueGrey : Colors.grey,
-                  width: constraints.maxWidth / region.width,
-                  height: constraints.maxHeight / region.height,
                   child: AssetWidget(
+                      width: constraints.maxWidth / region.width,
+                      height: constraints.maxHeight / region.height,
                       asset: region.cells[x + y * region.width]!,
                       data: widget.data),
                 ))
@@ -192,14 +193,22 @@ class AssetWidget extends StatelessWidget {
     super.key,
     required this.asset,
     required this.data,
+    required this.width,
+    required this.height,
   });
 
   final AssetID asset;
   final DataStructure data;
+  final double width;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     Asset asset = data.assets[this.asset]!;
-    return ISDIcon(icon: asset.icon);
+    return ISDIcon(
+      icon: asset.icon,
+      width: width,
+      height: height,
+    );
   }
 }

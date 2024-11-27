@@ -256,17 +256,21 @@ class ISDIcon extends StatelessWidget {
   const ISDIcon({
     super.key,
     required this.icon,
+    required this.width,
+    required this.height,
   });
 
   final String icon;
+  final double width;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     return Image.asset(
       'icons/$icon.png',
-      width: 32,
-      height: 32,
-      fit: BoxFit.cover,
+      width: width,
+      height: height,
+      fit: BoxFit.fill,
       filterQuality: FilterQuality.none,
     );
   }

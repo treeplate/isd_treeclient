@@ -150,7 +150,10 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
 
   Offset calculateOrbitForScreenFocus() {
     if (widget.data.rootAssets[widget.system] == null) return Offset(.5, .5);
-    if(screenFocus is OrbitAssetInformation && widget.data.assets[(screenFocus as OrbitAssetInformation).child.child] == null) {
+    if (screenFocus is OrbitAssetInformation &&
+        widget.data
+                .assets[(screenFocus as OrbitAssetInformation).child.child] ==
+            null) {
       screenFocus = null;
       return Offset(.5, .5);
     }
@@ -215,7 +218,8 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
   List<AssetInformation> flattenAssetTree() {
     if (widget.data.rootAssets[widget.system] == null) return [];
     if (widget.data.assets[widget.data.rootAssets[widget.system]!] == null) {
-      return [];}
+      return [];
+    }
     Asset rootAsset =
         widget.data.assets[widget.data.rootAssets[widget.system]!]!;
     SolarSystemFeature solarSystemFeature =
@@ -327,10 +331,14 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
                             setState(() {
                               screenFocus = e;
                               systemZoomController.animateTo(
-                                rootAsset.size /
-                                    widget.data.assets[e.getAsset(widget.data)]!
-                                        .size /
-                                    assetScale,
+                                max(
+                                    1/maxAssetSize,
+                                    rootAsset.size /
+                                        widget
+                                            .data
+                                            .assets[e.getAsset(widget.data)]!
+                                            .size /
+                                        assetScale),
                                 calculateOrbitForScreenFocus(),
                               );
                             });

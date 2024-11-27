@@ -99,13 +99,74 @@ class InboxMessage extends StatelessWidget {
     MessageFeature messageFeature = message.features.single as MessageFeature;
     return Row(
       children: [
-        Text(
-          '${messageFeature.message}',
-          style: DefaultTextStyle.of(context).style.copyWith(
-                fontWeight:
-                    messageFeature.isRead ? FontWeight.normal : FontWeight.bold,
-              ),
+        TextButton(
+          child: DefaultTextStyle(
+            style: DefaultTextStyle.of(context).style.copyWith(
+                  fontWeight: messageFeature.isRead
+                      ? FontWeight.normal
+                      : FontWeight.bold,
+                ),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 100,
+                  child: Text(messageFeature.from),
+                ),
+                Text(messageFeature.subject),
+                Text(
+                  messageFeature.body,
+                  overflow: TextOverflow.ellipsis,
+                  style: DefaultTextStyle.of(context).style.copyWith(
+                        fontWeight: messageFeature.isRead
+                            ? FontWeight.w300
+                            : FontWeight.normal,
+                      ),
+                ),
+                SizedBox(
+                  width: 100,
+                  child: Text(messageFeature.timestamp.displayName),
+                ),
+              ],
+            ),
+          ),
+          onPressed: () {
+            showDialog(
+                context: context,
+                builder: (context) =>
+                    InboxMessageDialog(message: messageFeature));
+          },
         )
+      ],
+    );
+  }
+}
+
+class InboxMessageDialog extends StatelessWidget {
+  const InboxMessageDialog({super.key, required this.message});
+  final MessageFeature message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          message.subject,
+          style: TextTheme.of(context).headlineLarge,
+        ),
+        Row(
+          children: [
+            Text(message.from),
+            Text(
+              '${message.source.displayName}',
+              style: DefaultTextStyle.of(context)
+                  .style
+                  .copyWith(fontWeight: FontWeight.w300),
+            ),
+            Expanded(child: Container()),
+            Text('${message.timestamp.displayName}')
+          ],
+        ),
+        Text(message.body),
       ],
     );
   }

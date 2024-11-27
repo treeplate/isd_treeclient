@@ -375,13 +375,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         }
         return MessageBoardFeature(messages);
       case 13:
-        StarIdentifier sourceSystem = StarIdentifier.parse(reader.readUint32());
-        int id = reader.readUint32();
-        AssetID? sourceAsset = id == 0 ? AssetID(systemID, id) : null;
-        assert(systemID == sourceSystem || sourceAsset == null);
-          String sourceIcon = reader.readString();
-          String sourceClassName = reader.readString();
-          String sourceDescription = reader.readString();
+        StarIdentifier source = StarIdentifier.parse(reader.readUint32());
         Uint64 timestamp = reader.readUint64();
         int isRead = reader.readUint8();
         if (isRead > 0x1) {
@@ -389,8 +383,10 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
               'Unsupported MessageFeature.isRead: 0x${isRead.toRadixString(16)}',
               context);
         }
-        String message = reader.readString();
-        return MessageFeature(sourceSystem, sourceAsset, sourceIcon, sourceClassName, sourceDescription, timestamp, isRead == 0x1, message);
+        String subject = reader.readString();
+        String from = reader.readString();
+        String body = reader.readString();
+        return MessageFeature(source, timestamp, isRead == 0x1, subject, from, body);
       default:
         throw UnimplementedError('Unknown featureID $featureCode');
     }
@@ -475,6 +471,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         binaryMessageHandler: (data) =>
             parseSystemServerBinaryMessage(data, stringTable),
         onReset: (NetworkConnection systemServer) {
+          stringTable.clear();
           onSystemServerReset(systemServer, server);
         },
         onError: (e, st) {

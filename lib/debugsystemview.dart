@@ -255,9 +255,13 @@ class MessageFeatureWidget extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text('Message from'),
-            ISDIcon(icon: feature.sourceIcon),
-            Text('${feature.sourceAsset == null ? 'a ${feature.sourceClassName} (${feature.sourceDescription}) in ${feature.sourceSystem}' : data.getAssetIdentifyingName(feature.sourceAsset!)} (${feature.isRead ? 'read' : 'unread'}): ${feature.message}'),
+            Text('Message from ${feature.from} in ${feature.source} (${feature.isRead ? 'read' : 'unread'}): ${feature.subject}'),
+        Padding(
+          padding: EdgeInsets.only(left: 16),
+          child: Text(
+            feature.body
+          ),
+        ),
           ],
         ),
       ],
@@ -555,7 +559,7 @@ class AssetWidget extends StatelessWidget {
                     color: Colors.grey,
                     child: Padding(
                       padding: const EdgeInsets.all(2),
-                      child: ISDIcon(icon: asset.icon),
+                      child: ISDIcon(icon: asset.icon, width: 32, height: 32,),
                     ),
                   ),
                   Text(
