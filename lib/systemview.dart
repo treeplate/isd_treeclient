@@ -100,6 +100,9 @@ class OrbitAssetInformation extends AssetInformation {
   final OrbitChild child;
   final AssetInformation parent;
 
+  int get hashCode => child.hashCode;
+  operator ==(other) => other is OrbitAssetInformation && child == other.child;
+
   OrbitAssetInformation(this.child, this.parent);
   @override
   Offset calculatePositionAtTime(Uint64 systemTime, DataStructure data) {
@@ -135,14 +138,20 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
   Map<String, ui.Image> icons = {};
 
   @override
-  void initState() {
-    super.initState();
+  void didUpdateWidget(oldWidget) {
+    super.didUpdateWidget(oldWidget);
     for (AssetInformation asset in flattenAssetTree()) {
       if (widget.data.assets[asset.getAsset(widget.data)]!.features
           .any((e) => e is PlotControlFeature && e.isColonyShip)) {
         screenFocus = asset;
       }
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    didUpdateWidget(widget);
 
     tick(Duration.zero);
     ticker = createTicker(tick)..start();
@@ -151,11 +160,12 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
   Offset calculateOrbitForScreenFocus() {
     if (widget.data.rootAssets[widget.system] == null) return Offset(.5, .5);
     if (screenFocus is OrbitAssetInformation &&
-        widget.data
-                .assets[(screenFocus as OrbitAssetInformation).child.child] ==
-            null) {
-      screenFocus = null;
-      return Offset(.5, .5);
+        !(screenFocus as OrbitAssetInformation)
+            .parent
+            .getChildren(widget.data)
+            .contains(screenFocus)) {
+      screenFocus = (screenFocus as OrbitAssetInformation).parent;
+      return systemZoomController.realScreenCenter;
     }
     return (screenFocus!.calculatePositionAtTime(systemTime, widget.data) /
             widget.data.assets[widget.data.rootAssets[widget.system]]!.size) +
@@ -332,7 +342,7 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
                               screenFocus = e;
                               systemZoomController.animateTo(
                                 max(
-                                    1/maxAssetSize,
+                                    1 / maxAssetSize,
                                     rootAsset.size /
                                         widget
                                             .data
