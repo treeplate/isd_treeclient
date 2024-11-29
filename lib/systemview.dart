@@ -183,15 +183,11 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
       }
     }
     setState(() {
-      (DateTime, Uint64) time0 = widget.data.time0s[widget.system]!;
-      systemTime = time0.$2;
-      systemTime += Uint64.fromInt(
-          (DateTime.timestamp().difference(time0.$1).inMilliseconds *
-                  widget.data.timeFactors[widget.system]!)
-              .floor());
+      systemTime = widget.data.getTime(widget.system, DateTime.timestamp());
       if (screenFocus != null) {
         systemZoomController.modifyAnimation(
-            screenCenter: calculateOrbitForScreenFocus());
+          screenCenter: calculateOrbitForScreenFocus(),
+        );
       }
     });
   }

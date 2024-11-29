@@ -253,16 +253,11 @@ class MessageFeatureWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text('Message from ${feature.from} in ${feature.source} (${feature.isRead ? 'read' : 'unread'}): ${feature.subject}'),
+        Text(
+            '${feature.timestamp.displayName}: Message from ${feature.from} in ${feature.source.displayName} (${feature.isRead ? 'read' : 'unread'}): ${feature.subject}'),
         Padding(
           padding: EdgeInsets.only(left: 16),
-          child: Text(
-            feature.body
-          ),
-        ),
-          ],
+          child: Text(feature.body),
         ),
       ],
     );
@@ -417,7 +412,7 @@ class SpaceSensorFeatureWidget extends StatelessWidget {
         Text('  Maximum steps up to an orbit: ${feature.reach}'),
         Text('  Maximum steps up after orbit: ${feature.up}'),
         Text('  Maximum steps down after going up: ${feature.down}'),
-        Text('  Smallest detectable object: ${feature.resolution}'),
+        Text('  Smallest detectable object: ${feature.resolution}m'),
       ],
     );
   }
@@ -465,7 +460,8 @@ class PopulationFeatureWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('${feature.population.displayName} people with an average of ${feature.averageHappiness} happiness (${feature.population.asDouble * feature.averageHappiness} total happiness)'),
+        Text(
+            '${feature.population.displayName} people with an average of ${feature.averageHappiness} happiness (${feature.population.asDouble * feature.averageHappiness} total happiness)'),
       ],
     );
   }
@@ -559,7 +555,11 @@ class AssetWidget extends StatelessWidget {
                     color: Colors.grey,
                     child: Padding(
                       padding: const EdgeInsets.all(2),
-                      child: ISDIcon(icon: asset.icon, width: 32, height: 32,),
+                      child: ISDIcon(
+                        icon: asset.icon,
+                        width: 32,
+                        height: 32,
+                      ),
                     ),
                   ),
                   Text(

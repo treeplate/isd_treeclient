@@ -136,6 +136,10 @@ class DataStructure with ChangeNotifier {
     notifyListeners();
   }
 
+  Uint64 getTime(StarIdentifier system, DateTime time) {
+    return time0s[system]!.$2 + Uint64.fromDouble(timeFactors[system]! * (time.millisecondsSinceEpoch - time0s[system]!.$1.millisecondsSinceEpoch));
+  }
+
   void setAsset(AssetID id, Asset asset) {
     assets[id] = asset;
     notifyListeners();

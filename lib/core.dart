@@ -24,7 +24,14 @@ extension type Uint64((int, int) _value) {
         lsh & (integerLimit32 - 1));
   }
 
-  double operator /(double divisor) {
+  Uint64 operator ~/(double divisor) {
+    int newLsh = lsh ~/ divisor;
+    double newMsh = msh / divisor;
+    newLsh += ((newMsh % 1) * integerLimit32).floor();
+    return Uint64.bigEndian(newMsh.floor(), newLsh);
+  }
+
+  double operator /(num divisor) {
     return asDouble / divisor;
   }
 
@@ -49,13 +56,20 @@ extension type Uint64((int, int) _value) {
       newMsh--;
       newLsh += 1 << 32;
     }
-    return Uint64.bigEndian(newMsh%integerLimit32, newLsh);
+    return Uint64.bigEndian(newMsh % integerLimit32, newLsh);
   }
 
   const Uint64.littleEndian(int lsh, int msh) : _value = (msh, lsh);
   const Uint64.bigEndian(int msh, int lsh) : _value = (msh, lsh);
   factory Uint64.fromInt(int value) {
-    return Uint64.bigEndian((value >> 32)%integerLimit32, value %integerLimit32);
+    return Uint64.bigEndian(
+        (value >> 32) % integerLimit32, value % integerLimit32);
+  }
+  factory Uint64.fromDouble(double value) {
+    return Uint64.bigEndian(
+      ((value / integerLimit32) % integerLimit32).floor(),
+      (value % integerLimit32).floor(),
+    );
   }
 }
 

@@ -37,9 +37,21 @@ class _InboxState extends State<Inbox> with TickerProviderStateMixin {
         builder: (context, child) {
           return Column(
             children: [
-              Text(
-                'Inbox',
-                style: TextTheme.of(context).headlineLarge,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(),
+                  Text(
+                    'Inbox',
+                    style: TextTheme.of(context).headlineLarge,
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    icon: Icon(Icons.close),
+                  )
+                ],
               ),
               SizedBox(
                 child: TabBar(
@@ -97,46 +109,44 @@ class InboxMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     MessageFeature messageFeature = message.features.single as MessageFeature;
-    return Row(
-      children: [
-        TextButton(
-          child: DefaultTextStyle(
-            style: DefaultTextStyle.of(context).style.copyWith(
-                  fontWeight: messageFeature.isRead
-                      ? FontWeight.normal
-                      : FontWeight.bold,
-                ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 100,
-                  child: Text(messageFeature.from),
-                ),
-                Text(messageFeature.subject),
-                Text(
-                  messageFeature.body,
-                  overflow: TextOverflow.ellipsis,
-                  style: DefaultTextStyle.of(context).style.copyWith(
-                        fontWeight: messageFeature.isRead
-                            ? FontWeight.w300
-                            : FontWeight.normal,
-                      ),
-                ),
-                SizedBox(
-                  width: 100,
-                  child: Text(messageFeature.timestamp.displayName),
-                ),
-              ],
+    return TextButton(
+      child: DefaultTextStyle(
+        style: DefaultTextStyle.of(context).style.copyWith(
+              fontWeight:
+                  messageFeature.isRead ? FontWeight.normal : FontWeight.bold,
             ),
-          ),
-          onPressed: () {
-            showDialog(
-                context: context,
-                builder: (context) =>
-                    InboxMessageDialog(message: messageFeature));
-          },
-        )
-      ],
+        child: Row(
+          children: [
+            SizedBox(
+              width: 100,
+              child: Text(messageFeature.from),
+            ),
+            Text(messageFeature.subject),
+            Text(
+              '- ${messageFeature.body}',
+              overflow: TextOverflow.ellipsis,
+              style: DefaultTextStyle.of(context).style.copyWith(
+                    fontWeight: messageFeature.isRead
+                        ? FontWeight.w300
+                        : FontWeight.normal,
+                  ),
+            ),
+            Expanded(
+              child: Container(),
+            ),
+            SizedBox(
+              width: 100,
+              child: Text(messageFeature.timestamp.displayName),
+            ),
+          ],
+        ),
+      ),
+      onPressed: () {
+        showDialog(
+            context: context,
+            builder: (context) =>
+                Dialog(child: InboxMessageDialog(message: messageFeature)));
+      },
     );
   }
 }
@@ -149,15 +159,27 @@ class InboxMessageDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(
-          message.subject,
-          style: TextTheme.of(context).headlineLarge,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(),
+            Text(
+              message.subject,
+              style: TextTheme.of(context).headlineLarge,
+            ),
+            IconButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              icon: Icon(Icons.close),
+            )
+          ],
         ),
         Row(
           children: [
             Text(message.from),
             Text(
-              '${message.source.displayName}',
+              ' (${message.source.displayName})',
               style: DefaultTextStyle.of(context)
                   .style
                   .copyWith(fontWeight: FontWeight.w300),
