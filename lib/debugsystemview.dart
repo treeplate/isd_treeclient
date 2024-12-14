@@ -18,6 +18,14 @@ class SystemSelector extends StatefulWidget {
 class _SystemSelectorState extends State<SystemSelector> {
   StarIdentifier? selectedSystem;
 
+  void initState() {
+    if (widget.data.rootAssets.keys.length == 1) {
+      // loading the SystemView is slow, so we don't want to load it during a tab transition
+      //selectedSystem = widget.data.rootAssets.keys.single;
+    }
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return selectedSystem == null
@@ -128,8 +136,7 @@ class SolarSystemFeatureWidget extends StatelessWidget {
       children: [
         Text('Children'),
         ...feature.children.map(
-          (e) => Padding(
-            padding: EdgeInsets.only(left: 16),
+          (e) => Indent(
             child: AssetWidget(
               asset: e.child,
               data: data,
@@ -138,6 +145,23 @@ class SolarSystemFeatureWidget extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class Indent extends StatelessWidget {
+  const Indent({
+    super.key,
+    required this.child,
+  });
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(left: 16),
+      child: child,
     );
   }
 }
@@ -158,8 +182,7 @@ class SurfaceFeatureWidget extends StatelessWidget {
       children: [
         Text('Regions'),
         ...feature.regions.map(
-          (e) => Padding(
-            padding: EdgeInsets.only(left: 16),
+          (e) => Indent(
             child: AssetWidget(
               asset: e,
               data: data,
@@ -187,13 +210,13 @@ class GridFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-            '${feature.width}x${feature.height} grid of cells each with diameter ${feature.cellSize}'),
+          '${feature.width}x${feature.height} grid of cells each with diameter ${feature.cellSize}m',
+        ),
         ...feature.cells
             .map(
               (e) => e == null
                   ? null
-                  : Padding(
-                      padding: EdgeInsets.only(left: 16),
+                  : Indent(
                       child: e == null
                           ? Text('<empty>')
                           : AssetWidget(
@@ -225,8 +248,7 @@ class MessageBoardFeatureWidget extends StatelessWidget {
       children: [
         Text('Messages'),
         ...feature.messages.map(
-          (e) => Padding(
-            padding: EdgeInsets.only(left: 16),
+          (e) => Indent(
             child: AssetWidget(
               asset: e,
               data: data,
@@ -255,8 +277,7 @@ class MessageFeatureWidget extends StatelessWidget {
       children: [
         Text(
             '${feature.timestamp.displayName}: Message from ${feature.from} in ${feature.source.displayName} (${feature.isRead ? 'read' : 'unread'}): ${feature.subject}'),
-        Padding(
-          padding: EdgeInsets.only(left: 16),
+        Indent(
           child: Text(feature.body),
         ),
       ],
@@ -282,8 +303,7 @@ class OrbitFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Center'),
-        Padding(
-          padding: EdgeInsets.only(left: 16),
+        Indent(
           child: AssetWidget(
             asset: feature.primaryChild,
             data: data,
@@ -292,8 +312,7 @@ class OrbitFeatureWidget extends StatelessWidget {
         ),
         Text('Orbiting'),
         ...feature.orbitingChildren.map(
-          (e) => Padding(
-            padding: EdgeInsets.only(left: 16),
+          (e) => Indent(
             child: AssetWidget(
               asset: e.child,
               data: data,
@@ -495,14 +514,19 @@ class AssetWidget extends StatelessWidget {
             collapseOrbits: collapseOrbits,
           ),
           if (orbit.orbitingChildren.isNotEmpty) ...[
-            Text(
-              '    Orbiting',
+            Indent(
+              child: Text(
+                'Orbiting',
+              ),
             ),
             ...orbit.orbitingChildren.map(
-              (e) => Padding(
-                padding: EdgeInsets.only(left: 16),
-                child: AssetWidget(
-                    asset: e.child, data: data, collapseOrbits: collapseOrbits),
+              (e) => Indent(
+                child: Indent(
+                  child: AssetWidget(
+                      asset: e.child,
+                      data: data,
+                      collapseOrbits: collapseOrbits),
+                ),
               ),
             ),
           ]
@@ -513,6 +537,9 @@ class AssetWidget extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextButton(
+            style: ButtonStyle(
+              padding: WidgetStatePropertyAll(EdgeInsets.zero),
+            ),
             onPressed: () {
               showDialog(
                 context: context,
@@ -575,8 +602,7 @@ class AssetWidget extends StatelessWidget {
             ),
           ),
           ...asset.features.map(
-            (e) => Padding(
-              padding: EdgeInsets.only(left: 16),
+            (e) => Indent(
               child: renderFeature(e, data, collapseOrbits),
             ),
           )

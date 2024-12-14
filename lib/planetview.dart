@@ -17,6 +17,13 @@ class SystemSelector extends StatefulWidget {
 class _SystemSelectorState extends State<SystemSelector> {
   StarIdentifier? selectedSystem;
 
+  void initState() {
+    if (widget.data.rootAssets.keys.length == 1) {
+      selectedSystem = widget.data.rootAssets.keys.single;
+    }
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return selectedSystem == null

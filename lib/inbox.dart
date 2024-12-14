@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'assets.dart';
 import 'data-structure.dart';
+import 'network_handler.dart';
 
 class Inbox extends StatefulWidget {
-  const Inbox({super.key, required this.data});
+  const Inbox({super.key, required this.data, required this.servers});
   final DataStructure data;
+  final Map<StarIdentifier, NetworkConnection> servers;
 
   @override
   State<Inbox> createState() => _InboxState();
@@ -59,6 +61,8 @@ class _InboxState extends State<Inbox> with TickerProviderStateMixin {
                   tabs: widget.data.rootAssets.keys.map((e) {
                     int messageCount =
                         findMessages(widget.data.rootAssets[e]!, widget.data)
+                            .where((e) => widget.data.assets[e]!.features
+                                .any((e) => e is MessageFeature && !e.isRead))
                             .length;
                     return Badge.count(
                       count: messageCount,
@@ -75,6 +79,7 @@ class _InboxState extends State<Inbox> with TickerProviderStateMixin {
                       .map((e) => SystemInbox(
                             rootAsset: e,
                             data: widget.data,
+                            server: widget.servers[e.system]!,
                           ))
                       .toList(),
                 ),
@@ -86,9 +91,14 @@ class _InboxState extends State<Inbox> with TickerProviderStateMixin {
 }
 
 class SystemInbox extends StatelessWidget {
-  const SystemInbox({super.key, required this.rootAsset, required this.data});
+  const SystemInbox(
+      {super.key,
+      required this.rootAsset,
+      required this.data,
+      required this.server});
   final AssetID rootAsset;
   final DataStructure data;
+  final NetworkConnection server;
 
   @override
   Widget build(BuildContext context) {
@@ -96,19 +106,31 @@ class SystemInbox extends StatelessWidget {
       children: findMessages(
         rootAsset,
         data,
-      ).map((e) => InboxMessage(message: e, data: data)).toList(),
+      )
+          .map((e) => InboxMessage(
+                message: e,
+                data: data,
+                server: server,
+              ))
+          .toList(),
     );
   }
 }
 
 class InboxMessage extends StatelessWidget {
-  const InboxMessage({super.key, required this.message, required this.data});
-  final Asset message;
+  const InboxMessage(
+      {super.key,
+      required this.message,
+      required this.data,
+      required this.server});
+  final AssetID message;
   final DataStructure data;
+  final NetworkConnection server;
 
   @override
   Widget build(BuildContext context) {
-    MessageFeature messageFeature = message.features.single as MessageFeature;
+    MessageFeature messageFeature =
+        data.assets[message]!.features.single as MessageFeature;
     return TextButton(
       child: DefaultTextStyle(
         style: DefaultTextStyle.of(context).style.copyWith(
@@ -142,18 +164,33 @@ class InboxMessage extends StatelessWidget {
         ),
       ),
       onPressed: () {
+        server.send([
+          'play',
+          message.system.value.toString(),
+          message.id.toString(),
+          'mark-read'
+        ]);
         showDialog(
             context: context,
-            builder: (context) =>
-                Dialog(child: InboxMessageDialog(message: messageFeature)));
+            builder: (context) => Dialog(
+                child: InboxMessageDialog(
+                    message: messageFeature,
+                    server: server,
+                    messageAsset: message)));
       },
     );
   }
 }
 
 class InboxMessageDialog extends StatelessWidget {
-  const InboxMessageDialog({super.key, required this.message});
+  const InboxMessageDialog(
+      {super.key,
+      required this.message,
+      required this.server,
+      required this.messageAsset});
   final MessageFeature message;
+  final NetworkConnection server;
+  final AssetID messageAsset;
 
   @override
   Widget build(BuildContext context) {
@@ -189,18 +226,29 @@ class InboxMessageDialog extends StatelessWidget {
           ],
         ),
         Text(message.body),
+        OutlinedButton(
+          onPressed: () {
+            server.send([
+              'play',
+              messageAsset.system.value.toString(),
+              messageAsset.id.toString(),
+              message.isRead ? 'mark-unread' : 'mark-read'
+            ]);
+          },
+          child: Text(message.isRead ? 'Mark as unread' : 'Mark as read'),
+        )
       ],
     );
   }
 }
 
-List<Asset> findMessages(AssetID root, DataStructure data) {
-  List<Asset> result = [];
+List<AssetID> findMessages(AssetID root, DataStructure data) {
+  List<AssetID> result = [];
   _findMessages(root, data, result);
   return result;
 }
 
-void _findMessages(AssetID root, DataStructure data, List<Asset> result) {
+void _findMessages(AssetID root, DataStructure data, List<AssetID> result) {
   Asset rootAsset = data.assets[root]!;
   for (Feature feature in rootAsset.features) {
     switch (feature) {
@@ -231,7 +279,7 @@ void _findMessages(AssetID root, DataStructure data, List<Asset> result) {
           _findMessages(message, data, result);
         }
       case MessageFeature():
-        result.add(rootAsset);
+        result.add(root);
       case StructureFeature():
       case StarFeature():
       case SpaceSensorFeature():

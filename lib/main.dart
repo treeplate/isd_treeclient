@@ -120,6 +120,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
   int currentSystemServerLoggedInCount = 0;
   LoginState loginState = LoginState.connectingToLoginServer;
   final Map<String, NetworkConnection> systemServers = {}; // URI -> connection
+  final Map<StarIdentifier, NetworkConnection> systemServersBySystemID = {};
   final List<String> systemServersLoggedIn =
       []; // list of system server URIs that have responded to "login"
   bool get isDarkMode => widget.themeMode == ThemeMode.system
@@ -386,7 +387,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         String subject = reader.readString();
         String from = reader.readString();
         String body = reader.readString();
-        return MessageFeature(source, timestamp, isRead == 0x1, subject, from, body);
+        return MessageFeature(
+            source, timestamp, isRead == 0x1, subject, from, body);
       default:
         throw UnimplementedError('Unknown featureID $featureCode');
     }
@@ -395,13 +397,19 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
   static const kClientVersion = 13;
 
   void parseSystemServerBinaryMessage(
-      ByteBuffer data, Map<int, String> stringTable) {
+      ByteBuffer data, Map<int, String> stringTable, NetworkConnection server) {
     BinaryReader reader = BinaryReader(data, stringTable, Endian.little);
+    for (StarIdentifier star in systemServersBySystemID.entries
+        .toList()
+        .where((e) => e.value == server)
+        .map((e) => e.key)) {
+      systemServersBySystemID.remove(star);
+    }
     while (!reader.done) {
       int id = reader.readUint32();
       if (id < 0x10000000) {
         StarIdentifier systemID = StarIdentifier.parse(id);
-
+        systemServersBySystemID[systemID] = server;
         (DateTime, Uint64) time0 = (DateTime.timestamp(), reader.readUint64());
         double timeFactor = reader.readFloat64();
         id = reader.readUint32();
@@ -460,7 +468,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
   void connectToSystemServer(String server) {
     connect(server).then((socket) async {
       Map<int, String> stringTable = {};
-      NetworkConnection systemServer = NetworkConnection(
+      late NetworkConnection systemServer;
+      systemServer = NetworkConnection(
         socket,
         unrequestedMessageHandler: (message) {
           openErrorDialog(
@@ -469,7 +478,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           );
         },
         binaryMessageHandler: (data) =>
-            parseSystemServerBinaryMessage(data, stringTable),
+            parseSystemServerBinaryMessage(data, stringTable, systemServer),
         onReset: (NetworkConnection systemServer) {
           stringTable.clear();
           onSystemServerReset(systemServer, server);
@@ -599,6 +608,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     }
     systemServers.clear();
     systemServersLoggedIn.clear();
+    systemServersBySystemID.clear();
     assert(systemServerURIs.length == systemServerCount);
     expectedSystemServerCount = systemServerCount;
     currentSystemServerLoggedInCount = 0;
@@ -674,12 +684,31 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
               )
             : null,
         actions: [
+          IconButton(
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => Dialog(
+                  child: DebugCommandSenderWidget(
+                    servers: systemServersBySystemID,
+                  ),
+                ),
+              );
+            },
+            icon: Icon(Icons.abc),
+          ),
           if (data.rootAssets.length > 0)
             ListenableBuilder(
                 listenable: data,
                 builder: (context, child) {
-                  int messageCount = data.rootAssets.values
-                      .fold(0, (a, b) => a + findMessages(b, data).length);
+                  int messageCount = data.rootAssets.values.fold(
+                      0,
+                      (a, b) =>
+                          a +
+                          findMessages(b, data)
+                              .where((e) => data.assets[e]!.features
+                                  .any((e) => e is MessageFeature && !e.isRead))
+                              .length);
                   return Badge.count(
                     count: messageCount,
                     isLabelVisible: messageCount > 0,
@@ -688,7 +717,10 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                         showDialog(
                           context: context,
                           builder: (context) => Dialog(
-                            child: Inbox(data: data),
+                            child: Inbox(
+                              data: data,
+                              servers: systemServersBySystemID,
+                            ),
                           ),
                         );
                       },
@@ -884,6 +916,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
       server.close();
     }
     systemServers.clear();
+    systemServersLoggedIn.clear();
+    systemServersBySystemID.clear();
     connectToLoginServer().then((e) {
       setState(() {
         loginState = LoginState.notLoggedIn;
@@ -925,5 +959,88 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
       },
     );
     return result.future;
+  }
+}
+
+class DebugCommandSenderWidget extends StatefulWidget {
+  const DebugCommandSenderWidget({super.key, required this.servers});
+  final Map<StarIdentifier, NetworkConnection> servers;
+
+  @override
+  State<DebugCommandSenderWidget> createState() =>
+      _DebugCommandSenderWidgetState();
+}
+
+class _DebugCommandSenderWidgetState extends State<DebugCommandSenderWidget> {
+  StarIdentifier? systemID;
+  TextEditingController assetID = TextEditingController();
+  TextEditingController command = TextEditingController();
+  TextEditingController semicolonSeparatedArgs = TextEditingController();
+
+  void sendMessage() {
+    int assetIDV = int.parse(assetID.text.substring(1), radix: 16);
+    String commandV = command.text;
+    List<String> args = semicolonSeparatedArgs.text.isEmpty
+        ? []
+        : semicolonSeparatedArgs.text.split(';');
+    widget.servers[systemID]!.send([
+      'play',
+      systemID!.value.toString(),
+      assetIDV.toString(),
+      commandV,
+      ...args,
+    ]);
+  }
+
+  @override
+  void didUpdateWidget(covariant DebugCommandSenderWidget oldWidget) {
+    setState(() {});
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        DropdownButton<StarIdentifier>(
+          value: systemID,
+          items: widget.servers.keys
+              .map(
+                (e) => DropdownMenuItem<StarIdentifier>(
+                  value: e,
+                  child: Text('${e.displayName}'),
+                ),
+              )
+              .toList(),
+          onChanged: (e) {
+            setState(() {
+              systemID = e;
+            });
+          },
+        ),
+        SizedBox(
+          width: 100,
+          child: TextField(
+            controller: assetID,
+          ),
+        ),
+        SizedBox(
+          width: 100,
+          child: TextField(
+            controller: command,
+          ),
+        ),
+        SizedBox(
+          width: 100,
+          child: TextField(
+            controller: semicolonSeparatedArgs,
+          ),
+        ),
+        OutlinedButton(
+          onPressed: sendMessage,
+          child: Text('Send'),
+        ),
+      ],
+    );
   }
 }
