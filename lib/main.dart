@@ -231,29 +231,27 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         int id = reader.readUint32();
         assert(id != 0);
         AssetID primaryChild = AssetID(systemID, id);
-        int childCount = reader.readUint32();
-        int i = 0;
         List<SolarSystemChild> children = [
           SolarSystemChild(primaryChild, 0, 0)
         ];
-        while (i < childCount) {
+        while (true) {
+          int id = reader.readUint32();
+          if (id == 0) break;
+          AssetID child = AssetID(systemID, id);
           double distanceFromCenter = reader.readFloat64();
           double theta = reader.readFloat64();
-          int id = reader.readUint32();
-          assert(id != 0);
-          AssetID child = AssetID(systemID, id);
           children.add(SolarSystemChild(child, distanceFromCenter, theta));
-          i++;
         }
         return SolarSystemFeature(children);
       case 3:
         int id = reader.readUint32();
         assert(id != 0);
         AssetID primaryChild = AssetID(systemID, id);
-        int childCount = reader.readUint32();
-        int i = 0;
         List<OrbitChild> children = [];
-        while (i < childCount) {
+        while (true) {
+          int id = reader.readUint32();
+          if (id == 0) break;
+          AssetID child = AssetID(systemID, id);
           double semiMajorAxis = reader.readFloat64();
           double eccentricity = reader.readFloat64();
           double omega = reader.readFloat64();
@@ -264,9 +262,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                 'Unsupported OrbitChild.direction: 0x${direction.toRadixString(16)}',
                 context);
           }
-          int id = reader.readUint32();
-          assert(id != 0);
-          AssetID child = AssetID(systemID, id);
           children.add(
             OrbitChild(
               child,
@@ -277,7 +272,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
               omega,
             ),
           );
-          i++;
         }
         return OrbitFeature(children, primaryChild);
       case 4:
@@ -329,34 +323,28 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           isColonyShip == 1,
         );
       case 9:
-        int regionCount = reader.readUint32();
-        if (regionCount != 1) {
-          openErrorDialog('surface has $regionCount regions', context);
-        }
-        int i = 0;
         List<AssetID> regions = [];
-        while (i < regionCount) {
+        while (true) {
           int id = reader.readUint32();
-          assert(id != 0);
+          if (id == 0) break;
+          if (regions.isNotEmpty) {
+            throw UnimplementedError('more than one region');
+          }
           AssetID region = AssetID(systemID, id);
           regions.add(region);
-          i++;
         }
         return SurfaceFeature(regions);
       case 10:
         double cellSize = reader.readFloat64();
         int width = reader.readUint32();
         int height = reader.readUint32();
-        int cellCount = reader.readUint32();
-        int i = 0;
         List<AssetID?> cells = List.filled(width * height, null);
-        while (i < cellCount) {
+        while (true) {
+          int id = reader.readUint32();
+          if (id == 0) break;
           int x = reader.readUint32();
           int y = reader.readUint32();
-          int id = reader.readUint32();
-          assert(id != 0);
           cells[x + y * width] = AssetID(systemID, id);
-          i++;
         }
         return GridFeature(cells, width, height, cellSize);
       case 11:
@@ -364,15 +352,12 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         double averageHappiness = reader.readFloat64();
         return PopulationFeature(population, averageHappiness);
       case 12:
-        int messageCount = reader.readUint32();
-        int i = 0;
         List<AssetID> messages = [];
-        while (i < messageCount) {
+        while (true) {
           int id = reader.readUint32();
-          assert(id != 0);
+          if (id == 0) break;
           AssetID message = AssetID(systemID, id);
           messages.add(message);
-          i++;
         }
         return MessageBoardFeature(messages);
       case 13:

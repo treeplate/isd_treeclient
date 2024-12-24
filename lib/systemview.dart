@@ -266,17 +266,20 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text('10^0'),
-                          Slider(
-                            min: 0,
-                            max: 10,
-                            value: log(assetScale) / log(10),
-                            onChanged: (newValue) {
-                              setState(
-                                () {
-                                  assetScale = pow(10, newValue).toDouble();
-                                },
-                              );
-                            },
+                          SizedBox(
+                            width: max(0, constraints.maxWidth / 4 - 100),
+                            child: Slider(
+                              min: 0,
+                              max: 10,
+                              value: log(assetScale) / log(10),
+                              onChanged: (newValue) {
+                                setState(
+                                  () {
+                                    assetScale = pow(10, newValue).toDouble();
+                                  },
+                                );
+                              },
+                            ),
                           ),
                           Text('10^10'),
                         ],
@@ -286,17 +289,20 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text('1/10^0'),
-                          Slider(
-                            min: 0,
-                            max: 10,
-                            value: log(1 / maxAssetSize) / log(10),
-                            onChanged: (newValue) {
-                              setState(
-                                () {
-                                  maxAssetSize = 1 / pow(10, newValue);
-                                },
-                              );
-                            },
+                          SizedBox(
+                            width: max(0, constraints.maxWidth / 4 - 120),
+                            child: Slider(
+                              min: 0,
+                              max: 10,
+                              value: log(1 / maxAssetSize) / log(10),
+                              onChanged: (newValue) {
+                                setState(
+                                  () {
+                                    maxAssetSize = 1 / pow(10, newValue);
+                                  },
+                                );
+                              },
+                            ),
                           ),
                           Text('1/10^10'),
                         ],
