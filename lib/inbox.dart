@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'assets.dart';
 import 'data-structure.dart';
@@ -130,37 +132,50 @@ class InboxMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     MessageFeature messageFeature =
-        data.assets[message]!.features.single as MessageFeature;
+        data.assets[message]!.features.whereType<MessageFeature>().single;
     return TextButton(
       child: DefaultTextStyle(
         style: DefaultTextStyle.of(context).style.copyWith(
               fontWeight:
                   messageFeature.isRead ? FontWeight.normal : FontWeight.bold,
             ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 100,
-              child: Text(messageFeature.from),
-            ),
-            Text(messageFeature.subject),
-            Text(
-              '- ${messageFeature.body}',
-              overflow: TextOverflow.ellipsis,
-              style: DefaultTextStyle.of(context).style.copyWith(
-                    fontWeight: messageFeature.isRead
-                        ? FontWeight.w300
-                        : FontWeight.normal,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Row(
+              children: [
+                SizedBox(
+                  width: 100,
+                  child: Text(messageFeature.from),
+                ),
+                SizedBox(
+                  width: max(0, constraints.maxWidth-200),
+                  child: Text.rich(
+                    TextSpan(
+                      text: messageFeature.subject,
+                      children: [
+                        TextSpan(
+                          text: ' - ${messageFeature.body.replaceAll('\n', ' ')}',
+                          style: DefaultTextStyle.of(context).style.copyWith(
+                                fontWeight: messageFeature.isRead
+                                    ? FontWeight.w300
+                                    : FontWeight.normal,
+                              ),
+                        ),
+                      ],
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-            ),
-            Expanded(
-              child: Container(),
-            ),
-            SizedBox(
-              width: 100,
-              child: Text(messageFeature.timestamp.displayName),
-            ),
-          ],
+                ),
+                Expanded(
+                  child: Container(),
+                ),
+                SizedBox(
+                  width: 100,
+                  child: Text(messageFeature.timestamp.displayName),
+                ),
+              ],
+            );
+          }
         ),
       ),
       onPressed: () {
@@ -280,6 +295,8 @@ void _findMessages(AssetID root, DataStructure data, List<AssetID> result) {
         }
       case MessageFeature():
         result.add(root);
+      case ProxyFeature(child: AssetID child):
+        _findMessages(child, data, result);
       case StructureFeature():
       case StarFeature():
       case SpaceSensorFeature():
@@ -287,6 +304,9 @@ void _findMessages(AssetID root, DataStructure data, List<AssetID> result) {
       case PlanetFeature():
       case PlotControlFeature():
       case PopulationFeature():
+      case RubblePileFeature():
+      case AssetClassKnowledgeFeature():
+      case EmptyAssetClassKnowledgeFeature():
         break;
     }
   }

@@ -116,6 +116,26 @@ Widget renderFeature(Feature feature, DataStructure data, bool collapseOrbits) {
         feature: feature,
         data: data,
       );
+    case RubblePileFeature():
+      return RubblePileFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case ProxyFeature():
+      return ProxyFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case AssetClassKnowledgeFeature():
+      return AssetClassKnowledgeFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case EmptyAssetClassKnowledgeFeature():
+      return EmptyAssetClassKnowledgeFeatureWidget(
+        feature: feature,
+        data: data,
+      );
   }
 }
 
@@ -318,6 +338,106 @@ class OrbitFeatureWidget extends StatelessWidget {
               data: data,
               collapseOrbits: collapseOrbits,
             ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class RubblePileFeatureWidget extends StatelessWidget {
+  const RubblePileFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final RubblePileFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Pile of rubble'),
+      ],
+    );
+  }
+}
+
+class AssetClassKnowledgeFeatureWidget extends StatelessWidget {
+  const AssetClassKnowledgeFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final AssetClassKnowledgeFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Knowledge about asset class ${feature.classDetails.id}'),
+        Indent(
+          child: Row(children: [
+            Container(color: Colors.grey, child: ISDIcon(width: 32, height: 32, icon: feature.classDetails.icon)),
+            Text('${feature.classDetails.name}'),
+          ]),
+        ),
+        Indent(
+          child: Text('${feature.classDetails.description}'),
+        ),
+      ],
+    );
+  }
+}
+
+class EmptyAssetClassKnowledgeFeatureWidget extends StatelessWidget {
+  const EmptyAssetClassKnowledgeFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final EmptyAssetClassKnowledgeFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Empty knowledge about asset class'),
+      ],
+    );
+  }
+}
+
+class ProxyFeatureWidget extends StatelessWidget {
+  const ProxyFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final ProxyFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Proxy'),
+        Indent(
+          child: AssetWidget(
+            asset: feature.child,
+            data: data,
+            collapseOrbits: false,
           ),
         ),
       ],
@@ -548,13 +668,18 @@ class AssetWidget extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
+                        SelectableText(
                           data.getAssetIdentifyingName(this.asset),
                           style: TextStyle(fontSize: 20),
                         ),
                         if (asset.name != null)
                           Text(
-                            asset.className,
+                            '${asset.className}${asset.classID == null ? '' : ' (class ID ${asset.classID})'}',
+                            style: TextStyle(fontSize: 10),
+                          )
+                        else if (asset.classID != null)
+                          Text(
+                            'Class ID ${asset.classID}',
                             style: TextStyle(fontSize: 10),
                           ),
                         Text(asset.description),
@@ -657,7 +782,7 @@ class _SystemViewState extends State<SystemView> {
           padding: const EdgeInsets.only(bottom: 16),
           child: Center(
             child: SelectableText(
-              '${widget.system.displayName} (${widget.data.rootAssets[widget.system]!.system})',
+              '${widget.system.displayName}',
               style: TextStyle(fontSize: 20),
             ),
           ),

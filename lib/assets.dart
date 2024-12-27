@@ -35,6 +35,7 @@ class Asset {
   final double mass; // in kg
   final double size; // in meters
   final String? name;
+  final AssetClassID? classID;
   final String icon;
   final String className;
   final String description;
@@ -45,6 +46,7 @@ class Asset {
     this.owner,
     this.size,
     this.name,
+    this.classID,
     this.icon,
     this.className,
     this.description,
@@ -221,4 +223,34 @@ class MessageFeature extends Feature {
   final String body;
 
   MessageFeature(this.source, this.timestamp, this.isRead, this.subject, this.from, this.body);
+}
+
+class RubblePileFeature extends Feature {}
+
+class ProxyFeature extends Feature {
+  final AssetID child;
+
+  ProxyFeature(this.child);
+}
+
+class EmptyAssetClassKnowledgeFeature extends Feature {
+
+  EmptyAssetClassKnowledgeFeature();
+}
+
+class AssetClassKnowledgeFeature extends Feature {
+  final AssetClass classDetails;
+
+  AssetClassKnowledgeFeature(this.classDetails);
+}
+
+typedef AssetClassID = int; // 32-bit signed, but can't be 0
+
+class AssetClass {
+  final AssetClassID id;
+  final String icon;
+  final String name;
+  final String description;
+
+  AssetClass(this.id, this.icon, this.name, this.description);
 }

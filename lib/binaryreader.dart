@@ -27,6 +27,14 @@ class BinaryReader {
     return _data.getUint32(_index - 4, endian);
   }
 
+  int readInt32() {
+    if (_index > _rawData.length - 4)
+      throw StateError(
+          'called readInt32 without enough bytes to read a Int32');
+    _index += 4;
+    return _data.getInt32(_index - 4, endian);
+  }
+
   Uint64 readUint64() {
     return Uint64.littleEndian(readUint32(), readUint32());
   }

@@ -374,12 +374,29 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         String body = reader.readString();
         return MessageFeature(
             source, timestamp, isRead == 0x1, subject, from, body);
+      case 14:
+        return RubblePileFeature();
+      case 15:
+        int id = reader.readUint32();
+        assert(id != 0);
+        AssetID child = AssetID(systemID, id);
+        return ProxyFeature(child);
+      case 16:
+        AssetClassID id = reader.readInt32();
+        if (id == 0) {
+          return EmptyAssetClassKnowledgeFeature();
+        }
+        String icon = reader.readString();
+        String name = reader.readString();
+        String description = reader.readString();
+        return AssetClassKnowledgeFeature(
+            AssetClass(id, icon, name, description));
       default:
         throw UnimplementedError('Unknown featureID $featureCode');
     }
   }
 
-  static const kClientVersion = 13;
+  static const kClientVersion = 16;
 
   void parseSystemServerBinaryMessage(
       ByteBuffer data, Map<int, String> stringTable, NetworkConnection server) {
@@ -417,6 +434,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           double mass = reader.readFloat64();
           double size = reader.readFloat64();
           String name = reader.readString();
+          AssetClassID classID = reader.readInt32();
           String icon = reader.readString();
           String className = reader.readString();
           String description = reader.readString();
@@ -434,6 +452,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                   owner == 0 ? null : owner,
                   size,
                   name == '' ? null : name,
+                  classID == 0 ? null : classID,
                   icon,
                   className,
                   description,
@@ -540,7 +559,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     loginServer!.close();
     loginServer = null;
     setState(() {
-      print('logged in succesfully');
       loginState = LoginState.connectingToDynastyServer;
     });
     connect(message[1]).then((socket) async {
@@ -559,7 +577,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
             },
             onReset: onDynastyServerReset,
             onError: (e, st) {
-              print('dynasty server error; reconnecting...');
               setState(() {
                 loginState = LoginState.connectingToDynastyServer;
               });
@@ -669,19 +686,20 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
               )
             : null,
         actions: [
-          IconButton(
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => Dialog(
-                  child: DebugCommandSenderWidget(
-                    servers: systemServersBySystemID,
+          if (systemServersBySystemID.isNotEmpty)
+            IconButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => Dialog(
+                    child: DebugCommandSenderWidget(
+                      servers: systemServersBySystemID,
+                    ),
                   ),
-                ),
-              );
-            },
-            icon: Icon(Icons.abc),
-          ),
+                );
+              },
+              icon: Icon(Icons.abc),
+            ),
           if (data.rootAssets.length > 0)
             ListenableBuilder(
                 listenable: data,
@@ -857,7 +875,10 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                           ),
                           systemview.SystemSelector(data: data),
                           debugsystemview.SystemSelector(data: data),
-                          planetview.SystemSelector(data: data),
+                          planetview.SystemSelector(
+                            data: data,
+                            servers: systemServersBySystemID,
+                          ),
                         ],
                       ),
                     );
@@ -974,7 +995,21 @@ class _DebugCommandSenderWidgetState extends State<DebugCommandSenderWidget> {
       assetIDV.toString(),
       commandV,
       ...args,
-    ]);
+    ]).then((List<String> response) {
+      showDialog(
+          context: context,
+          builder: (context) => Dialog(
+                child: Text('response: $response'),
+              ));
+    });
+  }
+
+  @override
+  void initState() {
+    if (widget.servers.keys.length == 1) {
+      systemID = widget.servers.keys.single;
+    }
+    super.initState();
   }
 
   @override
@@ -986,8 +1021,10 @@ class _DebugCommandSenderWidgetState extends State<DebugCommandSenderWidget> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         DropdownButton<StarIdentifier>(
+          hint: Text('System ID'),
           value: systemID,
           items: widget.servers.keys
               .map(
@@ -1006,18 +1043,21 @@ class _DebugCommandSenderWidgetState extends State<DebugCommandSenderWidget> {
         SizedBox(
           width: 100,
           child: TextField(
+            decoration: InputDecoration(label: Text('Asset ID')),
             controller: assetID,
           ),
         ),
         SizedBox(
           width: 100,
           child: TextField(
+            decoration: InputDecoration(label: Text('Command')),
             controller: command,
           ),
         ),
         SizedBox(
           width: 100,
           child: TextField(
+            decoration: InputDecoration(label: Text('Arguments')),
             controller: semicolonSeparatedArgs,
           ),
         ),

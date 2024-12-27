@@ -25,6 +25,13 @@ class _SystemSelectorState extends State<SystemSelector> {
     }
     super.initState();
   }
+  @override
+  void didUpdateWidget(SystemSelector oldWidget) {
+    if (widget.data.rootAssets.keys.length == 1) {
+      selectedSystem = widget.data.rootAssets.keys.single;
+    }
+    super.didUpdateWidget(oldWidget);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -131,7 +138,7 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
   late Uint64 systemTime;
   late final Ticker ticker;
   late final ZoomController systemZoomController =
-      ZoomController(zoom: 15000, vsync: this);
+      ZoomController(zoom: 1, vsync: this);
   AssetInformation? screenFocus;
   double assetScale = 1;
   double maxAssetSize = 1;
@@ -144,6 +151,7 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
       if (widget.data.assets[asset.getAsset(widget.data)]!.features
           .any((e) => e is PlotControlFeature && e.isColonyShip)) {
         screenFocus = asset;
+        systemZoomController.animateTo(1e8, systemZoomController.realScreenCenter);
       }
     }
   }
