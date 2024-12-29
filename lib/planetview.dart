@@ -324,8 +324,7 @@ class BuildDialog extends StatelessWidget {
                 ]);
 
                 if (response[0] == 'T') {
-                  assert(response.length == 2);
-                  // second field is asset ID of new asset
+                  assert(response.length == 1);
                   Navigator.pop(context);
                 } else {
                   assert(response[0] == 'F');
