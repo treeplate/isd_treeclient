@@ -299,10 +299,10 @@ class BuildDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(child: Container()),
+              Container(),
               Text('Build at $gridX, $gridY'),
-              Expanded(child: Container()),
               IconButton(
                   onPressed: () {
                     Navigator.pop(context);
@@ -524,7 +524,9 @@ Widget describeFeature(Feature feature, DataStructure data) {
     nothing:
     case ProxyFeature():
     case EmptyAssetClassKnowledgeFeature():
-      return Container();
+      return Container(
+        width: 0,
+      );
     case AssetClassKnowledgeFeature():
       // TODO: Handle this case.
       return Placeholder();
