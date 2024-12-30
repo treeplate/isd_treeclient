@@ -30,7 +30,7 @@ class DHMSCalendarSystem extends CalendarSystem {
 
   @override
   String durationName(Uint64 durationInMs) {
-    int milliseconds = (durationInMs % 1000).asInt;
+    int milliseconds = (durationInMs % 1000).toInt();
     int seconds = ((durationInMs / 1000) % secondsPerMinute).floor();
     int minutes = ((durationInMs / (1000 * secondsPerMinute)) % minutesPerHour).floor();
     int hours = ((durationInMs / (1000 * secondsPerMinute * minutesPerHour)) % hoursPerDay).floor();

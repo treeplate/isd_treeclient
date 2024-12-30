@@ -14,12 +14,12 @@ extension type Uint64((int, int) _value) {
   bool get isZero => _value.$1 == 0 && _value.$2 == 0;
   int get lsh => _value.$2;
   int get msh => _value.$1;
-  double get asDouble => ((msh << 32) + lsh).toDouble();
-  int get asInt => ((msh << 32) + lsh);
+  double toDouble() => (msh.toDouble() * integerLimit32) + lsh;
+  int toInt() => ((msh * integerLimit32) + lsh);
 
   Uint64 operator *(int multiplier) {
     return Uint64.bigEndian(
-        ((msh * multiplier) + ((lsh * multiplier) >> 32)) &
+        ((msh * multiplier) + ((lsh * multiplier) ~/ integerLimit32)) &
             (integerLimit32 - 1),
         lsh & (integerLimit32 - 1));
   }
@@ -32,20 +32,21 @@ extension type Uint64((int, int) _value) {
   }
 
   double operator /(num divisor) {
-    return asDouble / divisor;
+    return toDouble() / divisor;
   }
 
   Uint64 operator %(int divisor) {
-    if ((divisor >> 32) == 0) {
+    // TODO: this function is wrong
+    if ((divisor ~/ integerLimit32) == 0) {
       return Uint64.bigEndian(0, lsh % divisor);
     }
-    return Uint64.bigEndian(msh % (divisor >> 32), lsh % divisor);
+    return Uint64.bigEndian(msh % (divisor ~/ integerLimit32), lsh % divisor);
   }
 
   Uint64 operator +(Uint64 addend) {
     int lshResult = lsh + addend.lsh;
     return Uint64.bigEndian(
-        (msh + addend.msh + (lshResult >> 32)) & (integerLimit32 - 1),
+        (msh + addend.msh + (lshResult ~/ integerLimit32)) & (integerLimit32 - 1),
         lshResult & (integerLimit32 - 1));
   }
 
@@ -54,7 +55,7 @@ extension type Uint64((int, int) _value) {
     int newMsh = msh - addend.msh;
     if (newLsh < 0) {
       newMsh--;
-      newLsh += 1 << 32;
+      newLsh += integerLimit32;
     }
     return Uint64.bigEndian(newMsh % integerLimit32, newLsh);
   }
@@ -63,7 +64,7 @@ extension type Uint64((int, int) _value) {
   const Uint64.bigEndian(int msh, int lsh) : _value = (msh, lsh);
   factory Uint64.fromInt(int value) {
     return Uint64.bigEndian(
-        (value >> 32) % integerLimit32, value % integerLimit32);
+        (value ~/ integerLimit32) % integerLimit32, value % integerLimit32);
   }
   factory Uint64.fromDouble(double value) {
     return Uint64.bigEndian(
@@ -75,7 +76,7 @@ extension type Uint64((int, int) _value) {
 
 // uses SI units
 String prettyPrintDuration(Uint64 duration) {
-  int milliseconds = (duration % 1000).asInt;
+  int milliseconds = (duration % 1000).toInt();
   int seconds = ((duration / 1000) % 60).floor();
   int minutes = ((duration / (1000 * 60)) % 60).floor();
   int hours = ((duration / (1000 * 60 * 60)) % 24).floor();

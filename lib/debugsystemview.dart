@@ -600,7 +600,7 @@ class PopulationFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-            '${feature.population.displayName} people with an average of ${feature.averageHappiness} happiness (${feature.population.asDouble * feature.averageHappiness} total happiness)'),
+            '${feature.population.displayName} people with an average of ${feature.averageHappiness} happiness (${feature.population.toDouble() * feature.averageHappiness} total happiness)'),
       ],
     );
   }

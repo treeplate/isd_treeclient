@@ -304,10 +304,11 @@ class BuildDialog extends StatelessWidget {
               Container(),
               Text('Build at $gridX, $gridY'),
               IconButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  icon: Icon(Icons.close))
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                icon: Icon(Icons.close),
+              )
             ],
           ),
           ...catalog.map(
@@ -512,7 +513,7 @@ Widget describeFeature(Feature feature, DataStructure data) {
         averageHappiness: double averageHappiness
       ):
       return Text(
-        'There are ${population.displayName} people here with an average of $averageHappiness happiness (${population.asDouble * averageHappiness} total happiness)',
+        'There are ${population.displayName} people here with an average of $averageHappiness happiness (${population.toDouble() * averageHappiness} total happiness)',
       );
     case MessageBoardFeature():
       continue nothing;

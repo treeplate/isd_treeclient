@@ -306,7 +306,7 @@ Offset calculateOrbit(Uint64 currentTime, Uint64 timeOrigin, double a, double e,
       pi *
       sqrt((a * a * a) / (G * M)) *
       1000; // this multiplies by 1000 to convert seconds to milliseconds
-  double tau = (t.asDouble % T) / T;
+  double tau = (t.toDouble() % T) / T;
   double q = -0.99 * pi / 4 * (e - 3 * sqrt(e));
   double theta = 2 * pi * (tan(tau * 2 * q - q) - tan(-q)) / (tan(q) - tan(-q));
   if (e == 0) {
