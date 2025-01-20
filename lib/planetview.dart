@@ -176,50 +176,78 @@ class _PlanetViewState extends State<PlanetView> {
     GridFeature region =
         widget.data.assets[regionID]!.features.whereType<GridFeature>().single;
 
+    return GridWidget(
+        gridFeature: region,
+        data: widget.data,
+        server: widget.server,
+        gridAssetID: regionID);
+  }
+}
+
+class GridWidget extends StatelessWidget {
+  const GridWidget({
+    super.key,
+    required this.gridFeature,
+    required this.data,
+    required this.gridAssetID,
+    required this.server,
+  });
+
+  final GridFeature gridFeature;
+  final DataStructure data;
+  final NetworkConnection server;
+  final AssetID gridAssetID;
+
+  @override
+  Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
       int x = -1;
       int y = 0;
       bool computeNextI() {
         do {
           x++;
-          if (x >= region.width) {
+          if (x >= gridFeature.width) {
             x = 0;
             y++;
-            if (y >= region.height) {
+            if (y >= gridFeature.height) {
               return false;
             }
           }
-        } while (region.cells[x + y * region.width] == null);
+        } while (gridFeature.cells[x + y * gridFeature.width] == null);
         return true;
       }
 
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapUp: (TapUpDetails details) async {
-          int gridX =
-              details.localPosition.dx * region.width ~/ constraints.maxWidth;
-          int gridY =
-              details.localPosition.dy * region.height ~/ constraints.maxHeight;
-          if (region.cells[gridX + gridY * region.width] != null) {
+          int gridX = details.localPosition.dx *
+              gridFeature.width ~/
+              constraints.maxWidth;
+          int gridY = details.localPosition.dy *
+              gridFeature.height ~/
+              constraints.maxHeight;
+          if (gridFeature.cells[gridX + gridY * gridFeature.width] != null) {
             showDialog(
               context: context,
               builder: (context) => ListenableBuilder(
-                listenable: widget.data,
+                listenable: data,
                 builder: (context, child) {
                   return AssetDialog(
-                    asset: region.cells[gridX + gridY * region.width]!,
-                    data: widget.data,
+                    asset:
+                        gridFeature.cells[gridX + gridY * gridFeature.width]!,
+                    data: data,
+                    server: server,
                   );
                 },
               ),
             );
             return;
           }
-          List<String> rawCatalog = await widget.server.send([
+          List<String> rawCatalog = await server.send([
             'play',
-            regionID.system.value.toString(),
-            regionID.id.toString(),
-            'catalog',
+            gridAssetID.system.value.toString(),
+            gridAssetID.id.toString(),
+            'get-buildings',
             gridX.toString(),
             gridY.toString()
           ]);
@@ -238,10 +266,10 @@ class _PlanetViewState extends State<PlanetView> {
               context: context,
               builder: (context) => BuildDialog(
                 catalog: catalog,
-                region: regionID,
+                region: gridAssetID,
                 gridX: gridX,
                 gridY: gridY,
-                server: widget.server,
+                server: server,
               ),
             );
           } else {
@@ -255,19 +283,22 @@ class _PlanetViewState extends State<PlanetView> {
             children: [
               for (; computeNextI();)
                 Positioned(
-                  left: x * constraints.maxWidth / region.width,
-                  top: y * constraints.maxHeight / region.height,
+                  left: x * constraints.maxWidth / gridFeature.width,
+                  top: y * constraints.maxHeight / gridFeature.height,
                   child: Container(
-                    width: constraints.maxWidth / region.width,
-                    height: constraints.maxHeight / region.height,
+                    width: constraints.maxWidth / gridFeature.width,
+                    height: constraints.maxHeight / gridFeature.height,
                     color: (x + y).isEven ? Colors.blueGrey : Colors.grey,
-                    child: region.cells[x + y * region.width] == null
+                    child: gridFeature.cells[x + y * gridFeature.width] == null
                         ? null
                         : AssetWidget(
-                            width: constraints.maxWidth / region.width,
-                            height: constraints.maxHeight / region.height,
-                            asset: region.cells[x + y * region.width]!,
-                            data: widget.data),
+                            width: constraints.maxWidth / gridFeature.width,
+                            height: constraints.maxHeight / gridFeature.height,
+                            asset:
+                                gridFeature.cells[x + y * gridFeature.width]!,
+                            data: data,
+                            server: server,
+                          ),
                   ),
                 )
             ],
@@ -365,12 +396,14 @@ class AssetWidget extends StatelessWidget {
     required this.data,
     required this.width,
     required this.height,
+    required this.server,
   });
 
   final AssetID asset;
   final DataStructure data;
   final double width;
   final double height;
+  final NetworkConnection server;
 
   @override
   Widget build(BuildContext context) {
@@ -395,6 +428,7 @@ class AssetWidget extends StatelessWidget {
                         return AssetDialog(
                           asset: child,
                           data: data,
+                          server: server,
                         );
                       },
                     ),
@@ -404,6 +438,7 @@ class AssetWidget extends StatelessWidget {
                     data: data,
                     width: width / 2,
                     height: height / 2,
+                    server: server,
                   ),
                 ),
               )
@@ -425,10 +460,12 @@ class AssetDialog extends StatelessWidget {
     super.key,
     required this.asset,
     required this.data,
+    required this.server,
   });
 
   final AssetID asset;
   final DataStructure data;
+  final NetworkConnection server;
 
   @override
   Widget build(BuildContext context) {
@@ -438,16 +475,32 @@ class AssetDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              asset.name == null
-                  ? asset.className
-                  : '${asset.name} (${asset.className})',
-              style: TextStyle(fontSize: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(),
+                Text(
+                  asset.name == null
+                      ? asset.className
+                      : '${asset.name} (${asset.className})',
+                  style: TextStyle(fontSize: 20),
+                ),
+                IconButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  icon: Icon(Icons.close),
+                )
+              ],
             ),
             Text(asset.description),
             ...asset.features.map((e) => describeFeature(
                   e,
                   data,
+                  this.asset.system,
+                  this.asset,
+                  server,
+                  context,
                 ))
           ],
         ),
@@ -456,7 +509,13 @@ class AssetDialog extends StatelessWidget {
   }
 }
 
-Widget describeFeature(Feature feature, DataStructure data) {
+Widget describeFeature(
+    Feature feature,
+    DataStructure data,
+    StarIdentifier system,
+    AssetID asset,
+    NetworkConnection server,
+    BuildContext context) {
   switch (feature) {
     case OrbitFeature():
       throw StateError('orbit on planet');
@@ -494,20 +553,21 @@ Widget describeFeature(Feature feature, DataStructure data) {
         ],
       );
     case SpaceSensorFeature():
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('This is a space sensor.'),
-        ],
-      );
+      return Text('This is a space sensor.');
     case SpaceSensorStatusFeature():
       continue nothing;
     case PlotControlFeature(isColonyShip: bool isColonyShip):
       if (!isColonyShip) continue nothing;
       return Text('This is the colony ship.');
     case GridFeature():
-      // TODO: Handle this case.
-      return Placeholder();
+      return SizedBox(
+          width: 300,
+          height: 300,
+          child: GridWidget(
+              gridFeature: feature,
+              data: data,
+              server: server,
+              gridAssetID: asset));
     case PopulationFeature(
         population: Uint64 population,
         averageHappiness: double averageHappiness
@@ -524,12 +584,78 @@ Widget describeFeature(Feature feature, DataStructure data) {
       return Text('There is a pile of rubble.');
     nothing:
     case ProxyFeature():
-    case EmptyAssetClassKnowledgeFeature():
       return Container(
         width: 0,
       );
-    case AssetClassKnowledgeFeature():
+    case KnowledgeFeature():
       // TODO: Handle this case.
       return Placeholder();
+    case ResearchFeature(topic: String topic):
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('Researching: $topic'),
+          OutlinedButton(
+            onPressed: () async {
+              List<String> result = await server.send(
+                [
+                  'play',
+                  system.value.toString(),
+                  asset.id.toString(),
+                  'get-topics',
+                ],
+              );
+              if (result.first != 'T') {
+                openErrorDialog(
+                  'get-topics response: $result',
+                  context,
+                );
+                return;
+              }
+              List<(String, bool)> topics = [];
+              int i = 1;
+              while (i < result.length) {
+                topics.add((result[i], result[i + 1] == 'T'));
+                i += 2;
+              }
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return Dialog(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Pick new topic'),
+                        ...topics.map((e) => OutlinedButton(
+                            onPressed: () async {
+                              List<String> result = await server.send(
+                                [
+                                  'play',
+                                  system.value.toString(),
+                                  asset.id.toString(),
+                                  'set-topic',
+                                  e.$1,
+                                ],
+                              );
+                              if (result.length == 1 && result.single == 'T') {
+                                Navigator.pop(context);
+                              } else {
+                                openErrorDialog(
+                                  'set-topic response: $result',
+                                  context,
+                                );
+                              }
+                            },
+                            child: Text('${e.$1}${e.$2 ? '' : '(obsolete)'}')))
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+            child: Text('Change'),
+          ),
+        ],
+      );
   }
 }

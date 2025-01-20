@@ -46,7 +46,8 @@ extension type Uint64((int, int) _value) {
   Uint64 operator +(Uint64 addend) {
     int lshResult = lsh + addend.lsh;
     return Uint64.bigEndian(
-        (msh + addend.msh + (lshResult ~/ integerLimit32)) & (integerLimit32 - 1),
+        (msh + addend.msh + (lshResult ~/ integerLimit32)) &
+            (integerLimit32 - 1),
         lshResult & (integerLimit32 - 1));
   }
 
@@ -73,6 +74,7 @@ extension type Uint64((int, int) _value) {
     );
   }
 }
+const Uint64 zero64 = Uint64.bigEndian(0, 0);
 
 // uses SI units
 String prettyPrintDuration(Uint64 duration) {

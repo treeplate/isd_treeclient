@@ -1,9 +1,13 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:isd_treeclient/calendar.dart';
 import 'assets.dart';
+import 'core.dart';
 import 'data-structure.dart';
 import 'network_handler.dart';
+
+const DHMSCalendarSystem calendar = DHMSCalendarSystem(zero64, 60, 60, 24);
 
 class Inbox extends StatefulWidget {
   const Inbox({super.key, required this.data, required this.servers});
@@ -104,7 +108,7 @@ class SystemInbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return ListView(
       children: findMessages(
         rootAsset,
         data,
@@ -139,44 +143,49 @@ class InboxMessage extends StatelessWidget {
               fontWeight:
                   messageFeature.isRead ? FontWeight.normal : FontWeight.bold,
             ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return Row(
-              children: [
-                SizedBox(
-                  width: 100,
-                  child: Text(messageFeature.from),
+        child: LayoutBuilder(builder: (context, constraints) {
+          return Row(
+            children: [
+              SizedBox(
+                width: 150,
+                child: Text(
+                  messageFeature.from,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(
-                  width: max(0, constraints.maxWidth-200),
-                  child: Text.rich(
-                    TextSpan(
-                      text: messageFeature.subject,
-                      children: [
-                        TextSpan(
-                          text: ' - ${messageFeature.body.replaceAll('\n', ' ')}',
-                          style: DefaultTextStyle.of(context).style.copyWith(
-                                fontWeight: messageFeature.isRead
-                                    ? FontWeight.w300
-                                    : FontWeight.normal,
-                              ),
-                        ),
-                      ],
-                    ),
-                    overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(
+                width: max(0, constraints.maxWidth - 250),
+                child: Text.rich(
+                  TextSpan(
+                    text: messageFeature.subject,
+                    children: [
+                      TextSpan(
+                        text: ' - ${messageFeature.text.replaceAll('\n', ' ')}',
+                        style: DefaultTextStyle.of(context).style.copyWith(
+                              fontWeight: messageFeature.isRead
+                                  ? FontWeight.w300
+                                  : FontWeight.normal,
+                            ),
+                      ),
+                    ],
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                Expanded(
-                  child: Container(),
+              ),
+              Expanded(
+                child: Container(),
+              ),
+              SizedBox(
+                width: 100,
+                child: Text(
+                  calendar.dateName(messageFeature.timestamp) +
+                      ' ' +
+                      calendar.timeName(messageFeature.timestamp),
                 ),
-                SizedBox(
-                  width: 100,
-                  child: Text(messageFeature.timestamp.displayName),
-                ),
-              ],
-            );
-          }
-        ),
+              ),
+            ],
+          );
+        }),
       ),
       onPressed: () {
         server.send([
@@ -214,10 +223,14 @@ class InboxMessageDialog extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Container(),
-            Text(
-              message.subject,
-              style: TextTheme.of(context).headlineLarge,
+            Expanded(
+              child: Center(
+                child: Text(
+                  textAlign: TextAlign.center,
+                  message.subject,
+                  style: TextTheme.of(context).headlineLarge,
+                ),
+              ),
             ),
             IconButton(
               onPressed: () {
@@ -237,10 +250,11 @@ class InboxMessageDialog extends StatelessWidget {
                   .copyWith(fontWeight: FontWeight.w300),
             ),
             Expanded(child: Container()),
-            Text('${message.timestamp.displayName}')
+            Text(
+                '${calendar.dateName(message.timestamp)} ${calendar.timeName(message.timestamp)} (${message.timestamp.displayName})')
           ],
         ),
-        Text(message.body),
+        Text(message.text),
         OutlinedButton(
           onPressed: () {
             server.send([
@@ -305,8 +319,8 @@ void _findMessages(AssetID root, DataStructure data, List<AssetID> result) {
       case PlotControlFeature():
       case PopulationFeature():
       case RubblePileFeature():
-      case AssetClassKnowledgeFeature():
-      case EmptyAssetClassKnowledgeFeature():
+      case KnowledgeFeature():
+      case ResearchFeature():
         break;
     }
   }

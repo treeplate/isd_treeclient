@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Material;
 import 'package:isd_treeclient/ui-core.dart';
 import 'data-structure.dart';
 import 'assets.dart';
@@ -126,13 +126,13 @@ Widget renderFeature(Feature feature, DataStructure data, bool collapseOrbits) {
         feature: feature,
         data: data,
       );
-    case AssetClassKnowledgeFeature():
-      return AssetClassKnowledgeFeatureWidget(
+    case KnowledgeFeature():
+      return KnowledgeFeatureWidget(
         feature: feature,
         data: data,
       );
-    case EmptyAssetClassKnowledgeFeature():
-      return EmptyAssetClassKnowledgeFeatureWidget(
+    case ResearchFeature():
+      return ResearchFeatureWidget(
         feature: feature,
         data: data,
       );
@@ -298,7 +298,7 @@ class MessageFeatureWidget extends StatelessWidget {
         Text(
             '${feature.timestamp.displayName}: Message from ${feature.from} in ${feature.source.displayName} (${feature.isRead ? 'read' : 'unread'}): ${feature.subject}'),
         Indent(
-          child: Text(feature.body),
+          child: Text(feature.text),
         ),
       ],
     );
@@ -366,14 +366,14 @@ class RubblePileFeatureWidget extends StatelessWidget {
   }
 }
 
-class AssetClassKnowledgeFeatureWidget extends StatelessWidget {
-  const AssetClassKnowledgeFeatureWidget({
+class ResearchFeatureWidget extends StatelessWidget {
+  const ResearchFeatureWidget({
     super.key,
     required this.feature,
     required this.data,
   });
 
-  final AssetClassKnowledgeFeature feature;
+  final ResearchFeature feature;
   final DataStructure data;
 
   @override
@@ -381,29 +381,20 @@ class AssetClassKnowledgeFeatureWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Knowledge about asset class ${feature.classDetails.id}'),
-        Indent(
-          child: Row(children: [
-            Container(color: Colors.grey, child: ISDIcon(width: 32, height: 32, icon: feature.classDetails.icon)),
-            Text('${feature.classDetails.name}'),
-          ]),
-        ),
-        Indent(
-          child: Text('${feature.classDetails.description}'),
-        ),
+        Text('Researching "${feature.topic}"'),
       ],
     );
   }
 }
 
-class EmptyAssetClassKnowledgeFeatureWidget extends StatelessWidget {
-  const EmptyAssetClassKnowledgeFeatureWidget({
+class KnowledgeFeatureWidget extends StatelessWidget {
+  const KnowledgeFeatureWidget({
     super.key,
     required this.feature,
     required this.data,
   });
 
-  final EmptyAssetClassKnowledgeFeature feature;
+  final KnowledgeFeature feature;
   final DataStructure data;
 
   @override
@@ -411,7 +402,59 @@ class EmptyAssetClassKnowledgeFeatureWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Empty knowledge about asset class'),
+          Text('Research'),
+        for (MapEntry<AssetClassID, AssetClass> assetClass
+            in feature.classes.entries) ...[
+          Text('Knowledge about asset class ${assetClass.key}'),
+          Indent(
+            child: Row(
+              children: [
+                Container(
+                    color: Colors.grey,
+                    child: ISDIcon(
+                        width: 32, height: 32, icon: assetClass.value.icon)),
+                Text('${assetClass.value.name}'),
+              ],
+            ),
+          ),
+          Indent(
+            child: Text('${assetClass.value.description}'),
+          ),
+        ],
+        for (MapEntry<MaterialID, Material> material
+            in feature.materials.entries) ...[
+          Text('Knowledge about material ${material.key}'),
+          Indent(
+            child: Row(
+              children: [
+                Container(
+                    color: Colors.grey,
+                    child: ISDIcon(
+                        width: 32, height: 32, icon: material.value.icon)),
+                Text('${material.value.name}'),
+              ],
+            ),
+          ),
+          Indent(
+            child: Text('${material.value.description}'),
+          ),
+          
+          Indent(
+            child: Text('${material.value.isFluid ? 'fluid' : 'solid'}'),
+          ),
+          Indent(
+            child: Text('${material.value.isComponent ? 'component' : 'bulk'}'),
+          ),
+          Indent(
+            child: Text('${material.value.isPressurized ? 'pressurized' : 'not pressurized'}'),
+          ),
+          Indent(
+            child: Text('mass per unit: ${material.value.massPerUnit}kg'),
+          ),
+          Indent(
+            child: Text('mass per cubic meter: ${material.value.massPerCubicMeter}kg'),
+          ),
+        ],
       ],
     );
   }

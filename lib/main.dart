@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Material;
 
 import 'debugsystemview.dart' as debugsystemview;
 import 'systemview.dart' as systemview;
@@ -363,17 +363,35 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
       case 13:
         StarIdentifier source = StarIdentifier.parse(reader.readUint32());
         Uint64 timestamp = reader.readUint64();
-        int isRead = reader.readUint8();
-        if (isRead > 0x1) {
+        int flags = reader.readUint8();
+        if (flags > 0x1) {
           openErrorDialog(
-              'Unsupported MessageFeature.isRead: 0x${isRead.toRadixString(16)}',
+              'Unsupported MessageFeature.isRead: 0x${flags.toRadixString(16)}',
               context);
         }
-        String subject = reader.readString();
-        String from = reader.readString();
         String body = reader.readString();
+        if (!body.contains('\n')) {
+          openErrorDialog('no newline in message body', context);
+          return MessageFeature(
+          source,
+          timestamp,
+          flags == 0x1,
+          '<error>',
+          '<error>',
+          'error: body $body',
+        );
+        }
+        String subject = body.substring(0, body.indexOf('\n'));
+        String from = body.split('\n')[1];
+        String text = body.substring(subject.length + from.length + 2);
         return MessageFeature(
-            source, timestamp, isRead == 0x1, subject, from, body);
+          source,
+          timestamp,
+          flags == 0x1,
+          subject,
+          from.substring('From: '.length),
+          text,
+        );
       case 14:
         return RubblePileFeature();
       case 15:
@@ -382,21 +400,47 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         AssetID child = AssetID(systemID, id);
         return ProxyFeature(child);
       case 16:
-        AssetClassID id = reader.readInt32();
-        if (id == 0) {
-          return EmptyAssetClassKnowledgeFeature();
+        int type = reader.readUint8();
+        Map<AssetClassID, AssetClass> classes = {};
+        Map<MaterialID, Material> materials = {};
+        while (type != 0) {
+          switch (type) {
+            case 1:
+              AssetClassID id = reader.readInt32();
+              String icon = reader.readString();
+              String name = reader.readString();
+              String description = reader.readString();
+              classes[id] = AssetClass(id, icon, name, description);
+            case 2:
+            MaterialID id = reader.readInt32();
+              String icon = reader.readString();
+              String name = reader.readString();
+              String description = reader.readString();
+              Uint64 flags = reader.readUint64();
+              bool isFluid = flags.lsh&1==1;
+              bool isComponent = flags.lsh&2==2;
+              bool isPressurized = flags.lsh&8==8;
+              if (flags.msh != 0 || flags.lsh&4==4||flags.lsh>0xf) {
+                throw UnimplementedError('material flags ${flags.displayName}');
+              }
+              double massPerUnit = reader.readFloat64();
+              double massPerCubicMeter = reader.readFloat64();
+              materials[id] = Material(icon, name, description, isFluid, isComponent, isPressurized, massPerUnit, massPerCubicMeter);
+            default:
+              throw UnimplementedError('knowledge type $type');
+          }
+          type = reader.readUint8();
         }
-        String icon = reader.readString();
-        String name = reader.readString();
-        String description = reader.readString();
-        return AssetClassKnowledgeFeature(
-            AssetClass(id, icon, name, description));
+        return KnowledgeFeature(classes, materials);
+      case 17:
+        String topic = reader.readString();
+        return ResearchFeature(topic);
       default:
         throw UnimplementedError('Unknown featureID $featureCode');
     }
   }
 
-  static const kClientVersion = 16;
+  static const kClientVersion = 17;
 
   void parseSystemServerBinaryMessage(
       ByteBuffer data, Map<int, String> stringTable, NetworkConnection server) {
@@ -999,7 +1043,7 @@ class _DebugCommandSenderWidgetState extends State<DebugCommandSenderWidget> {
       showDialog(
           context: context,
           builder: (context) => Dialog(
-                child: Text('response: $response'),
+                child: SelectableText('response: $response'),
               ));
     });
   }

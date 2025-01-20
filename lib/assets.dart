@@ -97,22 +97,25 @@ class SolarSystemFeature extends Feature {
   );
 }
 
-// the server does not currently have any way of sending this class, and as such it is not in the documentation
 class Material {
+  final String icon;
   final String name;
   final String description;
-  final String icon;
-  final bool showInKG; // true for coal, false for computers
+  final bool isFluid;
+  final bool isComponent;
+  final bool isPressurized;
   final double massPerUnit; // in kilograms
-  final double volumePerUnit; // in kiloliters
+  final double massPerCubicMeter; // in kilograms
 
   Material(
+    this.icon,
     this.name,
     this.description,
-    this.icon,
-    this.showInKG,
+    this.isFluid,
+    this.isComponent,
+    this.isPressurized,
     this.massPerUnit,
-    this.volumePerUnit,
+    this.massPerCubicMeter,
   );
 }
 
@@ -220,9 +223,16 @@ class MessageFeature extends Feature {
   final bool isRead;
   final String subject;
   final String from;
-  final String body;
+  final String text;
 
-  MessageFeature(this.source, this.timestamp, this.isRead, this.subject, this.from, this.body);
+  MessageFeature(
+    this.source,
+    this.timestamp,
+    this.isRead,
+    this.subject,
+    this.from,
+    this.text,
+  );
 }
 
 class RubblePileFeature extends Feature {}
@@ -233,18 +243,21 @@ class ProxyFeature extends Feature {
   ProxyFeature(this.child);
 }
 
-class EmptyAssetClassKnowledgeFeature extends Feature {
+class KnowledgeFeature extends Feature {
+  final Map<AssetClassID, AssetClass> classes;
+  final Map<MaterialID, Material> materials;
 
-  EmptyAssetClassKnowledgeFeature();
+  KnowledgeFeature(this.classes, this.materials);
 }
 
-class AssetClassKnowledgeFeature extends Feature {
-  final AssetClass classDetails;
+class ResearchFeature extends Feature {
+  final String topic;
 
-  AssetClassKnowledgeFeature(this.classDetails);
+  ResearchFeature(this.topic);
 }
 
 typedef AssetClassID = int; // 32-bit signed, but can't be 0
+typedef MaterialID = int; // 32-bit signed, but can't be 0
 
 class AssetClass {
   final AssetClassID id;

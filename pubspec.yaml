@@ -43,6 +43,8 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
+    - icons/church.png
+    - icons/city.png
     - icons/colony-ship.png
     - icons/crater.png
     - icons/message.png
