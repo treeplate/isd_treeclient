@@ -33,6 +33,7 @@ class NetworkConnection {
         unrequestedMessageHandler: unrequestedMessageHandler,
         binaryMessageHandler: binaryMessageHandler,
         onError: onError,
+        onReset: onReset,
       ));
     }, onError: (e, st) {
       result.completeError(e);
