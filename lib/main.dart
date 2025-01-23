@@ -10,6 +10,7 @@ import 'galaxyview.dart';
 import 'inbox.dart';
 import 'binaryreader.dart';
 import 'network_handler.dart';
+import 'feature_parser.dart';
 import 'account.dart';
 import 'assets.dart';
 import 'data-structure.dart';
@@ -222,226 +223,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     }
   }
 
-  Feature parseFeature(
-      int featureCode, BinaryReader reader, StarIdentifier systemID) {
-    switch (featureCode) {
-      case 1:
-        return StarFeature(StarIdentifier.parse(reader.readUint32()));
-      case 2:
-        int id = reader.readUint32();
-        assert(id != 0);
-        AssetID primaryChild = AssetID(systemID, id);
-        List<SolarSystemChild> children = [
-          SolarSystemChild(primaryChild, 0, 0)
-        ];
-        while (true) {
-          int id = reader.readUint32();
-          if (id == 0) break;
-          AssetID child = AssetID(systemID, id);
-          double distanceFromCenter = reader.readFloat64();
-          double theta = reader.readFloat64();
-          children.add(SolarSystemChild(child, distanceFromCenter, theta));
-        }
-        return SolarSystemFeature(children);
-      case 3:
-        int id = reader.readUint32();
-        assert(id != 0);
-        AssetID primaryChild = AssetID(systemID, id);
-        List<OrbitChild> children = [];
-        while (true) {
-          int id = reader.readUint32();
-          if (id == 0) break;
-          AssetID child = AssetID(systemID, id);
-          double semiMajorAxis = reader.readFloat64();
-          double eccentricity = reader.readFloat64();
-          double omega = reader.readFloat64();
-          Uint64 timeOrigin = reader.readUint64();
-          int direction = reader.readUint8();
-          if (direction > 0x1) {
-            openErrorDialog(
-                'Unsupported OrbitChild.direction: 0x${direction.toRadixString(16)}',
-                context);
-          }
-          children.add(
-            OrbitChild(
-              child,
-              semiMajorAxis,
-              eccentricity,
-              timeOrigin,
-              direction & 0x1 > 0,
-              omega,
-            ),
-          );
-        }
-        return OrbitFeature(children, primaryChild);
-      case 4:
-        List<MaterialLineItem> materials = [];
-        while (reader.readUint32() != 0) {
-          int quantity = reader.readUint32();
-          int max = reader.readUint32();
-          String componentName = reader.readString();
-          String materialDescription = reader.readString();
-          int id = reader.readUint32();
-          int? materialID = id == 0 ? null : id;
-          materials.add(MaterialLineItem(
-            componentName == '' ? null : componentName,
-            materialID,
-            quantity,
-            max == 0 ? null : max,
-            materialDescription,
-          ));
-        }
-        int hp = reader.readUint32();
-        int minHP = reader.readUint32();
-        return StructureFeature(
-          materials,
-          hp,
-          minHP == 0 ? null : minHP,
-        );
-      case 5:
-        return SpaceSensorFeature(
-          reader.readUint32(),
-          reader.readUint32(),
-          reader.readUint32(),
-          reader.readFloat64(),
-        );
-      case 6:
-        return SpaceSensorStatusFeature(
-          AssetID(systemID, reader.readUint32()),
-          AssetID(systemID, reader.readUint32()),
-          reader.readUint32(),
-        );
-      case 7:
-        int hp = reader.readUint32();
-        return PlanetFeature(
-          hp,
-        );
-      case 8:
-        int isColonyShip = reader.readUint32();
-        assert(isColonyShip < 2);
-        return PlotControlFeature(
-          isColonyShip == 1,
-        );
-      case 9:
-        List<AssetID> regions = [];
-        while (true) {
-          int id = reader.readUint32();
-          if (id == 0) break;
-          if (regions.isNotEmpty) {
-            throw UnimplementedError('more than one region');
-          }
-          AssetID region = AssetID(systemID, id);
-          regions.add(region);
-        }
-        return SurfaceFeature(regions);
-      case 10:
-        double cellSize = reader.readFloat64();
-        int width = reader.readUint32();
-        int height = reader.readUint32();
-        List<AssetID?> cells = List.filled(width * height, null);
-        while (true) {
-          int id = reader.readUint32();
-          if (id == 0) break;
-          int x = reader.readUint32();
-          int y = reader.readUint32();
-          cells[x + y * width] = AssetID(systemID, id);
-        }
-        return GridFeature(cells, width, height, cellSize);
-      case 11:
-        Uint64 population = reader.readUint64();
-        double averageHappiness = reader.readFloat64();
-        return PopulationFeature(population, averageHappiness);
-      case 12:
-        List<AssetID> messages = [];
-        while (true) {
-          int id = reader.readUint32();
-          if (id == 0) break;
-          AssetID message = AssetID(systemID, id);
-          messages.add(message);
-        }
-        return MessageBoardFeature(messages);
-      case 13:
-        StarIdentifier source = StarIdentifier.parse(reader.readUint32());
-        Uint64 timestamp = reader.readUint64();
-        int flags = reader.readUint8();
-        if (flags > 0x1) {
-          openErrorDialog(
-              'Unsupported MessageFeature.isRead: 0x${flags.toRadixString(16)}',
-              context);
-        }
-        String body = reader.readString();
-        if (!body.contains('\n')) {
-          openErrorDialog('no newline in message body', context);
-          return MessageFeature(
-          source,
-          timestamp,
-          flags == 0x1,
-          '<error>',
-          '<error>',
-          'error: body $body',
-        );
-        }
-        String subject = body.substring(0, body.indexOf('\n'));
-        String from = body.split('\n')[1];
-        String text = body.substring(subject.length + from.length + 2);
-        return MessageFeature(
-          source,
-          timestamp,
-          flags == 0x1,
-          subject,
-          from.substring('From: '.length),
-          text,
-        );
-      case 14:
-        return RubblePileFeature();
-      case 15:
-        int id = reader.readUint32();
-        assert(id != 0);
-        AssetID child = AssetID(systemID, id);
-        return ProxyFeature(child);
-      case 16:
-        int type = reader.readUint8();
-        Map<AssetClassID, AssetClass> classes = {};
-        Map<MaterialID, Material> materials = {};
-        while (type != 0) {
-          switch (type) {
-            case 1:
-              AssetClassID id = reader.readInt32();
-              String icon = reader.readString();
-              String name = reader.readString();
-              String description = reader.readString();
-              classes[id] = AssetClass(id, icon, name, description);
-            case 2:
-            MaterialID id = reader.readInt32();
-              String icon = reader.readString();
-              String name = reader.readString();
-              String description = reader.readString();
-              Uint64 flags = reader.readUint64();
-              bool isFluid = flags.lsh&1==1;
-              bool isComponent = flags.lsh&2==2;
-              bool isPressurized = flags.lsh&8==8;
-              if (flags.msh != 0 || flags.lsh&4==4||flags.lsh>0xf) {
-                throw UnimplementedError('material flags ${flags.displayName}');
-              }
-              double massPerUnit = reader.readFloat64();
-              double massPerCubicMeter = reader.readFloat64();
-              materials[id] = Material(icon, name, description, isFluid, isComponent, isPressurized, massPerUnit, massPerCubicMeter);
-            default:
-              throw UnimplementedError('knowledge type $type');
-          }
-          type = reader.readUint8();
-        }
-        return KnowledgeFeature(classes, materials);
-      case 17:
-        String topic = reader.readString();
-        return ResearchFeature(topic);
-      default:
-        throw UnimplementedError('Unknown featureID $featureCode');
-    }
-  }
-
-  static const kClientVersion = 17;
-
   void parseSystemServerBinaryMessage(
       ByteBuffer data, Map<int, String> stringTable, NetworkConnection server) {
     BinaryReader reader = BinaryReader(data, stringTable, Endian.little);
@@ -486,7 +267,11 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           while (true) {
             int featureCode = reader.readUint32();
             if (featureCode == 0) break;
-            features.add(parseFeature(featureCode, reader, systemID));
+            try {
+              features.add(parseFeature(featureCode, reader, systemID));
+            } catch(e) {
+              openErrorDialog('$e', context);
+            }
           }
           this.data.setAsset(
                 assetID,
