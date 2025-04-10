@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import 'core.dart';
 
@@ -356,3 +357,33 @@ final List<Paint> starCategories = [
     ..color = Color(0x5FFF2200)
     ..strokeWidth = 0.0200,
 ];
+
+class ContinousBuilder extends StatefulWidget {
+  const ContinousBuilder({super.key, required this.builder});
+
+  final WidgetBuilder builder;
+
+  @override
+  State<ContinousBuilder> createState() => _ContinousBuilderState();
+}
+
+class _ContinousBuilderState extends State<ContinousBuilder>
+    with SingleTickerProviderStateMixin {
+  late final Ticker ticker;
+  @override
+  void initState() {
+    ticker = createTicker((duration) => setState(() {}))..start();
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    ticker.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.builder(context);
+  }
+}

@@ -251,12 +251,15 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
             .setSystemPosition(systemID, position / this.data.galaxyDiameter!);
         this.data.setTime0(systemID, time0);
         this.data.setTimeFactor(systemID, timeFactor);
+        Set<AssetID> notReferenced = {};
         while (true) {
           int id = reader.readUint32();
           if (id == 0) break;
           AssetID assetID = AssetID(systemID, id);
+          this.data.getChildren(assetID, notReferenced);
           int owner = reader.readUint32();
           double mass = reader.readFloat64();
+          double massFlowRate = reader.readFloat64();
           double size = reader.readFloat64();
           String name = reader.readString();
           AssetClassID classID = reader.readInt32();
@@ -268,8 +271,20 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
             int featureCode = reader.readUint32();
             if (featureCode == 0) break;
             try {
-              features.add(parseFeature(featureCode, reader, systemID));
-            } catch(e) {
+              Feature feature = parseFeature(
+                featureCode,
+                reader,
+                systemID,
+                notReferenced,
+                this.data,
+              );
+              if (feature is ReferenceFeature) {
+                for (AssetID asset in feature.references) {
+                  this.data.assets[asset]!.references.add(assetID);
+                }
+              }
+              features.add(feature);
+            } catch (e) {
               openErrorDialog('$e', context);
             }
           }
@@ -278,6 +293,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                 Asset(
                   features,
                   mass,
+                  massFlowRate,
                   owner == 0 ? null : owner,
                   size,
                   name == '' ? null : name,
@@ -285,8 +301,20 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                   icon,
                   className,
                   description,
+                  time0.$2,
                 ),
               );
+        }
+        for (AssetID asset in notReferenced) {
+          for (AssetID asset2 in this.data.assets[asset]!.references) {
+            for (ReferenceFeature feature
+                in this.data.assets[asset2]?.features.whereType() ?? []) {
+              feature.removeReferences(asset);
+            }
+          }
+          print(
+              'removing ${this.data.assets[asset]!.name ?? this.data.assets[asset]!.className}');
+          this.data.assets.remove(asset);
         }
       } else {
         switch (id) {
@@ -353,7 +381,13 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     if (message[0] == 'F') {
       if (message[1] == 'unrecognized credentials') {
         await connectToLoginServer();
-        await login();
+        currentSystemServerConnectedCount--;
+        if (data.username != null && data.password != null) {
+          await login();
+        } else {
+          systemServer.close();
+          return;
+        }
         onSystemServerReset(systemServer, serverName);
       } else {
         openErrorDialog(
@@ -469,8 +503,18 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     if (message[0] == 'F') {
       assert(message.length == 2);
       if (message[1] == 'unrecognized credentials') {
-        await connectToLoginServer();
-        await login();
+        try {
+          await connectToLoginServer();
+        } catch (error) {
+          openErrorDialog(error.toString(), context);
+          onDynastyServerReset(dynastyServer);
+        }
+        if (data.username != null && data.password != null) {
+          await login();
+        } else {
+          dynastyServer.close();
+          return;
+        }
         onDynastyServerReset(dynastyServer);
       } else {
         openErrorDialog(
@@ -667,6 +711,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                     children: [
                       Text(
                           'You have no visibility into anything. You should create another account.'),
+                      Text(
+                          'This probably means the system server is not running or broken.'),
                       OutlinedButton(
                           onPressed: () => openAccountDialog(context),
                           child: Text('Change username or password')),

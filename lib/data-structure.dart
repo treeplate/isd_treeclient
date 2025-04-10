@@ -21,10 +21,14 @@ class DataStructure with ChangeNotifier {
   List<List<Offset>>? stars;
   Map<StarIdentifier, StarIdentifier>?
       systems; // star ID -> system ID (first star in the system)
-  Map<StarIdentifier, AssetID> rootAssets = {}; // system ID -> root asset of system
-  Map<StarIdentifier, Offset> systemPositions = {}; // system ID -> system position in galaxy; (0, 0) to (1, 1)
-  Map<StarIdentifier, (DateTime, Uint64)> time0s = {}; // system ID -> ($1, $2); $2 = system time (in milliseconds) at $1
-  Map<StarIdentifier, double> timeFactors = {}; // system ID -> time factor of system
+  Map<StarIdentifier, AssetID> rootAssets =
+      {}; // system ID -> root asset of system
+  Map<StarIdentifier, Offset> systemPositions =
+      {}; // system ID -> system position in galaxy; (0, 0) to (1, 1)
+  Map<StarIdentifier, (DateTime, Uint64)> time0s =
+      {}; // system ID -> ($1, $2); $2 = system time (in milliseconds) at $1
+  Map<StarIdentifier, double> timeFactors =
+      {}; // system ID -> time factor of system
   Map<AssetID, Asset> assets = {};
   int? dynastyID;
 
@@ -137,7 +141,10 @@ class DataStructure with ChangeNotifier {
   }
 
   Uint64 getTime(StarIdentifier system, DateTime time) {
-    return time0s[system]!.$2 + Uint64.fromDouble(timeFactors[system]! * (time.millisecondsSinceEpoch - time0s[system]!.$1.millisecondsSinceEpoch));
+    return time0s[system]!.$2 +
+        Uint64.fromDouble(timeFactors[system]! *
+            (time.millisecondsSinceEpoch -
+                time0s[system]!.$1.millisecondsSinceEpoch));
   }
 
   void setAsset(AssetID id, Asset asset) {
@@ -157,7 +164,7 @@ class DataStructure with ChangeNotifier {
       throw StateError('getAssetIdentifyingName called with invalid asset id');
     }
     for (Feature feature in asset.features) {
-      switch(feature) {
+      switch (feature) {
         case OrbitFeature(primaryChild: AssetID child):
           return getAssetIdentifyingName(child);
         case StarFeature(starID: StarIdentifier id):
@@ -165,7 +172,8 @@ class DataStructure with ChangeNotifier {
         default:
       }
     }
-    return asset.name ?? 'A${id.id.toRadixString(16).padLeft(6,'0')} (${asset.className})';
+    return asset.name ??
+        'A${id.id.toRadixString(16).padLeft(6, '0')} (${asset.className})';
   }
 
   DataStructure() {
@@ -191,5 +199,45 @@ class DataStructure with ChangeNotifier {
         parseSystems(rawSystems.buffer.asUint32List(), rawSystems.buffer);
       }
     });
+  }
+
+  void getChildren(AssetID assetID, Set<AssetID> result) {
+    if (assets[assetID] == null) return;
+    Asset asset = assets[assetID]!;
+    for (Feature feature in asset.features) {
+      switch (feature) {
+        case SolarSystemFeature(children: List<SolarSystemChild> children):
+          result.addAll(children.map((e) => e.child));
+        case OrbitFeature(
+            primaryChild: AssetID primaryChild,
+            orbitingChildren: List<OrbitChild> orbitingChildren,
+          ):
+          result.add(primaryChild);
+          result.addAll(orbitingChildren.map((e) => e.child));
+        case SurfaceFeature(regions: Map<(double, double), AssetID> regions):
+          result.addAll(regions.values);
+        case GridFeature(cells: List<AssetID?> cells):
+          result.addAll(cells.where((e) => e != null).cast());
+        case MessageBoardFeature(messages: List<AssetID> messages):
+          result.addAll(messages);
+        case ProxyFeature(child: AssetID child):
+          result.add(child);
+        case MessageFeature():
+        case StructureFeature():
+        case StarFeature():
+        case SpaceSensorFeature():
+        case SpaceSensorStatusFeature():
+        case PlanetFeature():
+        case PlotControlFeature():
+        case PopulationFeature():
+        case RubblePileFeature():
+        case KnowledgeFeature():
+        case ResearchFeature():
+        case MiningFeature():
+        case OrePileFeature():
+        case RegionFeature():
+          break;
+      }
+    }
   }
 }

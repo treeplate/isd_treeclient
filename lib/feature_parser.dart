@@ -1,9 +1,11 @@
+import 'package:isd_treeclient/data-structure.dart';
+
 import 'binaryreader.dart';
 import 'assets.dart';
 import 'core.dart';
 
-Feature parseFeature(
-    int featureCode, BinaryReader reader, StarIdentifier systemID) {
+Feature parseFeature(int featureCode, BinaryReader reader,
+    StarIdentifier systemID, Set<AssetID> notReferenced, DataStructure data) {
   switch (featureCode) {
     case 1:
       return StarFeature(StarIdentifier.parse(reader.readUint32()));
@@ -11,11 +13,13 @@ Feature parseFeature(
       int id = reader.readUint32();
       assert(id != 0);
       AssetID primaryChild = AssetID(systemID, id);
+      notReferenced.remove(primaryChild);
       List<SolarSystemChild> children = [SolarSystemChild(primaryChild, 0, 0)];
       while (true) {
         int id = reader.readUint32();
         if (id == 0) break;
         AssetID child = AssetID(systemID, id);
+        notReferenced.remove(child);
         double distanceFromCenter = reader.readFloat64();
         double theta = reader.readFloat64();
         children.add(SolarSystemChild(child, distanceFromCenter, theta));
@@ -25,11 +29,13 @@ Feature parseFeature(
       int id = reader.readUint32();
       assert(id != 0);
       AssetID primaryChild = AssetID(systemID, id);
+      notReferenced.remove(primaryChild);
       List<OrbitChild> children = [];
       while (true) {
         int id = reader.readUint32();
         if (id == 0) break;
         AssetID child = AssetID(systemID, id);
+        notReferenced.remove(child);
         double semiMajorAxis = reader.readFloat64();
         double eccentricity = reader.readFloat64();
         double omega = reader.readFloat64();
@@ -37,7 +43,7 @@ Feature parseFeature(
         int direction = reader.readUint8();
         if (direction > 0x1) {
           throw UnimplementedError(
-              'Unsupported OrbitChild.direction: 0x${direction.toRadixString(16)}',
+            'Unsupported OrbitChild.direction: 0x${direction.toRadixString(16)}',
           );
         }
         children.add(
@@ -90,9 +96,7 @@ Feature parseFeature(
         reader.readUint32(),
       );
     case 7:
-      int hp = reader.readUint32();
       return PlanetFeature(
-        hp,
       );
     case 8:
       int isColonyShip = reader.readUint32();
@@ -101,15 +105,15 @@ Feature parseFeature(
         isColonyShip == 1,
       );
     case 9:
-      List<AssetID> regions = [];
+      Map<(double, double), AssetID> regions = {};
       while (true) {
         int id = reader.readUint32();
         if (id == 0) break;
-        if (regions.isNotEmpty) {
-          throw UnimplementedError('more than one region');
-        }
+        double x = reader.readFloat64();
+        double y = reader.readFloat64();
         AssetID region = AssetID(systemID, id);
-        regions.add(region);
+        regions[(x,y)] = region;
+        notReferenced.remove(region);
       }
       return SurfaceFeature(regions);
     case 10:
@@ -123,6 +127,7 @@ Feature parseFeature(
         int x = reader.readUint32();
         int y = reader.readUint32();
         cells[x + y * width] = AssetID(systemID, id);
+        notReferenced.remove(cells[x + y * width]);
       }
       return GridFeature(cells, width, height, cellSize);
     case 11:
@@ -135,6 +140,7 @@ Feature parseFeature(
         int id = reader.readUint32();
         if (id == 0) break;
         AssetID message = AssetID(systemID, id);
+        notReferenced.remove(message);
         messages.add(message);
       }
       return MessageBoardFeature(messages);
@@ -144,8 +150,8 @@ Feature parseFeature(
       int flags = reader.readUint8();
       if (flags > 0x1) {
         throw UnimplementedError(
-            'Unsupported MessageFeature.isRead: 0x${flags.toRadixString(16)}',
-            );
+          'Unsupported MessageFeature.isRead: 0x${flags.toRadixString(16)}',
+        );
       }
       String body = reader.readString();
       if (!body.contains('\n')) {
@@ -168,6 +174,7 @@ Feature parseFeature(
       int id = reader.readUint32();
       assert(id != 0);
       AssetID child = AssetID(systemID, id);
+      notReferenced.remove(child);
       return ProxyFeature(child);
     case 16:
       int type = reader.readUint8();
@@ -206,9 +213,28 @@ Feature parseFeature(
     case 17:
       String topic = reader.readString();
       return ResearchFeature(topic);
+    case 18:
+      double rate = reader.readFloat64();
+      MiningFeatureMode mode = MiningFeatureMode.values[(reader.readUint8()+1)%256];
+      return MiningFeature(rate, mode);
+    case 19:
+      double pileMass = reader.readFloat64();
+      double pileMassFlowRate = reader.readFloat64();
+      double capacity = reader.readFloat64();
+      List<MaterialID> materials = [];
+      while(true) {
+        MaterialID material = reader.readInt32();
+        if (material == 0) break;
+        materials.add(material);
+      }
+      return OrePileFeature(pileMass, pileMassFlowRate, capacity, materials, data.getTime(systemID, DateTime.timestamp()));
+    case 20:
+      int flags = reader.readUint8();
+      if (flags>1) throw UnimplementedError('unsupported fcRegion flags: $flags');
+      return RegionFeature(flags==1);
     default:
       throw UnimplementedError('Unknown featureID $featureCode');
   }
 }
 
-const kClientVersion = 17;
+const kClientVersion = 20;

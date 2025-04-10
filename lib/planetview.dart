@@ -19,16 +19,11 @@ class SystemSelector extends StatefulWidget {
 
 class _SystemSelectorState extends State<SystemSelector> {
   StarIdentifier? selectedSystem;
-
-  void initState() {
+  @override
+  Widget build(BuildContext context) {
     if (widget.data.rootAssets.keys.length == 1) {
       selectedSystem = widget.data.rootAssets.keys.single;
     }
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return selectedSystem == null
         ? ListView(
             children: [
@@ -94,8 +89,8 @@ class _PlanetSelectorState extends State<PlanetSelector> {
       if (asset.features
           .any((e) => e is SurfaceFeature && e.regions.isNotEmpty)) {
         if (showEmptyPlanets ||
-            asset.features.whereType<SurfaceFeature>().any((e) => e.regions.any(
-                (f) => (widget.data.assets[f]!.features
+            asset.features.whereType<SurfaceFeature>().any((e) =>
+                e.regions.values.any((f) => (widget.data.assets[f]!.features
                         .singleWhere((g) => g is GridFeature) as GridFeature)
                     .cells
                     .any((g) => g != null)))) {
@@ -168,19 +163,25 @@ class PlanetView extends StatefulWidget {
 class _PlanetViewState extends State<PlanetView> {
   @override
   Widget build(BuildContext context) {
-    AssetID regionID = widget.data.assets[widget.planet]!.features
+    Map<(double, double), AssetID> regions = widget
+        .data.assets[widget.planet]!.features
         .whereType<SurfaceFeature>()
         .single
-        .regions
-        .single;
-    GridFeature region =
-        widget.data.assets[regionID]!.features.whereType<GridFeature>().single;
+        .regions;
+    if (regions.length == 1) {
+      AssetID regionID = regions.values.single;
+      GridFeature region = widget.data.assets[regionID]!.features
+          .whereType<GridFeature>()
+          .single;
 
-    return GridWidget(
-        gridFeature: region,
-        data: widget.data,
-        server: widget.server,
-        gridAssetID: regionID);
+      return GridWidget(
+          gridFeature: region,
+          data: widget.data,
+          server: widget.server,
+          gridAssetID: regionID);
+    } else {
+      return Text('Unimplemented: multiple regions');
+    }
   }
 }
 
@@ -262,16 +263,18 @@ class GridWidget extends StatelessWidget {
               catalog.add(AssetClass(id, icon, name, description));
               i += 4;
             }
-            showDialog(
-              context: context,
-              builder: (context) => BuildDialog(
-                catalog: catalog,
-                region: gridAssetID,
-                gridX: gridX,
-                gridY: gridY,
-                server: server,
-              ),
-            );
+            if (context.mounted) {
+              showDialog(
+                context: context,
+                builder: (context) => BuildDialog(
+                  catalog: catalog,
+                  region: gridAssetID,
+                  gridX: gridX,
+                  gridY: gridY,
+                  server: server,
+                ),
+              );
+            }
           } else {
             assert(rawCatalog[0] == 'F');
             openErrorDialog(
@@ -527,6 +530,8 @@ Widget describeFeature(
       throw StateError('planet on planet');
     case SurfaceFeature():
       throw StateError('surface on planet');
+    case RegionFeature():
+      throw StateError('surface on planet');
     case StructureFeature(materials: List<MaterialLineItem> materials):
       return Column(
         mainAxisSize: MainAxisSize.min,
@@ -578,8 +583,7 @@ Widget describeFeature(
     case MessageBoardFeature():
       continue nothing;
     case MessageFeature():
-      // TODO: Handle this case.
-      return Placeholder();
+      throw StateError('message outside messageboard');
     case RubblePileFeature():
       return Text('There is a pile of rubble.');
     nothing:
@@ -588,14 +592,13 @@ Widget describeFeature(
         width: 0,
       );
     case KnowledgeFeature():
-      // TODO: Handle this case.
-      return Placeholder();
+      throw StateError('knowledge outside messageboard');
     case ResearchFeature(topic: String topic):
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Researching: $topic'),
-          OutlinedButton(
+          Text('Researching: '),
+          TextButton(
             onPressed: () async {
               List<String> result = await server.send(
                 [
@@ -653,9 +656,184 @@ Widget describeFeature(
                 },
               );
             },
-            child: Text('Change'),
+            child: Text('$topic'),
           ),
         ],
+      );
+    case MiningFeature(rate: double rate, mode: MiningFeatureMode mode):
+      switch (mode) {
+        case MiningFeatureMode.disabled:
+          return Column(
+            children: [
+              Text('Mines ${rate % .001 == 0 ? (rate * 1000).toInt() : rate * 1000} kilogram${rate==.001?'':'s'} per second (disabled)'),
+              SizedBox(width: 10),
+              OutlinedButton(
+                onPressed: () async {
+                  List<String> result = await server.send(
+                    [
+                      'play',
+                      system.value.toString(),
+                      asset.id.toString(),
+                      'enable',
+                    ],
+                  );
+                  if (result.first == 'T') {
+                    if (result.length != 2) {
+                      openErrorDialog(
+                          'unexpected response to enable: $result', context);
+                    } else {
+                      if (result.first != 'T') {
+                        openErrorDialog(
+                            'server thinks miner already enabled', context);
+                      }
+                    }
+                  } else {
+                    openErrorDialog('enable failed: $result', context);
+                  }
+                },
+                child: Text('Enable'),
+              ),
+            ],
+          );
+        case MiningFeatureMode.mining:
+          return Column(
+            children: [
+              Text('Mining ${rate % .001 == 0 ? (rate * 1000).toInt() : rate * 1000} kilogram${rate==.001?'':'s'} per second.'),
+              SizedBox(width: 10),
+              OutlinedButton(
+                onPressed: () async {
+                  List<String> result = await server.send(
+                    [
+                      'play',
+                      system.value.toString(),
+                      asset.id.toString(),
+                      'disable',
+                    ],
+                  );
+                  if (result.first == 'T') {
+                    if (result.length != 2) {
+                      openErrorDialog(
+                          'unexpected response to disable: $result', context);
+                    } else {
+                      if (result.first != 'T') {
+                        openErrorDialog(
+                            'server thinks miner already disabled', context);
+                      }
+                    }
+                  } else {
+                    openErrorDialog('disable failed: $result', context);
+                  }
+                },
+                child: Text('Disable'),
+              ),
+            ],
+          );
+        case MiningFeatureMode.pilesFull:
+          return Column(
+            children: [
+              Text('Mines ${rate % .001 == 0 ? (rate * 1000).toInt() : rate * 1000} kilogram${rate==.001?'':'s'} per second (out of storage space)'),
+              SizedBox(width: 10),
+              OutlinedButton(
+                onPressed: () async {
+                  List<String> result = await server.send(
+                    [
+                      'play',
+                      system.value.toString(),
+                      asset.id.toString(),
+                      'disable',
+                    ],
+                  );
+                  if (result.first == 'T') {
+                    if (result.length != 2) {
+                      openErrorDialog(
+                          'unexpected response to disable: $result', context);
+                    } else {
+                      if (result.first != 'T') {
+                        openErrorDialog(
+                            'server thinks miner already disabled', context);
+                      }
+                    }
+                  } else {
+                    openErrorDialog('disable failed: $result', context);
+                  }
+                },
+                child: Text('Disable'),
+              ),
+            ],
+          );
+        case MiningFeatureMode.minesEmpty:
+          return Column(
+            children: [
+              Text('Mines ${rate % .001 == 0 ? (rate * 1000).toInt() : rate * 1000} kilogram${rate==.001?'':'s'} per second (out of resources to mine)'),
+              SizedBox(width: 10),
+              OutlinedButton(
+                onPressed: () async {
+                  List<String> result = await server.send(
+                    [
+                      'play',
+                      system.value.toString(),
+                      asset.id.toString(),
+                      'disable',
+                    ],
+                  );
+                  if (result.first == 'T') {
+                    if (result.length != 2) {
+                      openErrorDialog(
+                          'unexpected response to disable: $result', context);
+                    } else {
+                      if (result.first != 'T') {
+                        openErrorDialog(
+                            'server thinks miner already disabled', context);
+                      }
+                    }
+                  } else {
+                    openErrorDialog('disable failed: $result', context);
+                  }
+                },
+                child: Text('Disable'),
+              ),
+            ],
+          );
+        case MiningFeatureMode.notAtRegion:
+          return Column(
+            children: [
+              Text('Mines ${rate % .001 == 0 ? (rate * 1000).toInt() : rate * 1000} kilogram${rate==.001?'':'s'} per second (not on planet)'),
+              SizedBox(width: 10),
+              OutlinedButton(
+                onPressed: () async {
+                  List<String> result = await server.send(
+                    [
+                      'play',
+                      system.value.toString(),
+                      asset.id.toString(),
+                      'disable',
+                    ],
+                  );
+                  if (result.first == 'T') {
+                    if (result.length != 2) {
+                      openErrorDialog(
+                          'unexpected response to disable: $result', context);
+                    } else {
+                      if (result.first != 'T') {
+                        openErrorDialog(
+                            'server thinks miner already disabled', context);
+                      }
+                    }
+                  } else {
+                    openErrorDialog('disable failed: $result', context);
+                  }
+                },
+                child: Text('Disable'),
+              ),
+            ],
+          );
+      }
+    case OrePileFeature(getMass: double Function(Uint64) getMass, materials: List<MaterialID> materials, capacity: double capacity):
+      if (materials.isNotEmpty) openErrorDialog('unimplemented: known materials', context);
+      return ContinousBuilder(
+        builder: (context) {
+          return Text('Contents: ${getMass(data.getTime(system, DateTime.now())).toInt()} kg of ore / $capacity kg possible');
+        }
       );
   }
 }

@@ -1,7 +1,7 @@
 import '../../network_handler.dart';
 import 'dart:io';
 import 'dart:typed_data';
-
+//ignore_for_file: avoid_print
 void main() async {
     NetworkConnection loginServer = await NetworkConnection.fromURL(
       loginServerURL,

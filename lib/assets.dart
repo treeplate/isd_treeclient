@@ -19,30 +19,36 @@ extension type AssetID._((StarIdentifier system, int id) value) {
 
   factory AssetID(StarIdentifier system, int id) {
     assert(id > 0);
-    assert(
-      id <= 0xFFFFFF,
-      'getAssetIdentifyingName assumes the biggest asset id is 6 hexadecimal digits (this is guaranteed by the docs as of this assert being written)',
-    );
     return AssetID._((system, id));
   }
 }
 
-sealed class Feature {}
+sealed class Feature {
+  const Feature();
+}
 
 class Asset {
   final int? owner;
   final List<Feature> features;
-  final double mass; // in kg
+  final double _mass; // in kg
+  final double massFlowRate; // in kg/ms
+  final Uint64 time0;
+  double getMass(Uint64 time) {
+    return _mass + massFlowRate * ((time - time0).toDouble());
+  }
+
   final double size; // in meters
   final String? name;
   final AssetClassID? classID;
   final String icon;
   final String className;
   final String description;
+  final Set<AssetID> references = {};
 
   Asset(
     this.features,
-    this.mass,
+    this._mass,
+    this.massFlowRate,
     this.owner,
     this.size,
     this.name,
@@ -50,6 +56,7 @@ class Asset {
     this.icon,
     this.className,
     this.description,
+    this.time0,
   );
 }
 
@@ -177,9 +184,7 @@ class SpaceSensorStatusFeature extends Feature {
 }
 
 class PlanetFeature extends Feature {
-  final int hp;
-
-  PlanetFeature(this.hp);
+  PlanetFeature();
 }
 
 class PlotControlFeature extends Feature {
@@ -191,7 +196,8 @@ class PlotControlFeature extends Feature {
 class SurfaceFeature extends Feature {
   SurfaceFeature(this.regions);
 
-  final List<AssetID> regions;
+  final Map<(double, double), AssetID>
+      regions; //key is (x,y) where coordinates represent distance from center of surface to center of region in meters
 }
 
 class GridFeature extends Feature {
@@ -254,6 +260,46 @@ class ResearchFeature extends Feature {
   final String topic;
 
   ResearchFeature(this.topic);
+}
+
+sealed class ReferenceFeature extends Feature {
+  void removeReferences(AssetID asset);
+  Set<AssetID> get references;
+}
+
+enum MiningFeatureMode { disabled, mining, pilesFull, minesEmpty, notAtRegion }
+
+class MiningFeature extends Feature {
+  final double rate; // kg/ms
+  final MiningFeatureMode mode;
+
+  MiningFeature(this.rate, this.mode);
+}
+
+class OrePileFeature extends Feature {
+  final double _mass; // kg
+  final double massFlowRate; // kg/ms
+  final Uint64 time0;
+  double getMass(Uint64 time) {
+    return _mass + massFlowRate * ((time - time0).toDouble());
+  }
+
+  final double capacity; // kg
+  final List<MaterialID> materials;
+
+  OrePileFeature(
+    this._mass,
+    this.massFlowRate,
+    this.capacity,
+    this.materials,
+    this.time0,
+  );
+}
+
+class RegionFeature extends Feature {
+  final bool canBeMined;
+
+  RegionFeature(this.canBeMined);
 }
 
 typedef AssetClassID = int; // 32-bit signed, but can't be 0

@@ -82,14 +82,14 @@ Future<WebSocketWrapper> connect(String serverUrl) async {
 }
 
 Future<String?> getCookie(String name) async {
-  return window.localStorage[name];
+  return window.localStorage.getItem(name);
 }
 
 void setCookie(String name, String? value) {
   if (value == null) {
     window.localStorage.removeItem(name);
   } else {
-    window.localStorage[name] = value;
+    window.localStorage.setItem(name, value);
   }
 }
 

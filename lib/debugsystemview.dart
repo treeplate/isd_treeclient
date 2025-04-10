@@ -47,7 +47,7 @@ class _SystemSelectorState extends State<SystemSelector> {
   }
 }
 
-Widget renderFeature(Feature feature, DataStructure data, bool collapseOrbits) {
+Widget renderFeature(Feature feature, DataStructure data, StarIdentifier system, bool collapseOrbits) {
   switch (feature) {
     case OrbitFeature():
       return OrbitFeatureWidget(
@@ -136,6 +136,22 @@ Widget renderFeature(Feature feature, DataStructure data, bool collapseOrbits) {
         feature: feature,
         data: data,
       );
+    case MiningFeature():
+      return MiningFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case OrePileFeature():
+      return OrePileFeatureWidget(
+        feature: feature,
+        data: data,
+        system: system,
+      );
+    case RegionFeature():
+      return RegionFeatureWidget(
+        feature: feature,
+        data: data,
+      );
   }
 }
 
@@ -201,12 +217,17 @@ class SurfaceFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Regions'),
-        ...feature.regions.map(
+        ...feature.regions.entries.map(
           (e) => Indent(
-            child: AssetWidget(
-              asset: e,
-              data: data,
-              collapseOrbits: false,
+            child: Column(
+              children: [
+                Text('At ${e.key}:'),
+                AssetWidget(
+                  asset: e.value,
+                  data: data,
+                  collapseOrbits: false,
+                ),
+              ],
             ),
           ),
         ),
@@ -402,7 +423,7 @@ class KnowledgeFeatureWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-          Text('Research'),
+        Text('Research'),
         for (MapEntry<AssetClassID, AssetClass> assetClass
             in feature.classes.entries) ...[
           Text('Knowledge about asset class ${assetClass.key}'),
@@ -438,7 +459,6 @@ class KnowledgeFeatureWidget extends StatelessWidget {
           Indent(
             child: Text('${material.value.description}'),
           ),
-          
           Indent(
             child: Text('${material.value.isFluid ? 'fluid' : 'solid'}'),
           ),
@@ -446,13 +466,15 @@ class KnowledgeFeatureWidget extends StatelessWidget {
             child: Text('${material.value.isComponent ? 'component' : 'bulk'}'),
           ),
           Indent(
-            child: Text('${material.value.isPressurized ? 'pressurized' : 'not pressurized'}'),
+            child: Text(
+                '${material.value.isPressurized ? 'pressurized' : 'not pressurized'}'),
           ),
           Indent(
             child: Text('mass per unit: ${material.value.massPerUnit}kg'),
           ),
           Indent(
-            child: Text('mass per cubic meter: ${material.value.massPerCubicMeter}kg'),
+            child: Text(
+                'mass per cubic meter: ${material.value.massPerCubicMeter}kg'),
           ),
         ],
       ],
@@ -527,7 +549,7 @@ class PlanetFeatureWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('HP: ${feature.hp}'),
+        Text('This is a planet.'),
       ],
     );
   }
@@ -612,15 +634,15 @@ class SpaceSensorStatusFeatureWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Asset nearestOrbit = data.assets[feature.nearestOrbit]!;
-    Asset topAsset = data.assets[feature.topAsset]!;
+    Asset? nearestOrbit = data.assets[feature.nearestOrbit];
+    Asset? topAsset = data.assets[feature.topAsset];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-            '  Enclosing orbit: ${nearestOrbit.name ?? 'an unnamed ${nearestOrbit.className}'}'),
+            '  Enclosing orbit: ${nearestOrbit == null ? '<nonexistent asset>' : nearestOrbit.name ?? 'an unnamed ${nearestOrbit.className}'}'),
         Text(
-            '  Top asset reached: ${topAsset.name ?? 'an unnamed ${topAsset.className}'}'),
+            '  Top asset reached: ${topAsset == null ? '<nonexistent asset>' : topAsset.name ?? 'an unnamed ${topAsset.className}'}'),
         Text('  Count of reached assets: ${feature.count}'),
       ],
     );
@@ -644,6 +666,83 @@ class PopulationFeatureWidget extends StatelessWidget {
       children: [
         Text(
             '${feature.population.displayName} people with an average of ${feature.averageHappiness} happiness (${feature.population.toDouble() * feature.averageHappiness} total happiness)'),
+      ],
+    );
+  }
+}
+
+class MiningFeatureWidget extends StatelessWidget {
+  const MiningFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+  final MiningFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Mining at a rate of ${feature.rate} kg/ms (mode: ${feature.mode})',
+        ),
+      ],
+    );
+  }
+}
+
+class OrePileFeatureWidget extends StatelessWidget {
+  const OrePileFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+    required this.system,
+  });
+  final OrePileFeature feature;
+  final DataStructure data;
+  final StarIdentifier system;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Mass of pile: ${feature.getMass(data.getTime(system, DateTime.timestamp()))} kg (increasing by ${feature.massFlowRate} kg/ms)',
+        ),
+        Text(
+          'Capacity: ${feature.capacity} kg',
+        ),
+        Text(
+          'Capacity: ${feature.capacity} kg',
+        ),
+        Text(
+          'Known materials: ${feature.materials.map((e) => 'M${e.toRadixString(16).padLeft(8, '0')}').join(', ')}',
+        ),
+      ],
+    );
+  }
+}
+
+class RegionFeatureWidget extends StatelessWidget {
+  const RegionFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+  final RegionFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'This region ${feature.canBeMined ? 'can still be mined' : 'can no longer be mined'}.',
+        ),
       ],
     );
   }
@@ -728,7 +827,8 @@ class AssetWidget extends StatelessWidget {
                         Text(asset.description),
                         Text(
                             'Owner: ${asset.owner == 0 ? 'nobody' : asset.owner == data.dynastyID ? 'you' : asset.owner}'),
-                        SelectableText('Mass: ${asset.mass} kilograms'),
+                        SelectableText(
+                            'Mass: ${asset.getMass(data.getTime(this.asset.system, DateTime.timestamp()))} kilograms (increasing by ${asset.massFlowRate} kilograms per millisecond)'),
                         SelectableText('Diameter: ${asset.size} meters'),
                       ],
                     ),
@@ -771,7 +871,7 @@ class AssetWidget extends StatelessWidget {
           ),
           ...asset.features.map(
             (e) => Indent(
-              child: renderFeature(e, data, collapseOrbits),
+              child: renderFeature(e, data, this.asset.system, collapseOrbits),
             ),
           )
         ],

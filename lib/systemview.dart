@@ -119,7 +119,7 @@ class OrbitAssetInformation extends AssetInformation {
           child.semiMajorAxis,
           child.eccentricity,
           child.clockwise,
-          data.assets[parent.getAsset(data)]!.mass,
+          data.assets[parent.getAsset(data)]!.getMass(systemTime),
           child.omega,
         ) +
         parent.calculatePositionAtTime(systemTime, data);
@@ -508,7 +508,7 @@ class SystemRenderer extends CustomPainter {
                   orbitChild.semiMajorAxis,
                   orbitChild.eccentricity,
                   orbitChild.clockwise,
-                  primaryChild.mass,
+                  primaryChild.getMass(systemTime),
                   orbitChild.omega)) /
               rootAsset.size +
           primaryChildPosition;

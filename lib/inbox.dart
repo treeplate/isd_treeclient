@@ -271,13 +271,13 @@ class InboxMessageDialog extends StatelessWidget {
   }
 }
 
-List<AssetID> findMessages(AssetID root, DataStructure data) {
-  List<AssetID> result = [];
+Set<AssetID> findMessages(AssetID root, DataStructure data) {
+  Set<AssetID> result = {};
   _findMessages(root, data, result);
   return result;
 }
 
-void _findMessages(AssetID root, DataStructure data, List<AssetID> result) {
+void _findMessages(AssetID root, DataStructure data, Set<AssetID> result) {
   Asset rootAsset = data.assets[root]!;
   for (Feature feature in rootAsset.features) {
     switch (feature) {
@@ -293,8 +293,8 @@ void _findMessages(AssetID root, DataStructure data, List<AssetID> result) {
         for (OrbitChild child in orbitingChildren) {
           _findMessages(child.child, data, result);
         }
-      case SurfaceFeature(regions: List<AssetID> regions):
-        for (AssetID region in regions) {
+      case SurfaceFeature(regions: Map<(double, double), AssetID> regions):
+        for (AssetID region in regions.values) {
           _findMessages(region, data, result);
         }
       case GridFeature(cells: List<AssetID?> cells):
@@ -321,6 +321,9 @@ void _findMessages(AssetID root, DataStructure data, List<AssetID> result) {
       case RubblePileFeature():
       case KnowledgeFeature():
       case ResearchFeature():
+      case MiningFeature():
+      case OrePileFeature():
+      case RegionFeature():
         break;
     }
   }
