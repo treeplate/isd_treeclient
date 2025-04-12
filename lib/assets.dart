@@ -30,11 +30,11 @@ sealed class Feature {
 class Asset {
   final int? owner;
   final List<Feature> features;
-  final double _mass; // in kg
+  final double mass0; // in kg
   final double massFlowRate; // in kg/ms
   final Uint64 time0;
   double getMass(Uint64 time) {
-    return _mass + massFlowRate * ((time - time0).toDouble());
+    return mass0 + massFlowRate * ((time - time0).toDouble());
   }
 
   final double size; // in meters
@@ -47,7 +47,7 @@ class Asset {
 
   Asset(
     this.features,
-    this._mass,
+    this.mass0,
     this.massFlowRate,
     this.owner,
     this.size,
@@ -277,18 +277,18 @@ class MiningFeature extends Feature {
 }
 
 class OrePileFeature extends Feature {
-  final double _mass; // kg
+  final double mass0; // kg
   final double massFlowRate; // kg/ms
   final Uint64 time0;
   double getMass(Uint64 time) {
-    return _mass + massFlowRate * ((time - time0).toDouble());
+    return mass0 + massFlowRate * ((time - time0).toDouble());
   }
 
   final double capacity; // kg
   final List<MaterialID> materials;
 
   OrePileFeature(
-    this._mass,
+    this.mass0,
     this.massFlowRate,
     this.capacity,
     this.materials,

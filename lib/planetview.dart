@@ -263,6 +263,7 @@ class GridWidget extends StatelessWidget {
               catalog.add(AssetClass(id, icon, name, description));
               i += 4;
             }
+            catalog.sort((a,b) => a.id.compareTo(b.id));
             if (context.mounted) {
               showDialog(
                 context: context,

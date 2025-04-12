@@ -1,13 +1,10 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:isd_treeclient/calendar.dart';
 import 'assets.dart';
-import 'core.dart';
+import 'calendar.dart';
 import 'data-structure.dart';
 import 'network_handler.dart';
-
-const DHMSCalendarSystem calendar = DHMSCalendarSystem(zero64, 60, 60, 24);
 
 class Inbox extends StatefulWidget {
   const Inbox({super.key, required this.data, required this.servers});

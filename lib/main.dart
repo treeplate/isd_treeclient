@@ -312,8 +312,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
               feature.removeReferences(asset);
             }
           }
-          print(
-              'removing ${this.data.assets[asset]!.name ?? this.data.assets[asset]!.className}');
           this.data.assets.remove(asset);
         }
       } else {

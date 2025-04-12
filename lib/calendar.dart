@@ -67,6 +67,8 @@ class DHMSCalendarSystem extends CalendarSystem {
   }
 }
 
+const DHMSCalendarSystem calendar = DHMSCalendarSystem(zero64, 60, 60, 24);
+
 class YearDHMSCalendarSystem extends DHMSCalendarSystem {
   final int daysPerYear;
   Uint64 getYearNumber(Uint64 msSinceSystemStart) =>

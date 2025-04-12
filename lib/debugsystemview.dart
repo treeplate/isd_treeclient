@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide Material;
 import 'package:isd_treeclient/ui-core.dart';
+import 'calendar.dart';
 import 'data-structure.dart';
 import 'assets.dart';
 import 'core.dart';
@@ -710,10 +711,7 @@ class OrePileFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Mass of pile: ${feature.getMass(data.getTime(system, DateTime.timestamp()))} kg (increasing by ${feature.massFlowRate} kg/ms)',
-        ),
-        Text(
-          'Capacity: ${feature.capacity} kg',
+          'Mass of pile last update (${calendar.dateName(feature.time0)} ${calendar.timeName(feature.time0)}): ${feature.mass0} kg (increasing by ${feature.massFlowRate} kg/ms)',
         ),
         Text(
           'Capacity: ${feature.capacity} kg',
@@ -828,7 +826,7 @@ class AssetWidget extends StatelessWidget {
                         Text(
                             'Owner: ${asset.owner == 0 ? 'nobody' : asset.owner == data.dynastyID ? 'you' : asset.owner}'),
                         SelectableText(
-                            'Mass: ${asset.getMass(data.getTime(this.asset.system, DateTime.timestamp()))} kilograms (increasing by ${asset.massFlowRate} kilograms per millisecond)'),
+                            'Mass last update (${calendar.dateName(asset.time0)} ${calendar.timeName(asset.time0)}): ${asset.mass0} kilograms (increasing by ${asset.massFlowRate} kilograms per millisecond)'),
                         SelectableText('Diameter: ${asset.size} meters'),
                       ],
                     ),
