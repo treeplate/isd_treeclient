@@ -7,6 +7,9 @@ import 'data-structure.dart';
 import 'assets.dart';
 import 'core.dart';
 import 'dart:ui' as ui;
+import 'platform_specific_stub.dart'
+    if (dart.library.io) 'platform_specific_io.dart'
+    if (dart.library.js_interop) 'platform_specific_web.dart';
 
 class SystemSelector extends StatefulWidget {
   const SystemSelector({super.key, required this.data});
@@ -25,6 +28,7 @@ class _SystemSelectorState extends State<SystemSelector> {
     }
     super.initState();
   }
+
   @override
   void didUpdateWidget(SystemSelector oldWidget) {
     if (widget.data.rootAssets.keys.length == 1) {
@@ -143,6 +147,7 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
   double assetScale = 1;
   double maxAssetSize = 1;
   Map<String, ui.Image> icons = {};
+  Map<String, ui.Image> networkIcons = {};
 
   @override
   void didUpdateWidget(oldWidget) {
@@ -151,16 +156,21 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
       if (widget.data.assets[asset.getAsset(widget.data)]!.features
           .any((e) => e is PlotControlFeature && e.isColonyShip)) {
         screenFocus = asset;
-        systemZoomController.animateTo(1e8, systemZoomController.realScreenCenter);
+        systemZoomController.animateTo(
+            1e8, systemZoomController.realScreenCenter);
       }
     }
+  }
+
+  bool? useNetworkImages = null;
+  void asyncTick() async {
+    useNetworkImages = await getCookie(useNetworkImagesCookieName) == 'true';
   }
 
   @override
   void initState() {
     super.initState();
     didUpdateWidget(widget);
-
     tick(Duration.zero);
     ticker = createTicker(tick)..start();
   }
@@ -181,13 +191,39 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
   }
 
   void tick(Duration duration) {
+    asyncTick();
     for (AssetInformation assetInfo in flattenAssetTree()) {
       Asset asset = widget.data.assets[assetInfo.getAsset(widget.data)]!;
-      if (!icons.containsKey(asset.icon)) {
-        AssetImage('icons/${asset.icon}.png')
-            .resolve(ImageConfiguration())
-            .addListener(ImageStreamListener(
-                (info, sync) => icons[asset.icon] = info.image));
+      if (useNetworkImages ?? false
+          ? !networkIcons.containsKey(asset.icon)
+          : !icons.containsKey(asset.icon)) {
+        final ImageProvider icon;
+        if ((useNetworkImages ?? false) &&
+            !failedNetworkIcons.contains(asset.icon)) {
+          icon = NetworkImage(
+              'https://interstellar-dynasties.space/icons/${asset.icon}.png');
+        } else {
+          icon = AssetImage('icons/${asset.icon}.png');
+        }
+        bool wasFromNetwork = (useNetworkImages ?? false) &&
+            !failedNetworkIcons.contains(asset.icon);
+        icon.resolve(ImageConfiguration()).addListener( // xxx
+              ImageStreamListener(
+                (info, sync) {
+                  (useNetworkImages ?? false
+                      ? networkIcons
+                      : icons)[asset.icon] = info.image;
+                },
+                onError: (exception, stackTrace) {
+                  print(
+                    'Failure when fetching ${asset.icon} from server: $exception',
+                  );
+                  if (wasFromNetwork) {
+                    failedNetworkIcons.add(asset.icon);
+                  }
+                },
+              ),
+            );
       }
     }
     setState(() {
@@ -328,7 +364,7 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
                       widget.system,
                       systemTime,
                       systemZoomController,
-                      icons,
+                      useNetworkImages ?? false ? networkIcons : icons,
                       assetScale,
                       maxAssetSize,
                     ),
@@ -483,7 +519,7 @@ class SystemRenderer extends CustomPainter {
               : getColorForDynastyID(asset.owner!));
     final ui.Image? icon = icons[asset.icon];
     if (icon != null) {
-      canvas.drawImageNine(icon, rect, rect, Paint());
+      paintImage(canvas: canvas, rect: rect, image: icon, fit: BoxFit.fill, filterQuality: FilterQuality.none);
     }
   }
 

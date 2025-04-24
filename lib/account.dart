@@ -356,6 +356,7 @@ class AccountWidget extends StatelessWidget {
                 },
                 child: Text('Logout'),
               ),
+              Row(mainAxisSize: MainAxisSize.min, children: [Text('Get icons from network'), CookieCheckbox(cookie: 'networkImages')],)
             ],
           );
         });

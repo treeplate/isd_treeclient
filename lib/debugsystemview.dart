@@ -48,7 +48,8 @@ class _SystemSelectorState extends State<SystemSelector> {
   }
 }
 
-Widget renderFeature(Feature feature, DataStructure data, StarIdentifier system, bool collapseOrbits) {
+Widget renderFeature(Feature feature, DataStructure data, StarIdentifier system,
+    bool collapseOrbits) {
   switch (feature) {
     case OrbitFeature():
       return OrbitFeatureWidget(
@@ -432,9 +433,13 @@ class KnowledgeFeatureWidget extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                    color: Colors.grey,
-                    child: ISDIcon(
-                        width: 32, height: 32, icon: assetClass.value.icon)),
+                  color: Colors.grey,
+                  child: ISDIcon(
+                    width: 32,
+                    height: 32,
+                    icon: assetClass.value.icon,
+                  ),
+                ),
                 Text('${assetClass.value.name}'),
               ],
             ),
@@ -450,9 +455,13 @@ class KnowledgeFeatureWidget extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                    color: Colors.grey,
-                    child: ISDIcon(
-                        width: 32, height: 32, icon: material.value.icon)),
+                  color: Colors.grey,
+                  child: ISDIcon(
+                    width: 32,
+                    height: 32,
+                    icon: material.value.icon,
+                  ),
+                ),
                 Text('${material.value.name}'),
               ],
             ),

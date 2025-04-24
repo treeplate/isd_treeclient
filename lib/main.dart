@@ -118,7 +118,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
   NetworkConnection? dynastyServer;
   int expectedSystemServerCount = 0;
   int currentSystemServerConnectedCount = 0;
-  int currentSystemServerLoggedInCount = 0;
   LoginState loginState = LoginState.connectingToLoginServer;
   final Map<String, NetworkConnection> systemServers = {}; // URI -> connection
   final Map<StarIdentifier, NetworkConnection> systemServersBySystemID = {};
@@ -346,9 +345,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           setState(() {
             loginState = LoginState.connectingToSystemServers;
             currentSystemServerConnectedCount--;
-            if (systemServersLoggedIn.contains(server)) {
-              currentSystemServerLoggedInCount--;
-            }
             systemServersLoggedIn.remove(server);
           });
         },
@@ -373,6 +369,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     }
     if (data.token == null) {
       loginState = LoginState.notLoggedIn;
+      currentSystemServerConnectedCount--;
+      systemServer.close();
       return;
     }
     List<String> message = await systemServer.send(['login', data.token!]);
@@ -394,10 +392,9 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         loginState = LoginState.systemServerLoginError;
       }
     } else {
-      currentSystemServerLoggedInCount++;
       systemServersLoggedIn.add(serverName);
-      assert(currentSystemServerLoggedInCount <= expectedSystemServerCount);
-      if (currentSystemServerLoggedInCount == expectedSystemServerCount) {
+      assert(systemServersLoggedIn.length <= expectedSystemServerCount);
+      if (systemServersLoggedIn.length == expectedSystemServerCount) {
         setState(() {
           loginState = LoginState.ready;
         });
@@ -407,8 +404,9 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
       int version = int.parse(message[1]);
       if (version != kClientVersion) {
         openErrorDialog(
-            'Warning: server version $version does not match client version $kClientVersion',
-            context);
+          'Warning: server version $version does not match client version $kClientVersion',
+          context,
+        );
       }
     }
   }
@@ -474,7 +472,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     systemServersBySystemID.clear();
     assert(systemServerURIs.length == systemServerCount);
     expectedSystemServerCount = systemServerCount;
-    currentSystemServerLoggedInCount = 0;
     currentSystemServerConnectedCount = 0;
     setState(() {
       loginState = LoginState.connectingToSystemServers;

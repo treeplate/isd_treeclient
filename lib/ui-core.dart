@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import 'core.dart';
+import 'platform_specific_stub.dart'
+    if (dart.library.io) 'platform_specific_io.dart'
+    if (dart.library.js_interop) 'platform_specific_web.dart';
 
 void openErrorDialog(String message, BuildContext context) {
   showDialog(
@@ -253,7 +256,7 @@ class _ZoomableCustomPaintState extends State<ZoomableCustomPaint> {
   }
 }
 
-class ISDIcon extends StatelessWidget {
+class ISDIcon extends StatefulWidget {
   const ISDIcon({
     super.key,
     required this.icon,
@@ -266,14 +269,57 @@ class ISDIcon extends StatelessWidget {
   final double height;
 
   @override
+  State<ISDIcon> createState() => _ISDIconState();
+}
+
+const String useNetworkImagesCookieName = 'networkImages';
+final Set<String> failedNetworkIcons = {};
+
+class _ISDIconState extends State<ISDIcon> {
+  bool? useNetworkImages = null;
+
+  @override
+  void initState() {
+    reload();
+    super.initState();
+  }
+
+  void reload() async {
+    useNetworkImages = await getCookie(useNetworkImagesCookieName) == 'true';
+    if (mounted) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      'icons/$icon.png',
-      width: width,
-      height: height,
-      fit: BoxFit.fill,
-      filterQuality: FilterQuality.none,
-    );
+    reload();
+    return (useNetworkImages ?? false) &&
+            !failedNetworkIcons.contains(widget.icon)
+        ? Image.network(
+            'https://interstellar-dynasties.space/icons/${widget.icon}.png',
+            width: widget.width,
+            height: widget.height,
+            fit: BoxFit.fill,
+            errorBuilder: (context, error, stackTrace) {
+              print(
+                'Failure when fetching ${widget.icon} from server: $error',
+              );
+              failedNetworkIcons.add(widget.icon);
+              return Image.asset(
+                'icons/${widget.icon}.png',
+                width: widget.width,
+                height: widget.height,
+                fit: BoxFit.fill,
+                filterQuality: FilterQuality.none,
+              );
+            },
+          )
+        : Image.asset(
+            'icons/${widget.icon}.png',
+            width: widget.width,
+            height: widget.height,
+            fit: BoxFit.fill,
+            filterQuality: FilterQuality.none,
+          );
   }
 }
 
@@ -385,5 +431,42 @@ class _ContinousBuilderState extends State<ContinousBuilder>
   @override
   Widget build(BuildContext context) {
     return widget.builder(context);
+  }
+}
+
+class CookieCheckbox extends StatefulWidget {
+  const CookieCheckbox({super.key, required this.cookie});
+
+  final String cookie;
+
+  @override
+  State<CookieCheckbox> createState() => _CookieCheckboxState();
+}
+
+class _CookieCheckboxState extends State<CookieCheckbox> {
+  bool? cookie = false;
+
+  @override
+  void initState() {
+    reload();
+
+    super.initState();
+  }
+
+  void reload() async {
+    cookie = await getCookie(widget.cookie) == 'true';
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Checkbox(
+        value: cookie,
+        onChanged: (value) {
+          setState(() {
+            setCookie(widget.cookie, value.toString());
+            cookie = value;
+          });
+        });
   }
 }

@@ -43,30 +43,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - icons/church.png
-    - icons/city.png
-    - icons/colony-ship.png
-    - icons/crater.png
-    - icons/message.png
-    - icons/mining-hole.png
-    - icons/mining-big-hole.png
-    - icons/mining-big-pile.png
-    - icons/orbit.png
-    - icons/outer-space.png
-    - icons/placeholder.png
-    - icons/planet.png
-    - icons/region.png
-    - icons/rock-pile.png
-    - icons/star2.png
-    - icons/star3.png
-    - icons/star4.png
-    - icons/star5.png
-    - icons/star6.png
-    - icons/star7.png
-    - icons/star8.png
-    - icons/star9.png
-    - icons/star10.png
-    - icons/unknown.png
+    - icons/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.
