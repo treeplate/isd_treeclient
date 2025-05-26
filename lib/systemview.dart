@@ -190,6 +190,8 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
         Offset(.5, .5);
   }
 
+  final List<String> pendingNetworkImages = [];
+
   void tick(Duration duration) {
     asyncTick();
     for (AssetInformation assetInfo in flattenAssetTree()) {
@@ -199,7 +201,8 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
           : !icons.containsKey(asset.icon)) {
         final ImageProvider icon;
         if ((useNetworkImages ?? false) &&
-            !failedNetworkIcons.contains(asset.icon)) {
+            !failedNetworkIcons.contains(asset.icon) && !pendingNetworkImages.contains(asset.icon)) {
+              pendingNetworkImages.add(asset.icon);
           icon = NetworkImage(
               'https://interstellar-dynasties.space/icons/${asset.icon}.png');
         } else {
