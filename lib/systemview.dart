@@ -207,7 +207,7 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
         }
         bool wasFromNetwork = (useNetworkImages ?? false) &&
             !failedNetworkIcons.contains(asset.icon);
-        icon.resolve(ImageConfiguration()).addListener( // xxx
+        icon.resolve(ImageConfiguration()).addListener(
               ImageStreamListener(
                 (info, sync) {
                   (useNetworkImages ?? false
@@ -261,6 +261,14 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
           normalizedPosition.dy > assetPos.dy - assetRadius &&
           normalizedPosition.dy < assetPos.dy + assetRadius) {
         screenFocus = asset;
+        systemZoomController.animateTo(
+          max(
+              1 / maxAssetSize,
+              widget.data.assets[widget.data.rootAssets[widget.system]!]!.size /
+                  widget.data.assets[asset.getAsset(widget.data)]!.size /
+                  assetScale),
+          calculateOrbitForScreenFocus(),
+        );
       }
     }
   }
@@ -350,7 +358,7 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
                           ),
                           Text('1/10^10'),
                         ],
-                      )
+                      ),
                     ],
                   ),
                 ),
@@ -519,7 +527,13 @@ class SystemRenderer extends CustomPainter {
               : getColorForDynastyID(asset.owner!));
     final ui.Image? icon = icons[asset.icon];
     if (icon != null) {
-      paintImage(canvas: canvas, rect: rect, image: icon, fit: BoxFit.fill, filterQuality: FilterQuality.none);
+      paintImage(
+        canvas: canvas,
+        rect: rect,
+        image: icon,
+        fit: BoxFit.fill,
+        filterQuality: FilterQuality.none,
+      );
     }
   }
 
