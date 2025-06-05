@@ -440,8 +440,8 @@ class AssetWidget extends StatelessWidget {
                   icon: AssetWidget(
                     asset: child,
                     data: data,
-                    width: width / 2,
-                    height: height / 2,
+                    width: width * data.assets[child]!.size / asset.size,
+                    height: height * data.assets[child]!.size / asset.size,
                     server: server,
                   ),
                 ),
