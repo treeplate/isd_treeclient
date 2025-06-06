@@ -201,8 +201,9 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
           : !icons.containsKey(asset.icon)) {
         final ImageProvider icon;
         if ((useNetworkImages ?? false) &&
-            !failedNetworkIcons.contains(asset.icon) && !pendingNetworkImages.contains(asset.icon)) {
-              pendingNetworkImages.add(asset.icon);
+            !failedNetworkIcons.contains(asset.icon) &&
+            !pendingNetworkImages.contains(asset.icon)) {
+          pendingNetworkImages.add(asset.icon);
           icon = NetworkImage(
               'https://interstellar-dynasties.space/icons/${asset.icon}.png');
         } else {
@@ -218,8 +219,9 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
                       : icons)[asset.icon] = info.image;
                 },
                 onError: (exception, stackTrace) {
-                  print(
+                  openErrorDialog(
                     'Failure when fetching ${asset.icon} from server: $exception',
+                    context,
                   );
                   if (wasFromNetwork) {
                     failedNetworkIcons.add(asset.icon);
