@@ -241,6 +241,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         id = reader.readUint32();
         assert(id != 0);
         AssetID rootAssetID = AssetID(systemID, id);
+        if (!mounted) break;
         setState(() {
           this.data.setRootAsset(systemID, rootAssetID);
         });

@@ -236,7 +236,9 @@ class DataStructure with ChangeNotifier {
         case MiningFeature():
         case OrePileFeature():
         case RegionFeature():
-          break;
+        case RefiningFeature():
+        case MaterialPileFeature():
+        case MaterialStackFeature():
       }
     }
   }

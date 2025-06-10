@@ -321,6 +321,9 @@ void _findMessages(AssetID root, DataStructure data, Set<AssetID> result) {
       case MiningFeature():
       case OrePileFeature():
       case RegionFeature():
+      case RefiningFeature():
+      case MaterialPileFeature():
+      case MaterialStackFeature():
         break;
     }
   }

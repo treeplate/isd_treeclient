@@ -147,10 +147,24 @@ Widget renderFeature(Feature feature, DataStructure data, StarIdentifier system,
       return OrePileFeatureWidget(
         feature: feature,
         data: data,
-        system: system,
       );
     case RegionFeature():
       return RegionFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case RefiningFeature():
+      return RefiningFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case MaterialPileFeature():
+      return MaterialPileFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case MaterialStackFeature():
+      return MaterialStackFeatureWidget(
         feature: feature,
         data: data,
       );
@@ -696,7 +710,7 @@ class MiningFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Mining at a rate of ${feature.rate} kg/ms (mode: ${feature.mode})',
+          'Mining at a rate of ${feature.currentRate} kg/ms (out of ${feature.maxRate} max) (enabled: ${feature.enabled}, active: ${feature.active}, rateLimitedBySource: ${feature.rateLimitedBySource}, rateLimitedByTarget: ${feature.rateLimitedByTarget})',
         ),
       ],
     );
@@ -708,11 +722,9 @@ class OrePileFeatureWidget extends StatelessWidget {
     super.key,
     required this.feature,
     required this.data,
-    required this.system,
   });
   final OrePileFeature feature;
   final DataStructure data;
-  final StarIdentifier system;
 
   @override
   Widget build(BuildContext context) {
@@ -749,6 +761,84 @@ class RegionFeatureWidget extends StatelessWidget {
       children: [
         Text(
           'This region ${feature.canBeMined ? 'can still be mined' : 'can no longer be mined'}.',
+        ),
+      ],
+    );
+  }
+}
+
+class RefiningFeatureWidget extends StatelessWidget {
+  const RefiningFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+  final RefiningFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Refining ${feature.ore == null ? 'unknown material' : 'M${feature.ore!.toRadixString(16).padLeft(8, '0')}'} at a rate of ${feature.currentRate} kg/ms (out of ${feature.maxRate} max) (enabled: ${feature.enabled}, active: ${feature.active}, rateLimitedBySource: ${feature.rateLimitedBySource}, rateLimitedByTarget: ${feature.rateLimitedByTarget})',
+        ),
+      ],
+    );
+  }
+}
+
+class MaterialPileFeatureWidget extends StatelessWidget {
+  const MaterialPileFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+  final MaterialPileFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Mass of pile last update (${calendar.dateName(feature.time0)} ${calendar.timeName(feature.time0)}): ${feature.mass0} kg (increasing by ${feature.massFlowRate} kg/ms)',
+        ),
+        Text(
+          'Capacity: ${feature.capacity} kg',
+        ),
+        Text(
+          'Material: ${feature.material == null ? 'unknown material' : 'M${feature.material!.toRadixString(16).padLeft(8, '0')}'} (${feature.materialName})',
+        ),
+      ],
+    );
+  }
+}
+
+class MaterialStackFeatureWidget extends StatelessWidget {
+  const MaterialStackFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+  final MaterialStackFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quantity of stack last update (${calendar.dateName(feature.time0)} ${calendar.timeName(feature.time0)}): ${feature.quantity0} kg (increasing by ${feature.quantityFlowRate} per ms)',
+        ),
+        Text(
+          'Capacity: ${feature.capacity} kg',
+        ),
+        Text(
+          'Material: ${feature.material == null ? 'unknown material' : 'M${feature.material!.toRadixString(16).padLeft(8, '0')}'} (${feature.materialName})',
         ),
       ],
     );

@@ -96,8 +96,7 @@ Feature parseFeature(int featureCode, BinaryReader reader,
         reader.readUint32(),
       );
     case 7:
-      return PlanetFeature(
-      );
+      return PlanetFeature();
     case 8:
       int isColonyShip = reader.readUint32();
       assert(isColonyShip < 2);
@@ -112,11 +111,11 @@ Feature parseFeature(int featureCode, BinaryReader reader,
         double x = reader.readFloat64();
         double y = reader.readFloat64();
         AssetID region = AssetID(systemID, id);
-        regions[(x,y)] = region;
+        regions[(x, y)] = region;
         notReferenced.remove(region);
       }
       return SurfaceFeature(regions);
-    case 10:
+    case 0xa:
       double cellSize = reader.readFloat64();
       int width = reader.readUint32();
       int height = reader.readUint32();
@@ -130,11 +129,11 @@ Feature parseFeature(int featureCode, BinaryReader reader,
         notReferenced.remove(cells[x + y * width]);
       }
       return GridFeature(cells, width, height, cellSize);
-    case 11:
+    case 0xb:
       Uint64 population = reader.readUint64();
       double averageHappiness = reader.readFloat64();
       return PopulationFeature(population, averageHappiness);
-    case 12:
+    case 0xc:
       List<AssetID> messages = [];
       while (true) {
         int id = reader.readUint32();
@@ -144,7 +143,7 @@ Feature parseFeature(int featureCode, BinaryReader reader,
         messages.add(message);
       }
       return MessageBoardFeature(messages);
-    case 13:
+    case 0xd:
       StarIdentifier source = StarIdentifier.parse(reader.readUint32());
       Uint64 timestamp = reader.readUint64();
       int flags = reader.readUint8();
@@ -168,15 +167,15 @@ Feature parseFeature(int featureCode, BinaryReader reader,
         from.substring('From: '.length),
         text,
       );
-    case 14:
+    case 0xe:
       return RubblePileFeature();
-    case 15:
+    case 0xf:
       int id = reader.readUint32();
       assert(id != 0);
       AssetID child = AssetID(systemID, id);
       notReferenced.remove(child);
       return ProxyFeature(child);
-    case 16:
+    case 0x10:
       int type = reader.readUint8();
       Map<AssetClassID, AssetClass> classes = {};
       Map<MaterialID, Material> materials = {};
@@ -210,31 +209,91 @@ Feature parseFeature(int featureCode, BinaryReader reader,
         type = reader.readUint8();
       }
       return KnowledgeFeature(classes, materials);
-    case 17:
+    case 0x11:
       String topic = reader.readString();
       return ResearchFeature(topic);
-    case 18:
-      double rate = reader.readFloat64();
-      MiningFeatureMode mode = MiningFeatureMode.values[(reader.readUint8()+1)%256];
-      return MiningFeature(rate, mode);
-    case 19:
+    case 0x12:
+      double maxRate = reader.readFloat64();
+      int flags = reader.readUint8();
+      double currentRate = reader.readFloat64();
+      return MiningFeature(
+        maxRate,
+        flags & 0x1 == 1,
+        flags & 0x2 == 2,
+        flags & 0x4 == 4,
+        flags & 0x8 == 8,
+        currentRate,
+      );
+    case 0x13:
       double pileMass = reader.readFloat64();
       double pileMassFlowRate = reader.readFloat64();
       double capacity = reader.readFloat64();
-      List<MaterialID> materials = [];
-      while(true) {
+      Set<MaterialID> materials = {};
+      while (true) {
         MaterialID material = reader.readInt32();
         if (material == 0) break;
         materials.add(material);
       }
-      return OrePileFeature(pileMass, pileMassFlowRate, capacity, materials, data.getTime(systemID, DateTime.timestamp()));
-    case 20:
+      return OrePileFeature(
+        pileMass,
+        pileMassFlowRate,
+        capacity,
+        materials,
+        data.getTime(systemID, DateTime.timestamp()),
+      );
+    case 0x14:
       int flags = reader.readUint8();
-      if (flags>1) throw UnimplementedError('unsupported fcRegion flags: $flags');
-      return RegionFeature(flags==1);
+      if (flags > 1)
+        throw UnimplementedError('unsupported fcRegion flags: $flags');
+      return RegionFeature(flags == 1);
+    case 0x15:
+      MaterialID? ore = reader.readInt32();
+      if (ore == 0) ore = null;
+      double maxRate = reader.readFloat64();
+      int flags = reader.readUint8();
+      double currentRate = reader.readFloat64();
+      return RefiningFeature(
+        ore,
+        maxRate,
+        flags & 0x1 == 1,
+        flags & 0x2 == 2,
+        flags & 0x4 == 4,
+        flags & 0x8 == 8,
+        currentRate,
+      );
+    case 0x16:
+      double pileMass = reader.readFloat64();
+      double pileMassFlowRate = reader.readFloat64();
+      double capacity = reader.readFloat64();
+      String materialName = reader.readString();
+      MaterialID? material = reader.readInt32();
+      if (material == 0) material = null;
+      return MaterialPileFeature(
+        pileMass,
+        pileMassFlowRate,
+        capacity,
+        materialName,
+        material,
+        data.getTime(systemID, DateTime.timestamp()),
+      );
+    case 0x17:
+      Uint64 pileQuantity = reader.readUint64();
+      double pileQuantityFlowRate = reader.readFloat64();
+      Uint64 capacity = reader.readUint64();
+      String materialName = reader.readString();
+      MaterialID? material = reader.readInt32();
+      if (material == 0) material = null;
+      return MaterialStackFeature(
+        pileQuantity,
+        pileQuantityFlowRate,
+        capacity,
+        materialName,
+        material,
+        data.getTime(systemID, DateTime.timestamp()),
+      );
     default:
       throw UnimplementedError('Unknown featureID $featureCode');
   }
 }
 
-const kClientVersion = 20;
+const kClientVersion = 0x17;

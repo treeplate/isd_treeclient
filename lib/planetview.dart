@@ -263,7 +263,7 @@ class GridWidget extends StatelessWidget {
               catalog.add(AssetClass(id, icon, name, description));
               i += 4;
             }
-            catalog.sort((a,b) => a.id.compareTo(b.id));
+            catalog.sort((a, b) => a.id.compareTo(b.id));
             if (context.mounted) {
               showDialog(
                 context: context,
@@ -538,23 +538,29 @@ Widget describeFeature(
         mainAxisSize: MainAxisSize.min,
         children: [
           ...materials.map(
-            (e) => Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (e.componentName != null) Text('${e.componentName} - '),
-                Text(
-                    '${e.requiredQuantity ?? '???'} x ${e.materialDescription}'),
-                if (e.requiredQuantity != null)
-                  SizedBox(
-                      width: 250,
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 8.0),
-                        child: LinearProgressIndicator(
-                          value: e.quantity / e.requiredQuantity!,
-                        ),
-                      )),
-              ],
-            ),
+            (e) {
+              if (e.materialID != null) {
+                openErrorDialog(
+                    'unimplemented: known material ID for structure', context);
+              }
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (e.componentName != null) Text('${e.componentName} - '),
+                  Text(
+                      '${e.requiredQuantity ?? '???'} x ${e.materialDescription}'),
+                  if (e.requiredQuantity != null)
+                    SizedBox(
+                        width: 250,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 8.0),
+                          child: LinearProgressIndicator(
+                            value: e.quantity / e.requiredQuantity!,
+                          ),
+                        )),
+                ],
+              );
+            },
           ),
         ],
       );
@@ -661,180 +667,159 @@ Widget describeFeature(
           ),
         ],
       );
-    case MiningFeature(rate: double rate, mode: MiningFeatureMode mode):
-      switch (mode) {
-        case MiningFeatureMode.disabled:
-          return Column(
-            children: [
-              Text('Mines ${rate % .001 == 0 ? (rate * 1000).toInt() : rate * 1000} kilogram${rate==.001?'':'s'} per second (disabled)'),
-              SizedBox(width: 10),
-              OutlinedButton(
-                onPressed: () async {
-                  List<String> result = await server.send(
-                    [
-                      'play',
-                      system.value.toString(),
-                      asset.id.toString(),
-                      'enable',
-                    ],
-                  );
-                  if (result.first == 'T') {
-                    if (result.length != 2) {
-                      openErrorDialog(
-                          'unexpected response to enable: $result', context);
-                    } else {
-                      if (result.first != 'T') {
-                        openErrorDialog(
-                            'server thinks miner already enabled', context);
-                      }
-                    }
-                  } else {
-                    openErrorDialog('enable failed: $result', context);
-                  }
-                },
-                child: Text('Enable'),
-              ),
-            ],
-          );
-        case MiningFeatureMode.mining:
-          return Column(
-            children: [
-              Text('Mining ${rate % .001 == 0 ? (rate * 1000).toInt() : rate * 1000} kilogram${rate==.001?'':'s'} per second.'),
-              SizedBox(width: 10),
-              OutlinedButton(
-                onPressed: () async {
-                  List<String> result = await server.send(
-                    [
-                      'play',
-                      system.value.toString(),
-                      asset.id.toString(),
-                      'disable',
-                    ],
-                  );
-                  if (result.first == 'T') {
-                    if (result.length != 2) {
-                      openErrorDialog(
-                          'unexpected response to disable: $result', context);
-                    } else {
-                      if (result.first != 'T') {
-                        openErrorDialog(
-                            'server thinks miner already disabled', context);
-                      }
-                    }
-                  } else {
-                    openErrorDialog('disable failed: $result', context);
-                  }
-                },
-                child: Text('Disable'),
-              ),
-            ],
-          );
-        case MiningFeatureMode.pilesFull:
-          return Column(
-            children: [
-              Text('Mines ${rate % .001 == 0 ? (rate * 1000).toInt() : rate * 1000} kilogram${rate==.001?'':'s'} per second (out of storage space)'),
-              SizedBox(width: 10),
-              OutlinedButton(
-                onPressed: () async {
-                  List<String> result = await server.send(
-                    [
-                      'play',
-                      system.value.toString(),
-                      asset.id.toString(),
-                      'disable',
-                    ],
-                  );
-                  if (result.first == 'T') {
-                    if (result.length != 2) {
-                      openErrorDialog(
-                          'unexpected response to disable: $result', context);
-                    } else {
-                      if (result.first != 'T') {
-                        openErrorDialog(
-                            'server thinks miner already disabled', context);
-                      }
-                    }
-                  } else {
-                    openErrorDialog('disable failed: $result', context);
-                  }
-                },
-                child: Text('Disable'),
-              ),
-            ],
-          );
-        case MiningFeatureMode.minesEmpty:
-          return Column(
-            children: [
-              Text('Mines ${rate % .001 == 0 ? (rate * 1000).toInt() : rate * 1000} kilogram${rate==.001?'':'s'} per second (out of resources to mine)'),
-              SizedBox(width: 10),
-              OutlinedButton(
-                onPressed: () async {
-                  List<String> result = await server.send(
-                    [
-                      'play',
-                      system.value.toString(),
-                      asset.id.toString(),
-                      'disable',
-                    ],
-                  );
-                  if (result.first == 'T') {
-                    if (result.length != 2) {
-                      openErrorDialog(
-                          'unexpected response to disable: $result', context);
-                    } else {
-                      if (result.first != 'T') {
-                        openErrorDialog(
-                            'server thinks miner already disabled', context);
-                      }
-                    }
-                  } else {
-                    openErrorDialog('disable failed: $result', context);
-                  }
-                },
-                child: Text('Disable'),
-              ),
-            ],
-          );
-        case MiningFeatureMode.notAtRegion:
-          return Column(
-            children: [
-              Text('Mines ${rate % .001 == 0 ? (rate * 1000).toInt() : rate * 1000} kilogram${rate==.001?'':'s'} per second (not on planet)'),
-              SizedBox(width: 10),
-              OutlinedButton(
-                onPressed: () async {
-                  List<String> result = await server.send(
-                    [
-                      'play',
-                      system.value.toString(),
-                      asset.id.toString(),
-                      'disable',
-                    ],
-                  );
-                  if (result.first == 'T') {
-                    if (result.length != 2) {
-                      openErrorDialog(
-                          'unexpected response to disable: $result', context);
-                    } else {
-                      if (result.first != 'T') {
-                        openErrorDialog(
-                            'server thinks miner already disabled', context);
-                      }
-                    }
-                  } else {
-                    openErrorDialog('disable failed: $result', context);
-                  }
-                },
-                child: Text('Disable'),
-              ),
-            ],
-          );
-      }
-    case OrePileFeature(getMass: double Function(Uint64) getMass, materials: List<MaterialID> materials, capacity: double capacity):
-      if (materials.isNotEmpty) openErrorDialog('unimplemented: known materials', context);
-      return ContinousBuilder(
-        builder: (context) {
-          return Text('Contents: ${getMass(data.getTime(system, DateTime.now())).toInt()} kg of ore / $capacity kg possible');
+    case MiningFeature(
+        currentRate: double currentRate,
+        enabled: bool enabled,
+        active: bool active,
+        rateLimitedBySource: bool rateLimitedBySource,
+        rateLimitedByTarget: bool rateLimitedByTarget,
+        maxRate: double maxRate,
+      ):
+      String rateLimitString = 'max speed';
+      if (rateLimitedBySource) {
+        rateLimitString = 'rate limited by source';
+        if (rateLimitedByTarget) {
+          rateLimitString = 'rate limited by source and target';
         }
+      } else if (rateLimitedByTarget) {
+        rateLimitString = 'rate limited by target';
+      }
+      return Column(
+        children: [
+          Text(
+            'Mining ${currentRate % .001 == 0 ? (currentRate * 1000).toInt() : currentRate * 1000} kilogram${currentRate == .001 ? '' : 's'} per second (${enabled ? active ? rateLimitString : 'not in region' : 'disabled'}).',
+          ),
+          Text(
+              'Can mine ${maxRate % .001 == 0 ? (maxRate * 1000).toInt() : maxRate * 1000} kilogram${maxRate == .001 ? '' : 's'} per second.'),
+          SizedBox(width: 10),
+          OutlinedButton(
+            onPressed: () async {
+              List<String> result = await server.send(
+                [
+                  'play',
+                  system.value.toString(),
+                  asset.id.toString(),
+                  enabled ? 'disable' : 'enable',
+                ],
+              );
+              if (result.first == 'T') {
+                if (result.length != 2) {
+                  openErrorDialog(
+                      'unexpected response to enable/disable: $result',
+                      context);
+                } else {
+                  if (result.first != 'T') {
+                    openErrorDialog(
+                        'server thinks miner already enabled/disabled',
+                        context);
+                  }
+                }
+              } else {
+                openErrorDialog('enable/disable failed: $result', context);
+              }
+            },
+            child: Text(enabled ? 'Disable' : 'Enable'),
+          ),
+        ],
       );
+    case OrePileFeature(
+        getMass: double Function(Uint64) getMass,
+        materials: Set<MaterialID> materials,
+        capacity: double capacity
+      ):
+      if (materials.isNotEmpty)
+        openErrorDialog('unimplemented: known materials', context);
+      return ContinousBuilder(builder: (context) {
+        return Text(
+            'Contents: ${getMass(data.getTime(system, DateTime.now())).toInt()} kg of ore / $capacity kg possible');
+      });
+    case RefiningFeature(
+        ore: MaterialID? ore,
+        currentRate: double currentRate,
+        enabled: bool enabled,
+        active: bool active,
+        rateLimitedBySource: bool rateLimitedBySource,
+        rateLimitedByTarget: bool rateLimitedByTarget,
+        maxRate: double maxRate,
+      ):
+      if (ore != null) {
+        openErrorDialog(
+            'unimplemented: known material ID for refinery', context);
+      }
+      String rateLimitString = 'max speed';
+      if (rateLimitedBySource) {
+        rateLimitString = 'rate limited by source';
+        if (rateLimitedByTarget) {
+          rateLimitString = 'rate limited by source and target';
+        }
+      } else if (rateLimitedByTarget) {
+        rateLimitString = 'rate limited by target';
+      }
+      return Column(
+        children: [
+          Text(
+            'Refining ${currentRate % .001 == 0 ? (currentRate * 1000).toInt() : currentRate * 1000} kilogram${currentRate == .001 ? '' : 's'} per second (${enabled ? active ? rateLimitString : 'not in region' : 'disabled'}).',
+          ),
+          Text(
+              'Can refine ${maxRate % .001 == 0 ? (maxRate * 1000).toInt() : maxRate * 1000} kilogram${maxRate == .001 ? '' : 's'} per second.'),
+          SizedBox(width: 10),
+          OutlinedButton(
+            onPressed: () async {
+              List<String> result = await server.send(
+                [
+                  'play',
+                  system.value.toString(),
+                  asset.id.toString(),
+                  enabled ? 'disable' : 'enable',
+                ],
+              );
+              if (result.first == 'T') {
+                if (result.length != 2) {
+                  openErrorDialog(
+                      'unexpected response to enable/disable: $result',
+                      context);
+                } else {
+                  if (result.first != 'T') {
+                    openErrorDialog(
+                        'server thinks refiner already enabled/disabled',
+                        context);
+                  }
+                }
+              } else {
+                openErrorDialog('enable/disable failed: $result', context);
+              }
+            },
+            child: Text(enabled ? 'Disable' : 'Enable'),
+          ),
+        ],
+      );
+    case MaterialPileFeature(
+        getMass: double Function(Uint64) getMass,
+        materialName: String name,
+        material: MaterialID? material,
+        capacity: double capacity,
+      ):
+      if (material != null) {
+        openErrorDialog(
+            'unimplemented: known material ID for material pile', context);
+      }
+      return ContinousBuilder(builder: (context) {
+        return Text(
+            'Contents: ${getMass(data.getTime(system, DateTime.now())).toInt()} kg of $name / $capacity kg possible');
+      });
+    case MaterialStackFeature(
+        getQuantity: Uint64 Function(Uint64) getQuantity,
+        materialName: String name,
+        material: MaterialID? material,
+        capacity: Uint64 capacity,
+      ):
+      if (material != null) {
+        openErrorDialog(
+            'unimplemented: known material ID for material stack', context);
+      }
+      return ContinousBuilder(builder: (context) {
+        return Text(
+            'Contents: ${getQuantity(data.getTime(system, DateTime.now())).toInt()} ${name}s / $capacity ${name}s possible');
+      });
   }
 }

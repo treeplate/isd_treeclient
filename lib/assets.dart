@@ -267,13 +267,22 @@ sealed class ReferenceFeature extends Feature {
   Set<AssetID> get references;
 }
 
-enum MiningFeatureMode { disabled, mining, pilesFull, minesEmpty, notAtRegion }
-
 class MiningFeature extends Feature {
-  final double rate; // kg/ms
-  final MiningFeatureMode mode;
+  final double maxRate; // kg/ms
+  final bool enabled;
+  final bool active;
+  final bool rateLimitedBySource;
+  final bool rateLimitedByTarget;
+  final double currentRate; // kg/ms
 
-  MiningFeature(this.rate, this.mode);
+  MiningFeature(
+    this.maxRate,
+    this.enabled,
+    this.active,
+    this.rateLimitedBySource,
+    this.rateLimitedByTarget,
+    this.currentRate,
+  );
 }
 
 class OrePileFeature extends Feature {
@@ -285,7 +294,7 @@ class OrePileFeature extends Feature {
   }
 
   final double capacity; // kg
-  final List<MaterialID> materials;
+  final Set<MaterialID> materials;
 
   OrePileFeature(
     this.mass0,
@@ -300,6 +309,62 @@ class RegionFeature extends Feature {
   final bool canBeMined;
 
   RegionFeature(this.canBeMined);
+}
+
+class RefiningFeature extends Feature {
+  final MaterialID? ore;
+  final double maxRate; // kg/ms
+  final bool enabled;
+  final bool active;
+  final bool rateLimitedBySource;
+  final bool rateLimitedByTarget;
+  final double currentRate;
+
+  RefiningFeature(this.ore, this.maxRate, this.enabled, this.active, this.rateLimitedBySource, this.rateLimitedByTarget, this.currentRate);
+}
+
+class MaterialPileFeature extends Feature {
+  final double mass0; // kg
+  final double massFlowRate; // kg/ms
+  final Uint64 time0;
+  double getMass(Uint64 time) {
+    return mass0 + massFlowRate * ((time - time0).toDouble());
+  }
+
+  final double capacity; // kg
+  final String materialName;
+  final MaterialID? material;
+
+  MaterialPileFeature(
+    this.mass0,
+    this.massFlowRate,
+    this.capacity,
+    this.materialName,
+    this.material,
+    this.time0,
+  );
+}
+
+class MaterialStackFeature extends Feature {
+  final Uint64 quantity0;
+  final double quantityFlowRate; // per ms
+  final Uint64 time0;
+  Uint64 getQuantity(Uint64 time) {
+    return quantity0 + Uint64.fromDouble(quantityFlowRate * ((time - time0).toDouble()));
+  }
+
+  final Uint64 capacity;
+  final String materialName;
+  final MaterialID? material;
+
+  MaterialStackFeature(
+    this.quantity0,
+    this.quantityFlowRate,
+    this.capacity,
+    this.materialName,
+    this.material,
+    this.time0,
+  );
 }
 
 typedef AssetClassID = int; // 32-bit signed, but can't be 0
