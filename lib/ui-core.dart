@@ -23,7 +23,9 @@ void openErrorDialog(String message, BuildContext context) {
             ),
             OutlinedButton(
               onPressed: () {
-                Navigator.pop(context);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
               },
               child: Text('Ok'),
             )

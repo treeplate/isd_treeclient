@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Material;
 import 'package:isd_treeclient/core.dart';
 import 'ui-core.dart';
 import 'assets.dart';
@@ -330,64 +330,79 @@ class BuildDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(),
-              Text('Build at $gridX, $gridY'),
-              IconButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                icon: Icon(Icons.close),
-              )
-            ],
-          ),
-          ...catalog.map(
-            (e) => TextButton(
-              onPressed: () async {
-                List<String> response = await server.send([
-                  'play',
-                  region.system.value.toString(),
-                  region.id.toString(),
-                  'build',
-                  gridX.toString(),
-                  gridY.toString(),
-                  e.id.toString()
-                ]);
+      clipBehavior: Clip.antiAlias,
+      child: SizedBox(
+        width: 400,
+        height: 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(),
+                Text('Build at $gridX, $gridY'),
+                IconButton(
+                  onPressed: () {
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                }
+                  },
+                  icon: Icon(Icons.close),
+                )
+              ],
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: catalog.length,
+                itemBuilder: (context, int i) {
+                  AssetClass e = catalog[i];
+                  return TextButton(
+                    onPressed: () async {
+                      List<String> response = await server.send([
+                        'play',
+                        region.system.value.toString(),
+                        region.id.toString(),
+                        'build',
+                        gridX.toString(),
+                        gridY.toString(),
+                        e.id.toString()
+                      ]);
 
-                if (response[0] == 'T') {
-                  assert(response.length == 1);
-                  Navigator.pop(context);
-                } else {
-                  assert(response[0] == 'F');
-                  openErrorDialog(
-                      'tried to build, response: $response', context);
-                }
-              },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ISDIcon(
-                        height: 32,
-                        width: 32,
-                        icon: e.icon,
-                      ),
-                      Text(e.name),
-                    ],
-                  ),
-                  Text(e.description)
-                ],
+                      if (response[0] == 'T') {
+                        assert(response.length == 1);
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                }
+                      } else {
+                        assert(response[0] == 'F');
+                        openErrorDialog(
+                            'tried to build, response: $response', context);
+                      }
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ISDIcon(
+                              height: 32,
+                              width: 32,
+                              icon: e.icon,
+                            ),
+                            Text(e.name),
+                          ],
+                        ),
+                        Text(e.description)
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -480,6 +495,7 @@ class AssetDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Row(
+              // TODO: make it MainAxisSize.min but find a way to put the x in the corner
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(),
@@ -491,7 +507,9 @@ class AssetDialog extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: () {
-                    Navigator.pop(context);
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                }
                   },
                   icon: Icon(Icons.close),
                 )
@@ -539,16 +557,16 @@ Widget describeFeature(
         children: [
           ...materials.map(
             (e) {
-              if (e.materialID != null) {
-                openErrorDialog(
-                    'unimplemented: known material ID for structure', context);
-              }
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (e.componentName != null) Text('${e.componentName} - '),
-                  Text(
-                      '${e.requiredQuantity ?? '???'} x ${e.materialDescription}'),
+                  Text('${e.requiredQuantity ?? '???'} x '),
+                  e.materialID == null
+                      ? Text('${e.materialDescription}')
+                      : MaterialWidget(
+                          material: data.getMaterial(e.materialID!, system),
+                        ),
                   if (e.requiredQuantity != null)
                     SizedBox(
                         width: 250,
@@ -599,7 +617,7 @@ Widget describeFeature(
         width: 0,
       );
     case KnowledgeFeature():
-      throw StateError('knowledge outside messageboard');
+      return Placeholder();
     case ResearchFeature(topic: String topic):
       return Row(
         mainAxisSize: MainAxisSize.min,
@@ -648,7 +666,9 @@ Widget describeFeature(
                                 ],
                               );
                               if (result.length == 1 && result.single == 'T') {
-                                Navigator.pop(context);
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                }
                               } else {
                                 openErrorDialog(
                                   'set-topic response: $result',
@@ -727,11 +747,16 @@ Widget describeFeature(
         materials: Set<MaterialID> materials,
         capacity: double capacity
       ):
-      if (materials.isNotEmpty)
-        openErrorDialog('unimplemented: known materials', context);
       return ContinousBuilder(builder: (context) {
-        return Text(
-            'Contents: ${getMass(data.getTime(system, DateTime.now())).toInt()} kg of ore / $capacity kg possible');
+        return Column(
+          children: [
+            Text(
+                'Contents: ${getMass(data.getTime(system, DateTime.now())).toInt()} kg of ore / $capacity kg possible'),
+            if (materials.isNotEmpty) Text('You can see:'),
+            ...materials.map(
+                (e) => MaterialWidget(material: data.getMaterial(e, system))),
+          ],
+        );
       });
     case RefiningFeature(
         ore: MaterialID? ore,
@@ -742,10 +767,6 @@ Widget describeFeature(
         rateLimitedByTarget: bool rateLimitedByTarget,
         maxRate: double maxRate,
       ):
-      if (ore != null) {
-        openErrorDialog(
-            'unimplemented: known material ID for refinery', context);
-      }
       String rateLimitString = 'max speed';
       if (rateLimitedBySource) {
         rateLimitString = 'rate limited by source';
@@ -757,8 +778,16 @@ Widget describeFeature(
       }
       return Column(
         children: [
-          Text(
-            'Refining ${currentRate % .001 == 0 ? (currentRate * 1000).toInt() : currentRate * 1000} kilogram${currentRate == .001 ? '' : 's'} per second (${enabled ? active ? rateLimitString : 'not in region' : 'disabled'}).',
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Refining'),
+              if (ore != null)
+                MaterialWidget(material: data.getMaterial(ore, system)),
+              Text(
+                ' at a rate of ${currentRate % .001 == 0 ? (currentRate * 1000).toInt() : currentRate * 1000} kilogram${currentRate == .001 ? '' : 's'} per second (${enabled ? active ? rateLimitString : 'not in region' : 'disabled'}).',
+              ),
+            ],
           ),
           Text(
               'Can refine ${maxRate % .001 == 0 ? (maxRate * 1000).toInt() : maxRate * 1000} kilogram${maxRate == .001 ? '' : 's'} per second.'),
@@ -799,13 +828,18 @@ Widget describeFeature(
         material: MaterialID? material,
         capacity: double capacity,
       ):
-      if (material != null) {
-        openErrorDialog(
-            'unimplemented: known material ID for material pile', context);
-      }
       return ContinousBuilder(builder: (context) {
-        return Text(
-            'Contents: ${getMass(data.getTime(system, DateTime.now())).toInt()} kg of $name / $capacity kg possible');
+        return Row(
+          children: [
+            Text(
+                'Contents: ${getMass(data.getTime(system, DateTime.now())).toInt()} kg of '),
+            material == null
+                ? Text(name)
+                : MaterialWidget(material: data.getMaterial(material, system)),
+            Text(' / $capacity kg possible'),
+          ],
+          mainAxisSize: MainAxisSize.min,
+        );
       });
     case MaterialStackFeature(
         getQuantity: Uint64 Function(Uint64) getQuantity,
@@ -813,13 +847,63 @@ Widget describeFeature(
         material: MaterialID? material,
         capacity: Uint64 capacity,
       ):
-      if (material != null) {
-        openErrorDialog(
-            'unimplemented: known material ID for material stack', context);
-      }
       return ContinousBuilder(builder: (context) {
-        return Text(
-            'Contents: ${getQuantity(data.getTime(system, DateTime.now())).toInt()} ${name}s / $capacity ${name}s possible');
+        return Row(children: [
+          Text(
+              'Contents: ${getQuantity(data.getTime(system, DateTime.now())).toInt()} '),
+          material == null
+              ? Text(name)
+              : MaterialWidget(material: data.getMaterial(material, system)),
+          Text('s / $capacity possible'),
+        ]);
       });
+    case GridSensorFeature():
+      return Text('This is a grid sensor.');
+    case GridSensorStatusFeature():
+      continue nothing;
+  }
+}
+
+class MaterialWidget extends StatelessWidget {
+  const MaterialWidget({super.key, required this.material});
+  final Material material;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: () {
+        showDialog(
+          context: context,
+          builder: (context) {
+            return Dialog(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ISDIcon(icon: material.icon, width: 32, height: 32),
+                      Text(material.name, style: TextStyle(fontSize: 20))
+                    ],
+                  ),
+                  Text(material.description),
+                  Text(material.isFluid ? 'A fluid.' : 'A solid.'),
+                  if (material.isPressurized) Text('Pressurized.'),
+                  Text(
+                      'Density: ${material.massPerCubicMeter} kilograms per cubic meter.')
+                ],
+              ),
+            );
+          },
+        );
+      },
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ISDIcon(icon: material.icon, width: 32, height: 32),
+          Text(material.name)
+        ],
+      ),
+    );
   }
 }

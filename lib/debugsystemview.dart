@@ -168,6 +168,16 @@ Widget renderFeature(Feature feature, DataStructure data, StarIdentifier system,
         feature: feature,
         data: data,
       );
+    case GridSensorFeature():
+      return GridSensorFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case GridSensorStatusFeature():
+      return GridSensorStatusFeatureWidget(
+        feature: feature,
+        data: data,
+      );
   }
 }
 
@@ -665,6 +675,51 @@ class SpaceSensorStatusFeatureWidget extends StatelessWidget {
       children: [
         Text(
             '  Enclosing orbit: ${nearestOrbit == null ? '<nonexistent asset>' : nearestOrbit.name ?? 'an unnamed ${nearestOrbit.className}'}'),
+        Text(
+            '  Top asset reached: ${topAsset == null ? '<nonexistent asset>' : topAsset.name ?? 'an unnamed ${topAsset.className}'}'),
+        Text('  Count of reached assets: ${feature.count}'),
+      ],
+    );
+  }
+}
+
+class GridSensorFeatureWidget extends StatelessWidget {
+  const GridSensorFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final GridSensorFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Grid sensor'),
+      ],
+    );
+  }
+}
+
+class GridSensorStatusFeatureWidget extends StatelessWidget {
+  const GridSensorStatusFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final GridSensorStatusFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    Asset? topAsset = data.assets[feature.topAsset];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         Text(
             '  Top asset reached: ${topAsset == null ? '<nonexistent asset>' : topAsset.name ?? 'an unnamed ${topAsset.className}'}'),
         Text('  Count of reached assets: ${feature.count}'),

@@ -1,5 +1,4 @@
-import 'package:isd_treeclient/data-structure.dart';
-
+import 'data-structure.dart';
 import 'binaryreader.dart';
 import 'assets.dart';
 import 'core.dart';
@@ -291,9 +290,17 @@ Feature parseFeature(int featureCode, BinaryReader reader,
         material,
         data.getTime(systemID, DateTime.timestamp()),
       );
+    case 0x18:
+      return GridSensorFeature();
+    case 0x19:
+      int? grid = reader.readUint32();
+      return GridSensorStatusFeature(
+        grid == 0 ? null : AssetID(systemID, grid),
+        reader.readUint32(),
+      );
     default:
       throw UnimplementedError('Unknown featureID $featureCode');
   }
 }
 
-const kClientVersion = 0x17;
+const kClientVersion = 0x19;

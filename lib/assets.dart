@@ -320,7 +320,15 @@ class RefiningFeature extends Feature {
   final bool rateLimitedByTarget;
   final double currentRate;
 
-  RefiningFeature(this.ore, this.maxRate, this.enabled, this.active, this.rateLimitedBySource, this.rateLimitedByTarget, this.currentRate);
+  RefiningFeature(
+    this.ore,
+    this.maxRate,
+    this.enabled,
+    this.active,
+    this.rateLimitedBySource,
+    this.rateLimitedByTarget,
+    this.currentRate,
+  );
 }
 
 class MaterialPileFeature extends Feature {
@@ -350,7 +358,10 @@ class MaterialStackFeature extends Feature {
   final double quantityFlowRate; // per ms
   final Uint64 time0;
   Uint64 getQuantity(Uint64 time) {
-    return quantity0 + Uint64.fromDouble(quantityFlowRate * ((time - time0).toDouble()));
+    return quantity0 +
+        Uint64.fromDouble(
+          quantityFlowRate * ((time - time0).toDouble()),
+        );
   }
 
   final Uint64 capacity;
@@ -365,6 +376,15 @@ class MaterialStackFeature extends Feature {
     this.material,
     this.time0,
   );
+}
+
+class GridSensorFeature extends Feature {}
+
+class GridSensorStatusFeature extends Feature {
+  final int count;
+  final AssetID? topAsset;
+
+  GridSensorStatusFeature(this.topAsset, this.count);
 }
 
 typedef AssetClassID = int; // 32-bit signed, but can't be 0

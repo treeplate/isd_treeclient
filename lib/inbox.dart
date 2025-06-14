@@ -52,7 +52,9 @@ class _InboxState extends State<Inbox> with TickerProviderStateMixin {
                   ),
                   IconButton(
                     onPressed: () {
-                      Navigator.pop(context);
+                      if (mounted) {
+                        Navigator.pop(context);
+                      }
                     },
                     icon: Icon(Icons.close),
                   )
@@ -62,11 +64,11 @@ class _InboxState extends State<Inbox> with TickerProviderStateMixin {
                 child: TabBar(
                   controller: tabController,
                   tabs: widget.data.rootAssets.keys.map((e) {
-                    int messageCount =
-                        findMessages(widget.data.rootAssets[e]!, widget.data)
-                            .where((e) => widget.data.assets[e]!.features
-                                .any((e) => e is MessageFeature && !e.isRead))
-                            .length;
+                    int messageCount = widget.data
+                        .findMessages(widget.data.rootAssets[e]!)
+                        .where((e) => widget.data.assets[e]!.features
+                            .any((e) => e is MessageFeature && !e.isRead))
+                        .length;
                     return Badge.count(
                       count: messageCount,
                       isLabelVisible: messageCount > 0,
@@ -106,10 +108,8 @@ class SystemInbox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      children: findMessages(
-        rootAsset,
-        data,
-      )
+      children: data
+          .findMessages(rootAsset)
           .map((e) => InboxMessage(
                 message: e,
                 data: data,
@@ -231,7 +231,9 @@ class InboxMessageDialog extends StatelessWidget {
             ),
             IconButton(
               onPressed: () {
-                Navigator.pop(context);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
               },
               icon: Icon(Icons.close),
             )
@@ -265,66 +267,5 @@ class InboxMessageDialog extends StatelessWidget {
         )
       ],
     );
-  }
-}
-
-Set<AssetID> findMessages(AssetID root, DataStructure data) {
-  Set<AssetID> result = {};
-  _findMessages(root, data, result);
-  return result;
-}
-
-void _findMessages(AssetID root, DataStructure data, Set<AssetID> result) {
-  Asset rootAsset = data.assets[root]!;
-  for (Feature feature in rootAsset.features) {
-    switch (feature) {
-      case SolarSystemFeature(children: List<SolarSystemChild> children):
-        for (SolarSystemChild child in children) {
-          _findMessages(child.child, data, result);
-        }
-      case OrbitFeature(
-          primaryChild: AssetID primaryChild,
-          orbitingChildren: List<OrbitChild> orbitingChildren,
-        ):
-        _findMessages(primaryChild, data, result);
-        for (OrbitChild child in orbitingChildren) {
-          _findMessages(child.child, data, result);
-        }
-      case SurfaceFeature(regions: Map<(double, double), AssetID> regions):
-        for (AssetID region in regions.values) {
-          _findMessages(region, data, result);
-        }
-      case GridFeature(cells: List<AssetID?> cells):
-        for (AssetID? cell in cells) {
-          if (cell != null) {
-            _findMessages(cell, data, result);
-          }
-        }
-      case MessageBoardFeature(messages: List<AssetID> messages):
-        for (AssetID message in messages) {
-          _findMessages(message, data, result);
-        }
-      case MessageFeature():
-        result.add(root);
-      case ProxyFeature(child: AssetID child):
-        _findMessages(child, data, result);
-      case StructureFeature():
-      case StarFeature():
-      case SpaceSensorFeature():
-      case SpaceSensorStatusFeature():
-      case PlanetFeature():
-      case PlotControlFeature():
-      case PopulationFeature():
-      case RubblePileFeature():
-      case KnowledgeFeature():
-      case ResearchFeature():
-      case MiningFeature():
-      case OrePileFeature():
-      case RegionFeature():
-      case RefiningFeature():
-      case MaterialPileFeature():
-      case MaterialStackFeature():
-        break;
-    }
   }
 }

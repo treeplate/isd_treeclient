@@ -1,6 +1,5 @@
 import 'dart:typed_data';
-import 'dart:ui' show Offset;
-import 'package:flutter/foundation.dart' show ChangeNotifier;
+import 'package:flutter/widgets.dart' show ChangeNotifier, Offset;
 import 'core.dart';
 import 'assets.dart';
 import 'platform_specific_stub.dart'
@@ -176,6 +175,20 @@ class DataStructure with ChangeNotifier {
         'A${id.id.toRadixString(16).padLeft(6, '0')} (${asset.className})';
   }
 
+  Material getMaterial(MaterialID id, StarIdentifier system) {
+    Set<AssetID> messages = findMessages(rootAssets[system]!);
+    for (AssetID message in messages) {
+      Asset asset = assets[message]!;
+      Iterable<KnowledgeFeature> knowledges = asset.features.whereType();
+      for (KnowledgeFeature knowledge in knowledges) {
+        if (knowledge.materials[id] != null) {
+          return knowledge.materials[id]!;
+        }
+      }
+    }
+    throw Exception('called getMaterial with invalid material ID');
+  }
+
   DataStructure() {
     getCookie(kUsernameCookieName).then((e) {
       username = e;
@@ -239,6 +252,73 @@ class DataStructure with ChangeNotifier {
         case RefiningFeature():
         case MaterialPileFeature():
         case MaterialStackFeature():
+        case GridSensorFeature():
+        case GridSensorStatusFeature():
+      }
+    }
+  }
+
+  Set<AssetID> findMessages(
+    AssetID root,
+  ) {
+    Set<AssetID> result = {};
+    _findMessages(root, result);
+    return result;
+  }
+
+  void _findMessages(AssetID root, Set<AssetID> result) {
+    Asset rootAsset = assets[root]!;
+    for (Feature feature in rootAsset.features) {
+      switch (feature) {
+        case SolarSystemFeature(children: List<SolarSystemChild> children):
+          for (SolarSystemChild child in children) {
+            _findMessages(child.child, result);
+          }
+        case OrbitFeature(
+            primaryChild: AssetID primaryChild,
+            orbitingChildren: List<OrbitChild> orbitingChildren,
+          ):
+          _findMessages(primaryChild, result);
+          for (OrbitChild child in orbitingChildren) {
+            _findMessages(child.child, result);
+          }
+        case SurfaceFeature(regions: Map<(double, double), AssetID> regions):
+          for (AssetID region in regions.values) {
+            _findMessages(region, result);
+          }
+        case GridFeature(cells: List<AssetID?> cells):
+          for (AssetID? cell in cells) {
+            if (cell != null) {
+              _findMessages(cell, result);
+            }
+          }
+        case MessageBoardFeature(messages: List<AssetID> messages):
+          for (AssetID message in messages) {
+            _findMessages(message, result);
+          }
+        case MessageFeature():
+          result.add(root);
+        case ProxyFeature(child: AssetID child):
+          _findMessages(child, result);
+        case StructureFeature():
+        case StarFeature():
+        case SpaceSensorFeature():
+        case SpaceSensorStatusFeature():
+        case PlanetFeature():
+        case PlotControlFeature():
+        case PopulationFeature():
+        case RubblePileFeature():
+        case KnowledgeFeature():
+        case ResearchFeature():
+        case MiningFeature():
+        case OrePileFeature():
+        case RegionFeature():
+        case RefiningFeature():
+        case MaterialPileFeature():
+        case MaterialStackFeature():
+        case GridSensorFeature():
+        case GridSensorStatusFeature():
+          break;
       }
     }
   }

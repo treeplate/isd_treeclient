@@ -230,7 +230,9 @@ class AccountWidget extends StatelessWidget {
                                   'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
                                   context,
                                 );
-                                Navigator.pop(context);
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                }
                               } else if (message[1] == 'inadequate username') {
                                 if (newUsername == '') {
                                   return 'Username must be non-empty.';
@@ -244,13 +246,17 @@ class AccountWidget extends StatelessWidget {
                                   'Error when changing username: ${message[1]}',
                                   context,
                                 );
-                                Navigator.pop(context);
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                }
                               }
                             } else {
                               assert(message[0] == 'T');
                               data.updateUsername(newUsername);
                               assert(message.length == 1);
-                              Navigator.pop(context);
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                              }
                             }
                             return null;
                           },
@@ -294,7 +300,9 @@ class AccountWidget extends StatelessWidget {
                                   'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
                                   context,
                                 );
-                                Navigator.pop(context);
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                }
                               } else if (message[1] == 'inadequate password') {
                                 assert(utf8.encode(newPassword).length < 6);
                                 return 'Password must be at least 6 characters long.';
@@ -303,13 +311,17 @@ class AccountWidget extends StatelessWidget {
                                   'Error when changing password: ${message[1]}',
                                   context,
                                 );
-                                Navigator.pop(context);
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                }
                               }
                             } else {
                               assert(message[0] == 'T');
                               data.updatePassword(newPassword);
                               assert(message.length == 1);
-                              Navigator.pop(context);
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                              }
                             }
                             return null;
                           },
@@ -337,7 +349,9 @@ class AccountWidget extends StatelessWidget {
                       if (message[1] == 'unrecognized credentials') {
                         // (we're logging out, we don't care about unrecognized credentials)
                         logout();
-                        Navigator.pop(context);
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
                       } else {
                         openErrorDialog(
                           'Error when logging out: ${message[1]}',
@@ -349,14 +363,22 @@ class AccountWidget extends StatelessWidget {
                       assert(message.length == 1);
                       if (data.username != null && data.password != null) {
                         logout();
-                        Navigator.pop(context);
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
                       }
                     }
                   });
                 },
                 child: Text('Logout'),
               ),
-              Row(mainAxisSize: MainAxisSize.min, children: [Text('Get icons from network'), CookieCheckbox(cookie: 'networkImages')],)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Get icons from network'),
+                  CookieCheckbox(cookie: 'networkImages')
+                ],
+              )
             ],
           );
         });

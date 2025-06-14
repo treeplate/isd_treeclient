@@ -3,19 +3,19 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart' hide Material;
 
+import 'binaryreader.dart';
 import 'debugsystemview.dart' as debugsystemview;
 import 'systemview.dart' as systemview;
 import 'planetview.dart' as planetview;
 import 'galaxyview.dart';
 import 'inbox.dart';
-import 'binaryreader.dart';
 import 'network_handler.dart';
 import 'feature_parser.dart';
 import 'account.dart';
 import 'assets.dart';
 import 'data-structure.dart';
 import 'ui-core.dart';
-import 'core.dart';
+import 'parseSystemServerBinaryMessage.dart';
 import 'platform_specific_stub.dart'
     if (dart.library.io) 'platform_specific_io.dart'
     if (dart.library.js_interop) 'platform_specific_web.dart';
@@ -222,108 +222,6 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     }
   }
 
-  void parseSystemServerBinaryMessage(
-      ByteBuffer data, Map<int, String> stringTable, NetworkConnection server) {
-    BinaryReader reader = BinaryReader(data, stringTable, Endian.little);
-    for (StarIdentifier star in systemServersBySystemID.entries
-        .toList()
-        .where((e) => e.value == server)
-        .map((e) => e.key)) {
-      systemServersBySystemID.remove(star);
-    }
-    while (!reader.done) {
-      int id = reader.readUint32();
-      if (id < 0x10000000) {
-        StarIdentifier systemID = StarIdentifier.parse(id);
-        systemServersBySystemID[systemID] = server;
-        (DateTime, Uint64) time0 = (DateTime.timestamp(), reader.readUint64());
-        double timeFactor = reader.readFloat64();
-        id = reader.readUint32();
-        assert(id != 0);
-        AssetID rootAssetID = AssetID(systemID, id);
-        if (!mounted) break;
-        setState(() {
-          this.data.setRootAsset(systemID, rootAssetID);
-        });
-        Offset position = Offset(reader.readFloat64(), reader.readFloat64());
-        this
-            .data
-            .setSystemPosition(systemID, position / this.data.galaxyDiameter!);
-        this.data.setTime0(systemID, time0);
-        this.data.setTimeFactor(systemID, timeFactor);
-        Set<AssetID> notReferenced = {};
-        while (true) {
-          int id = reader.readUint32();
-          if (id == 0) break;
-          AssetID assetID = AssetID(systemID, id);
-          this.data.getChildren(assetID, notReferenced);
-          int owner = reader.readUint32();
-          double mass = reader.readFloat64();
-          double massFlowRate = reader.readFloat64();
-          double size = reader.readFloat64();
-          String name = reader.readString();
-          AssetClassID classID = reader.readInt32();
-          String icon = reader.readString();
-          String className = reader.readString();
-          String description = reader.readString();
-          List<Feature> features = [];
-          while (true) {
-            int featureCode = reader.readUint32();
-            if (featureCode == 0) break;
-            try {
-              Feature feature = parseFeature(
-                featureCode,
-                reader,
-                systemID,
-                notReferenced,
-                this.data,
-              );
-              if (feature is ReferenceFeature) {
-                for (AssetID asset in feature.references) {
-                  this.data.assets[asset]!.references.add(assetID);
-                }
-              }
-              features.add(feature);
-            } catch (e) {
-              openErrorDialog('$e', context);
-            }
-          }
-          this.data.setAsset(
-                assetID,
-                Asset(
-                  features,
-                  mass,
-                  massFlowRate,
-                  owner == 0 ? null : owner,
-                  size,
-                  name == '' ? null : name,
-                  classID == 0 ? null : classID,
-                  icon,
-                  className,
-                  description,
-                  time0.$2,
-                ),
-              );
-        }
-        for (AssetID asset in notReferenced) {
-          for (AssetID asset2 in this.data.assets[asset]!.references) {
-            for (ReferenceFeature feature
-                in this.data.assets[asset2]?.features.whereType() ?? []) {
-              feature.removeReferences(asset);
-            }
-          }
-          this.data.assets.remove(asset);
-        }
-      } else {
-        switch (id) {
-          default:
-            throw UnimplementedError(
-                'Unknown notification ID 0x${id.toRadixString(16)}');
-        }
-      }
-    }
-  }
-
   void connectToSystemServer(String server) {
     connect(server).then((socket) async {
       Map<int, String> stringTable = {};
@@ -336,8 +234,29 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
             context,
           );
         },
-        binaryMessageHandler: (data) =>
-            parseSystemServerBinaryMessage(data, stringTable, systemServer),
+        binaryMessageHandler: (data) {
+          if (mounted)
+            setState(() {
+              try {
+                for (StarIdentifier star in systemServersBySystemID.entries
+                    .toList()
+                    .where((e) => e.value == server)
+                    .map((e) => e.key)) {
+                  systemServersBySystemID.remove(star);
+                }
+                BinaryReader reader =
+                    BinaryReader(data, stringTable, Endian.little);
+                Set<StarIdentifier> systems = parseSystemServerBinaryMessage(
+                  reader,
+                  this.data,
+                );
+                systemServersBySystemID
+                    .addEntries(systems.map((e) => MapEntry(e, systemServer)));
+              } catch (e) {
+                openErrorDialog(e.toString(), context);
+              }
+            });
+        },
         onReset: (NetworkConnection systemServer) {
           stringTable.clear();
           onSystemServerReset(systemServer, server);
@@ -577,7 +496,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                       0,
                       (a, b) =>
                           a +
-                          findMessages(b, data)
+                          data.findMessages(b)
                               .where((e) => data.assets[e]!.features
                                   .any((e) => e is MessageFeature && !e.isRead))
                               .length);
