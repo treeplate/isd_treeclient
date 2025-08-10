@@ -407,16 +407,16 @@ final List<Paint> starCategories = [
     ..strokeWidth = 0.0200,
 ];
 
-class ContinousBuilder extends StatefulWidget {
-  const ContinousBuilder({super.key, required this.builder});
+class ContinuousBuilder extends StatefulWidget {
+  const ContinuousBuilder({super.key, required this.builder});
 
   final WidgetBuilder builder;
 
   @override
-  State<ContinousBuilder> createState() => _ContinousBuilderState();
+  State<ContinuousBuilder> createState() => _ContinuousBuilderState();
 }
 
-class _ContinousBuilderState extends State<ContinousBuilder>
+class _ContinuousBuilderState extends State<ContinuousBuilder>
     with SingleTickerProviderStateMixin {
   late final Ticker ticker;
   @override

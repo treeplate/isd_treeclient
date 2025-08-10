@@ -177,6 +177,7 @@ class DataStructure with ChangeNotifier {
 
   Material getMaterial(MaterialID id, StarIdentifier system) {
     Set<AssetID> messages = findMessages(rootAssets[system]!);
+    // TODO: knowledge can be from assets without message features
     for (AssetID message in messages) {
       Asset asset = assets[message]!;
       Iterable<KnowledgeFeature> knowledges = asset.features.whereType();
@@ -254,6 +255,7 @@ class DataStructure with ChangeNotifier {
         case MaterialStackFeature():
         case GridSensorFeature():
         case GridSensorStatusFeature():
+        case BuilderFeature():
       }
     }
   }
@@ -318,6 +320,7 @@ class DataStructure with ChangeNotifier {
         case MaterialStackFeature():
         case GridSensorFeature():
         case GridSensorStatusFeature():
+        case BuilderFeature():
           break;
       }
     }

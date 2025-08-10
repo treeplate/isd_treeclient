@@ -357,6 +357,7 @@ class AccountWidget extends StatelessWidget {
                           'Error when logging out: ${message[1]}',
                           context,
                         );
+                        // TODO: have an option somewhere to force log out (i.e. data.logout() even if login server sends an error)
                       }
                     } else {
                       assert(message[0] == 'T');

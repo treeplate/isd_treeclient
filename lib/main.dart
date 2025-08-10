@@ -253,6 +253,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                 systemServersBySystemID
                     .addEntries(systems.map((e) => MapEntry(e, systemServer)));
               } catch (e) {
+                    // TODO: clear the asset data or something so it's not in a broken state
                 openErrorDialog(e.toString(), context);
               }
             });

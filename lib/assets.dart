@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'core.dart';
 
 extension type StarIdentifier._((int category, int subindex) _value) {
@@ -129,29 +131,46 @@ class Material {
 class MaterialLineItem {
   final String? componentName;
   final String materialDescription;
-  final int quantity;
-  final int? requiredQuantity;
+  final int requiredQuantity;
   final int? materialID;
 
-  MaterialLineItem(this.componentName, this.materialID, this.quantity,
+  MaterialLineItem(this.componentName, this.materialID,
       this.requiredQuantity, this.materialDescription);
 }
 
 class StructureFeature extends Feature {
   final List<MaterialLineItem> materials;
 
-  int? get maxHP {
+  int get maxHP {
     double result = materials.fold(
       0,
-      (a, b) => a + (b.requiredQuantity ?? double.nan),
+      (a, b) => a + b.requiredQuantity,
     );
-    if (result.isNaN) return null;
     return result.toInt();
   }
 
-  final int hp;
+  final Uint64 time0;
+  final int hp0;
+  final double hpFlowRate; // units/ms
+  double getHP(Uint64 time) {
+    return min(getQuantity(time), hp0 + hpFlowRate * ((time - time0).toDouble()));
+  }
+  final int quantity0;
+  final double quantityFlowRate; // units/ms
+  double getQuantity(Uint64 time) {
+    return quantity0 + quantityFlowRate * ((time - time0).toDouble());
+  }
+
   final int? minHP;
-  StructureFeature(this.materials, this.hp, this.minHP);
+  StructureFeature(
+    this.materials,
+    this.quantity0,
+    this.quantityFlowRate,
+    this.hp0,
+    this.hpFlowRate,
+    this.minHP,
+    this.time0,
+  );
 }
 
 class StarFeature extends Feature {
@@ -184,7 +203,8 @@ class SpaceSensorStatusFeature extends Feature {
 }
 
 class PlanetFeature extends Feature {
-  PlanetFeature();
+  final int seed;
+  PlanetFeature(this.seed);
 }
 
 class PlotControlFeature extends Feature {
@@ -241,7 +261,13 @@ class MessageFeature extends Feature {
   );
 }
 
-class RubblePileFeature extends Feature {}
+class RubblePileFeature extends Feature {
+  // material id -> units of material
+  final Map<MaterialID, Uint64> materials;
+  final Uint64 totalUnitCount;
+
+  RubblePileFeature(this.materials, this.totalUnitCount);
+}
 
 class ProxyFeature extends Feature {
   final AssetID child;
@@ -385,6 +411,14 @@ class GridSensorStatusFeature extends Feature {
   final AssetID? topAsset;
 
   GridSensorStatusFeature(this.topAsset, this.count);
+}
+
+class BuilderFeature extends Feature {
+  final int capacity;
+  final double rate;
+  final Set<AssetID> structures;
+
+  BuilderFeature(this.capacity, this.rate, this.structures);
 }
 
 typedef AssetClassID = int; // 32-bit signed, but can't be 0

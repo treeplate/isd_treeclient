@@ -219,10 +219,13 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
                       : icons)[asset.icon] = info.image;
                 },
                 onError: (exception, stackTrace) {
-                  openErrorDialog(
-                    'Failure when fetching ${asset.icon} from server: $exception',
-                    context,
-                  );
+                  if (mounted) {
+                    openErrorDialog(
+                      'Failure when fetching ${asset.icon} from server: $exception, $wasFromNetwork',
+                      context,
+                    );
+                  }
+                  // TODO: make it not open a million dialogs when the asset isn't found
                   if (wasFromNetwork) {
                     failedNetworkIcons.add(asset.icon);
                   }

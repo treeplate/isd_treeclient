@@ -21,7 +21,7 @@ extension type Uint64((int, int) _value) {
     return Uint64.bigEndian(
         ((msh * multiplier) + ((lsh * multiplier) ~/ integerLimit32)) &
             (integerLimit32 - 1),
-        lsh & (integerLimit32 - 1));
+        (lsh * multiplier) & (integerLimit32 - 1));
   }
 
   Uint64 operator ~/(double divisor) {
@@ -72,6 +72,15 @@ extension type Uint64((int, int) _value) {
       ((value / integerLimit32) % integerLimit32).floor(),
       (value % integerLimit32).floor(),
     );
+  }
+
+  factory Uint64.parse(String str) {
+    Uint64 result = zero64;
+    for (int digit in str.codeUnits) {
+      result += Uint64.fromInt(digit - 0x30);
+      result *= 10;
+    }
+    return result ~/ 10;
   }
 }
 const Uint64 zero64 = Uint64.bigEndian(0, 0);

@@ -54,14 +54,17 @@ class WebSocketWrapper {
         listen(onData, onError: onError, onReset: onReset);
       } catch (e, st) {
         try {
-          if (onError == null) rethrow;
+          if (onError == null) {
+            rethrow;
+          }
           onError(e, st);
         } finally {
           if (waitingTime < Duration(minutes: 1)) {
             waitingTime *= 2;
           }
+          Duration duration = waitingTime + waitingTime * (_random.nextDouble() - .5);
           await Future.delayed(
-            waitingTime + waitingTime * (_random.nextDouble() - .5),
+            duration,
           );
           continue;
         }

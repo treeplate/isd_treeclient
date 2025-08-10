@@ -4,9 +4,7 @@ import 'ui-core.dart';
 import 'assets.dart';
 import 'data-structure.dart';
 import 'network_handler.dart';
-import 'platform_specific_stub.dart'
-    if (dart.library.io) 'platform_specific_io.dart'
-    if (dart.library.js_interop) 'platform_specific_web.dart';
+import 'calendar.dart';
 
 class SystemSelector extends StatefulWidget {
   const SystemSelector({super.key, required this.data, required this.servers});
@@ -23,6 +21,9 @@ class _SystemSelectorState extends State<SystemSelector> {
   Widget build(BuildContext context) {
     if (widget.data.rootAssets.keys.length == 1) {
       selectedSystem = widget.data.rootAssets.keys.single;
+    }
+    if (widget.servers[selectedSystem] == null) {
+      selectedSystem = null;
     }
     return selectedSystem == null
         ? ListView(
@@ -63,17 +64,6 @@ class PlanetSelector extends StatefulWidget {
 
 class _PlanetSelectorState extends State<PlanetSelector> {
   AssetID? selectedPlanet;
-  bool showEmptyPlanets = true;
-
-  @override
-  void initState() {
-    () async {
-      showEmptyPlanets =
-          (await getCookie('showEmptyPlanets') ?? true) == true.toString();
-      setState(() {});
-    }();
-    super.initState();
-  }
 
   List<AssetID> walkTreeForPlanets() {
     Asset rootAsset =
@@ -88,14 +78,7 @@ class _PlanetSelectorState extends State<PlanetSelector> {
       Asset asset = widget.data.assets[frontier.first]!;
       if (asset.features
           .any((e) => e is SurfaceFeature && e.regions.isNotEmpty)) {
-        if (showEmptyPlanets ||
-            asset.features.whereType<SurfaceFeature>().any((e) =>
-                e.regions.values.any((f) => (widget.data.assets[f]!.features
-                        .singleWhere((g) => g is GridFeature) as GridFeature)
-                    .cells
-                    .any((g) => g != null)))) {
-          result.add(frontier.first);
-        }
+        result.add(frontier.first);
       } else if (asset.features.any((e) => e is OrbitFeature)) {
         OrbitFeature feature = asset.features.single as OrbitFeature;
         frontier.add(feature.primaryChild);
@@ -108,28 +91,17 @@ class _PlanetSelectorState extends State<PlanetSelector> {
 
   @override
   Widget build(BuildContext context) {
+    List<AssetID> planets = walkTreeForPlanets();
+    if (planets.length == 1) {
+      selectedPlanet = planets.single;
+    }
     return selectedPlanet == null
         ? ListView(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('Show empty planets'),
-                  Checkbox(
-                    value: showEmptyPlanets,
-                    onChanged: (v) {
-                      setState(() {
-                        showEmptyPlanets = v!;
-                        setCookie('showEmptyPlanets', v.toString());
-                      });
-                    },
-                  )
-                ],
-              ),
               if (widget.data.rootAssets.isEmpty)
                 Center(child: Text('No visible planets in system.'))
               else
-                for (AssetID planet in walkTreeForPlanets())
+                for (AssetID planet in planets)
                   TextButton(
                     onPressed: () => setState(() {
                       selectedPlanet = planet;
@@ -218,6 +190,7 @@ class GridWidget extends StatelessWidget {
         return true;
       }
 
+      // TODO: make a border around the gridfeature so the edge is obvious
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapUp: (TapUpDetails details) async {
@@ -344,9 +317,9 @@ class BuildDialog extends StatelessWidget {
                 Text('Build at $gridX, $gridY'),
                 IconButton(
                   onPressed: () {
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                }
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
                   },
                   icon: Icon(Icons.close),
                 )
@@ -371,13 +344,15 @@ class BuildDialog extends StatelessWidget {
 
                       if (response[0] == 'T') {
                         assert(response.length == 1);
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                }
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
                       } else {
                         assert(response[0] == 'F');
-                        openErrorDialog(
-                            'tried to build, response: $response', context);
+                        if (context.mounted) {
+                          openErrorDialog(
+                              'tried to build, response: $response', context);
+                        }
                       }
                     },
                     child: Column(
@@ -507,9 +482,9 @@ class AssetDialog extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: () {
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                }
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
                   },
                   icon: Icon(Icons.close),
                 )
@@ -552,36 +527,93 @@ Widget describeFeature(
     case RegionFeature():
       throw StateError('surface on planet');
     case StructureFeature(materials: List<MaterialLineItem> materials):
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ...materials.map(
-            (e) {
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (e.componentName != null) Text('${e.componentName} - '),
-                  Text('${e.requiredQuantity ?? '???'} x '),
-                  e.materialID == null
-                      ? Text('${e.materialDescription}')
-                      : MaterialWidget(
-                          material: data.getMaterial(e.materialID!, system),
+      if (feature.minHP == null) {
+        return Placeholder();
+      }
+      const int minLineItemHeight = 35;
+      final double minLineItemFraction = materials
+              .reduce((a, b) => a.requiredQuantity < b.requiredQuantity ? a : b)
+              .requiredQuantity /
+          feature.maxHP;
+      final double totalHeight = minLineItemHeight / minLineItemFraction;
+      final ThemeData theme = Theme.of(context);
+      return ContinuousBuilder(builder: (context) {
+        return Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ...materials.map(
+                  (e) {
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          color: Colors.grey,
+                          width: 10,
+                          height:
+                              totalHeight * e.requiredQuantity / feature.maxHP,
                         ),
-                  if (e.requiredQuantity != null)
-                    SizedBox(
-                        width: 250,
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 8.0),
-                          child: LinearProgressIndicator(
-                            value: e.quantity / e.requiredQuantity!,
+                        Container(
+                          height:
+                              totalHeight * e.requiredQuantity / feature.maxHP,
+                          width: 10,
+                          decoration: BoxDecoration(
+                            border: BoxBorder.fromLTRB(
+                              top: BorderSide(color: theme.dividerColor),
+                              right: BorderSide(color: theme.dividerColor),
+                              bottom: BorderSide(color: theme.dividerColor),
+                            ),
                           ),
-                        )),
-                ],
-              );
-            },
-          ),
-        ],
-      );
+                        ),
+                        Container(
+                          width: 10,
+                          decoration: BoxDecoration(
+                            border: BoxBorder.fromLTRB(
+                              top: BorderSide(color: theme.dividerColor),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 5,
+                        ),
+                        if (e.componentName != null)
+                          Text('${e.componentName} - '),
+                        Text('${e.requiredQuantity} x '),
+                        e.materialID == null
+                            ? Text('${e.materialDescription}')
+                            : MaterialWidget(
+                                material:
+                                    data.getMaterial(e.materialID!, system),
+                              ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+            Container(
+              color: const Color.fromARGB(255, 174, 230, 176),
+              width: 10,
+              height: totalHeight *
+                  feature.getQuantity(
+                    data.getTime(system, DateTime.timestamp()),
+                  ) /
+                  feature.maxHP,
+            ),
+            Container(
+              color: Colors.green,
+              width: 10,
+              height: totalHeight *
+                  feature.getHP(
+                    data.getTime(system, DateTime.timestamp()),
+                  ) /
+                  feature.maxHP,
+            ),
+          ],
+        );
+      });
     case SpaceSensorFeature():
       return Text('This is a space sensor.');
     case SpaceSensorStatusFeature():
@@ -747,7 +779,7 @@ Widget describeFeature(
         materials: Set<MaterialID> materials,
         capacity: double capacity
       ):
-      return ContinousBuilder(builder: (context) {
+      return ContinuousBuilder(builder: (context) {
         return Column(
           children: [
             Text(
@@ -755,6 +787,63 @@ Widget describeFeature(
             if (materials.isNotEmpty) Text('You can see:'),
             ...materials.map(
                 (e) => MaterialWidget(material: data.getMaterial(e, system))),
+            OutlinedButton(
+              onPressed: () async {
+                List<String> result = await server.send(
+                  [
+                    'play',
+                    system.value.toString(),
+                    asset.id.toString(),
+                    'analyze',
+                  ],
+                );
+                if (result.first != 'T') {
+                  if (context.mounted)
+                    openErrorDialog(
+                      'analyze response: $result',
+                      context,
+                    );
+                  return;
+                }
+                Uint64 time = Uint64.parse(result[1]);
+                double totalQuantity = double.parse(result[2]);
+                List<(MaterialID, Uint64)> materials = [];
+                int i = 3;
+                while (i < result.length) {
+                  materials
+                      .add((int.parse(result[i]), Uint64.parse(result[i + 1])));
+                  i += 2;
+                }
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return Dialog(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '(${calendar.dateName(time)} ${calendar.timeName(time)})',
+                          ),
+                          Text('Total units of material: $totalQuantity'),
+                          ...materials.map(
+                            (e) => Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('${e.$2.displayName} units of'),
+                                MaterialWidget(
+                                  material: data.getMaterial(e.$1, system),
+                                )
+                              ],
+                            ),
+                          )
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+              child: Text('Analyze'),
+            ),
           ],
         );
       });
@@ -828,7 +917,7 @@ Widget describeFeature(
         material: MaterialID? material,
         capacity: double capacity,
       ):
-      return ContinousBuilder(builder: (context) {
+      return ContinuousBuilder(builder: (context) {
         return Row(
           children: [
             Text(
@@ -847,7 +936,7 @@ Widget describeFeature(
         material: MaterialID? material,
         capacity: Uint64 capacity,
       ):
-      return ContinousBuilder(builder: (context) {
+      return ContinuousBuilder(builder: (context) {
         return Row(children: [
           Text(
               'Contents: ${getQuantity(data.getTime(system, DateTime.now())).toInt()} '),
@@ -861,6 +950,13 @@ Widget describeFeature(
       return Text('This is a grid sensor.');
     case GridSensorStatusFeature():
       continue nothing;
+    case BuilderFeature(
+        capacity: int capacity,
+        rate: double rate,
+        structures: Set<AssetID> structures
+      ):
+      return Text(
+          'This is a builder that can build $capacity structures at a rate of ${rate * 1000} units per second. It is currently building ${structures.length} structures.');
   }
 }
 

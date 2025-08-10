@@ -3,8 +3,13 @@ import 'binaryreader.dart';
 import 'assets.dart';
 import 'core.dart';
 
-Feature parseFeature(int featureCode, BinaryReader reader,
-    StarIdentifier systemID, Set<AssetID> notReferenced, DataStructure data) {
+Feature parseFeature(
+  int featureCode,
+  BinaryReader reader,
+  StarIdentifier systemID,
+  Set<AssetID> notReferenced,
+  DataStructure data,
+) {
   switch (featureCode) {
     case 1:
       return StarFeature(StarIdentifier.parse(reader.readUint32()));
@@ -59,9 +64,8 @@ Feature parseFeature(int featureCode, BinaryReader reader,
       return OrbitFeature(children, primaryChild);
     case 4:
       List<MaterialLineItem> materials = [];
-      while (reader.readUint32() != 0) {
-        int quantity = reader.readUint32();
-        int max = reader.readUint32();
+      int max = reader.readUint32();
+      while (max != 0) {
         String componentName = reader.readString();
         String materialDescription = reader.readString();
         int id = reader.readUint32();
@@ -69,17 +73,24 @@ Feature parseFeature(int featureCode, BinaryReader reader,
         materials.add(MaterialLineItem(
           componentName == '' ? null : componentName,
           materialID,
-          quantity,
-          max == 0 ? null : max,
+          max,
           materialDescription,
         ));
+        max = reader.readUint32();
       }
+      int quantity = reader.readUint32();
+      double quantityFlowRate = reader.readFloat64();
       int hp = reader.readUint32();
+      double hpFlowRate = reader.readFloat64();
       int minHP = reader.readUint32();
       return StructureFeature(
         materials,
+        quantity,
+        quantityFlowRate,
         hp,
+        hpFlowRate,
         minHP == 0 ? null : minHP,
+        data.getTime(systemID, DateTime.timestamp()),
       );
     case 5:
       return SpaceSensorFeature(
@@ -95,7 +106,7 @@ Feature parseFeature(int featureCode, BinaryReader reader,
         reader.readUint32(),
       );
     case 7:
-      return PlanetFeature();
+      return PlanetFeature(reader.readUint32());
     case 8:
       int isColonyShip = reader.readUint32();
       assert(isColonyShip < 2);
@@ -167,7 +178,13 @@ Feature parseFeature(int featureCode, BinaryReader reader,
         text,
       );
     case 0xe:
-      return RubblePileFeature();
+      int id = reader.readUint32();
+      Map<MaterialID, Uint64> materials = {};
+      while(id != 0) {
+        materials[id] = reader.readUint64();
+        id = reader.readInt32();
+      }
+      return RubblePileFeature(materials, reader.readUint64());
     case 0xf:
       int id = reader.readUint32();
       assert(id != 0);
@@ -215,6 +232,7 @@ Feature parseFeature(int featureCode, BinaryReader reader,
       double maxRate = reader.readFloat64();
       int flags = reader.readUint8();
       double currentRate = reader.readFloat64();
+      // TODO: check constraints for these flags
       return MiningFeature(
         maxRate,
         flags & 0x1 == 1,
@@ -251,6 +269,7 @@ Feature parseFeature(int featureCode, BinaryReader reader,
       double maxRate = reader.readFloat64();
       int flags = reader.readUint8();
       double currentRate = reader.readFloat64();
+      // TODO: check constraints for these flags
       return RefiningFeature(
         ore,
         maxRate,
@@ -298,9 +317,19 @@ Feature parseFeature(int featureCode, BinaryReader reader,
         grid == 0 ? null : AssetID(systemID, grid),
         reader.readUint32(),
       );
+    case 0x1A:
+      int capacity = reader.readUint32();
+      double rate = reader.readFloat64();
+      Set<AssetID> structures = {};
+      int rawStructureID = reader.readUint32();
+      while(rawStructureID != 0) {
+        structures.add(AssetID(systemID, rawStructureID));
+        rawStructureID = reader.readUint32();
+      }
+      return BuilderFeature(capacity, rate, structures);
     default:
       throw UnimplementedError('Unknown featureID $featureCode');
   }
 }
 
-const kClientVersion = 0x19;
+const kClientVersion = 0x1A;

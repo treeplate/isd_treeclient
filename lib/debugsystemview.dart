@@ -21,8 +21,7 @@ class _SystemSelectorState extends State<SystemSelector> {
 
   void initState() {
     if (widget.data.rootAssets.keys.length == 1) {
-      // loading the SystemView is slow, so we don't want to load it during a tab transition
-      //selectedSystem = widget.data.rootAssets.keys.single;
+      selectedSystem = widget.data.rootAssets.keys.single;
     }
     super.initState();
   }
@@ -175,6 +174,11 @@ Widget renderFeature(Feature feature, DataStructure data, StarIdentifier system,
       );
     case GridSensorStatusFeature():
       return GridSensorStatusFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case BuilderFeature():
+      return BuilderFeatureWidget(
         feature: feature,
         data: data,
       );
@@ -408,6 +412,9 @@ class RubblePileFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Pile of rubble'),
+        Text('Contains ${feature.totalUnitCount.displayName} units:'),
+        ...feature.materials.entries.map(
+            (e) => Text('${e.key}: ${e.value.displayName}'))
       ],
     );
   }
@@ -560,9 +567,14 @@ class StructureFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-            'Components (total: ${feature.hp}/${feature.minHP ?? '???'}/${feature.maxHP ?? '???'})'),
-        ...feature.materials.map((e) => Text(
-            '  ${e.materialID == null ? 'unknown material' : 'M${e.materialID!.toRadixString(16).padLeft(8, '0')}'} (${e.materialDescription}) - ${e.componentName == null ? '' : '${e.componentName} '}${e.quantity}/${e.requiredQuantity ?? '???'}'))
+            'Health (total at ${calendar.dateName(feature.time0)} ${calendar.timeName(feature.time0)}: ${feature.hp0}/${feature.minHP ?? '???'}/${feature.maxHP}, increasing by ${feature.hpFlowRate}/ms)'),
+        Text(
+            'Materials (total at ${calendar.dateName(feature.time0)} ${calendar.timeName(feature.time0)}: ${feature.quantity0}/${feature.minHP ?? '???'}/${feature.maxHP}, increasing by ${feature.quantityFlowRate}/ms)'),
+        ...feature.materials.map(
+          (e) => Text(
+            '  ${e.materialID == null ? 'unknown material' : 'M${e.materialID!.toRadixString(16).padLeft(8, '0')}'} (${e.materialDescription}) - ${e.componentName == null ? '' : '${e.componentName} '}(max ${e.requiredQuantity})',
+          ),
+        )
       ],
     );
   }
@@ -583,7 +595,7 @@ class PlanetFeatureWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('This is a planet.'),
+        Text('Planet seed: ${feature.seed}'),
       ],
     );
   }
@@ -895,6 +907,34 @@ class MaterialStackFeatureWidget extends StatelessWidget {
         Text(
           'Material: ${feature.material == null ? 'unknown material' : 'M${feature.material!.toRadixString(16).padLeft(8, '0')}'} (${feature.materialName})',
         ),
+      ],
+    );
+  }
+}
+
+class BuilderFeatureWidget extends StatelessWidget {
+  const BuilderFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final BuilderFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          'Can build ${feature.capacity} structures at a rate of ${feature.rate} kg/ms.',
+        ),
+        Text('Currently building:'),
+        ...feature.structures.map(
+          (e) => Indent(
+            child: Text('${data.getAssetIdentifyingName(e)}'),
+          ),
+        )
       ],
     );
   }
