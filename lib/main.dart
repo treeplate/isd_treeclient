@@ -703,6 +703,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     );
   }
 
+  /// deletes all account-related info from this machine and goes back to login screen
   void logout() {
     setState(() {
       loginState = LoginState.connectingToLoginServer;

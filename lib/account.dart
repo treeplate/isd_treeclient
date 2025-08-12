@@ -186,6 +186,7 @@ class AccountWidget extends StatelessWidget {
 
   final DataStructure data;
   final NetworkConnection loginServer;
+  /// deletes all account-related info from this machine and goes back to login screen
   final VoidCallback logout;
   final bool isDarkMode;
 
@@ -353,11 +354,43 @@ class AccountWidget extends StatelessWidget {
                           Navigator.pop(context);
                         }
                       } else {
-                        openErrorDialog(
-                          'Error when logging out: ${message[1]}',
-                          context,
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            return Dialog(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('Error when logging out: ${message[1]}'),
+                                  SizedBox(
+                                    height: 16,
+                                  ),
+                                  OutlinedButton(
+                                    onPressed: () {
+                                      logout();
+                                      if (context.mounted) {
+                                        Navigator.pop(context);
+                                        Navigator.pop(context);
+                                      }
+                                    },
+                                    child: Text('Logout anyways (only logs out this window)'),
+                                  ),
+                                  SizedBox(
+                                    height: 16,
+                                  ),
+                                  OutlinedButton(
+                                    onPressed: () {
+                                      if (context.mounted) {
+                                        Navigator.pop(context);
+                                      }
+                                    },
+                                    child: Text('Do nothing'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         );
-                        // TODO: have an option somewhere to force log out (i.e. data.logout() even if login server sends an error)
                       }
                     } else {
                       assert(message[0] == 'T');
