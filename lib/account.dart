@@ -186,235 +186,259 @@ class AccountWidget extends StatelessWidget {
 
   final DataStructure data;
   final NetworkConnection loginServer;
+
   /// deletes all account-related info from this machine and goes back to login screen
   final VoidCallback logout;
   final bool isDarkMode;
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-        listenable: data,
-        builder: (context, child) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Logged in as ${data.username}'),
-              SizedBox(
-                height: 10,
-              ),
-              OutlinedButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => TextFieldDialog(
-                      obscureText: false,
-                      onSubmit: (String newUsername) {
-                        if (newUsername.contains('\x00')) {
-                          return Future.value(
-                            'Username must not contain 0x0 byte.',
-                          );
-                        }
-                        return loginServer.send(
-                          [
-                            'change-username',
-                            data.username!,
-                            data.password!,
-                            newUsername,
-                          ],
-                        ).then(
-                          (List<String> message) {
-                            if (message[0] == 'F') {
-                              assert(message.length == 2);
-                              if (message[1] == 'unrecognized credentials') {
-                                logout();
-                                openErrorDialog(
-                                  'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
-                                  context,
-                                );
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                }
-                              } else if (message[1] == 'inadequate username') {
-                                if (newUsername == '') {
-                                  return 'Username must be non-empty.';
-                                } else if (newUsername.contains('\x10')) {
-                                  return 'Username must not contain 0x10 byte.';
-                                } else {
-                                  return 'Username already in use.';
-                                }
-                              } else {
-                                openErrorDialog(
-                                  'Error when changing username: ${message[1]}',
-                                  context,
-                                );
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                }
-                              }
-                            } else {
-                              assert(message[0] == 'T');
-                              data.updateUsername(newUsername);
-                              assert(message.length == 1);
-                              if (context.mounted) {
-                                Navigator.pop(context);
-                              }
-                            }
-                            return null;
-                          },
-                        );
-                      },
-                      dialogTitle: 'Change username',
-                      buttonMessage: 'Change username',
-                      textFieldLabel: 'New username',
-                    ),
-                  );
-                },
-                child: Text('Change username'),
-              ),
-              SizedBox(
-                height: 10,
-              ),
-              OutlinedButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => TextFieldDialog(
-                      obscureText: true,
-                      onSubmit: (String newPassword) {
-                        if (newPassword.contains('\x00')) {
-                          return Future.value(
-                            'Password must not contain 0x0 byte.',
-                          );
-                        }
-                        return loginServer.send([
-                          'change-password',
-                          data.username!,
-                          data.password!,
-                          newPassword,
-                        ]).then(
-                          (List<String> message) {
-                            if (message[0] == 'F') {
-                              assert(message.length == 2);
-                              if (message[1] == 'unrecognized credentials') {
-                                logout();
-                                openErrorDialog(
-                                  'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
-                                  context,
-                                );
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                }
-                              } else if (message[1] == 'inadequate password') {
-                                assert(utf8.encode(newPassword).length < 6);
-                                return 'Password must be at least 6 characters long.';
-                              } else {
-                                openErrorDialog(
-                                  'Error when changing password: ${message[1]}',
-                                  context,
-                                );
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                }
-                              }
-                            } else {
-                              assert(message[0] == 'T');
-                              data.updatePassword(newPassword);
-                              assert(message.length == 1);
-                              if (context.mounted) {
-                                Navigator.pop(context);
-                              }
-                            }
-                            return null;
-                          },
-                        );
-                      },
-                      dialogTitle: 'Change password',
-                      buttonMessage: 'Change password',
-                      textFieldLabel: 'New password',
-                    ),
-                  );
-                },
-                child: Text('Change password'),
-              ),
-              SizedBox(
-                height: 10,
-              ),
-              OutlinedButton(
-                onPressed: () {
-                  loginServer.send([
-                    'logout',
-                    data.username!,
-                    data.password!,
-                  ]).then((List<String> message) {
-                    if (message[0] == 'F') {
-                      if (message[1] == 'unrecognized credentials') {
-                        // (we're logging out, we don't care about unrecognized credentials)
-                        logout();
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                        }
-                      } else {
-                        showDialog(
-                          context: context,
-                          builder: (context) {
-                            return Dialog(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text('Error when logging out: ${message[1]}'),
-                                  SizedBox(
-                                    height: 16,
-                                  ),
-                                  OutlinedButton(
-                                    onPressed: () {
-                                      logout();
-                                      if (context.mounted) {
-                                        Navigator.pop(context);
-                                        Navigator.pop(context);
-                                      }
-                                    },
-                                    child: Text('Logout anyways (only logs out this window)'),
-                                  ),
-                                  SizedBox(
-                                    height: 16,
-                                  ),
-                                  OutlinedButton(
-                                    onPressed: () {
-                                      if (context.mounted) {
-                                        Navigator.pop(context);
-                                      }
-                                    },
-                                    child: Text('Do nothing'),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        );
-                      }
-                    } else {
-                      assert(message[0] == 'T');
-                      assert(message.length == 1);
-                      if (data.username != null && data.password != null) {
-                        logout();
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                        }
-                      }
-                    }
-                  });
-                },
-                child: Text('Logout'),
-              ),
-              Row(
+    return Stack(
+      alignment: AlignmentDirectional.topCenter,
+      children: [
+        ListenableBuilder(
+            listenable: data,
+            builder: (context, child) {
+              return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Get icons from network'),
-                  CookieCheckbox(cookie: 'networkImages')
+                  Text('Logged in as ${data.username}'),
+                  SizedBox(
+                    height: 10,
+                  ),
+                  OutlinedButton(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => TextFieldDialog(
+                          obscureText: false,
+                          onSubmit: (String newUsername) {
+                            if (newUsername.contains('\x00')) {
+                              return Future.value(
+                                'Username must not contain 0x0 byte.',
+                              );
+                            }
+                            return loginServer.send(
+                              [
+                                'change-username',
+                                data.username!,
+                                data.password!,
+                                newUsername,
+                              ],
+                            ).then(
+                              (List<String> message) {
+                                if (message[0] == 'F') {
+                                  assert(message.length == 2);
+                                  if (message[1] ==
+                                      'unrecognized credentials') {
+                                    logout();
+                                    openErrorDialog(
+                                      'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
+                                      context,
+                                    );
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                    }
+                                  } else if (message[1] ==
+                                      'inadequate username') {
+                                    if (newUsername == '') {
+                                      return 'Username must be non-empty.';
+                                    } else if (newUsername.contains('\x10')) {
+                                      return 'Username must not contain 0x10 byte.';
+                                    } else {
+                                      return 'Username already in use.';
+                                    }
+                                  } else {
+                                    openErrorDialog(
+                                      'Error when changing username: ${message[1]}',
+                                      context,
+                                    );
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                    }
+                                  }
+                                } else {
+                                  assert(message[0] == 'T');
+                                  data.updateUsername(newUsername);
+                                  assert(message.length == 1);
+                                  if (context.mounted) {
+                                    Navigator.pop(context);
+                                  }
+                                }
+                                return null;
+                              },
+                            );
+                          },
+                          dialogTitle: 'Change username',
+                          buttonMessage: 'Change username',
+                          textFieldLabel: 'New username',
+                        ),
+                      );
+                    },
+                    child: Text('Change username'),
+                  ),
+                  SizedBox(
+                    height: 10,
+                  ),
+                  OutlinedButton(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => TextFieldDialog(
+                          obscureText: true,
+                          onSubmit: (String newPassword) {
+                            if (newPassword.contains('\x00')) {
+                              return Future.value(
+                                'Password must not contain 0x0 byte.',
+                              );
+                            }
+                            return loginServer.send([
+                              'change-password',
+                              data.username!,
+                              data.password!,
+                              newPassword,
+                            ]).then(
+                              (List<String> message) {
+                                if (message[0] == 'F') {
+                                  assert(message.length == 2);
+                                  if (message[1] ==
+                                      'unrecognized credentials') {
+                                    logout();
+                                    openErrorDialog(
+                                      'You have changed your username or password on another device.\nPlease log in again with your new username and password.',
+                                      context,
+                                    );
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                    }
+                                  } else if (message[1] ==
+                                      'inadequate password') {
+                                    assert(utf8.encode(newPassword).length < 6);
+                                    return 'Password must be at least 6 characters long.';
+                                  } else {
+                                    openErrorDialog(
+                                      'Error when changing password: ${message[1]}',
+                                      context,
+                                    );
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                    }
+                                  }
+                                } else {
+                                  assert(message[0] == 'T');
+                                  data.updatePassword(newPassword);
+                                  assert(message.length == 1);
+                                  if (context.mounted) {
+                                    Navigator.pop(context);
+                                  }
+                                }
+                                return null;
+                              },
+                            );
+                          },
+                          dialogTitle: 'Change password',
+                          buttonMessage: 'Change password',
+                          textFieldLabel: 'New password',
+                        ),
+                      );
+                    },
+                    child: Text('Change password'),
+                  ),
+                  SizedBox(
+                    height: 10,
+                  ),
+                  OutlinedButton(
+                    onPressed: () {
+                      loginServer.send([
+                        'logout',
+                        data.username!,
+                        data.password!,
+                      ]).then((List<String> message) {
+                        if (message[0] == 'F') {
+                          if (message[1] == 'unrecognized credentials') {
+                            // (we're logging out, we don't care about unrecognized credentials)
+                            logout();
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                            }
+                          } else {
+                            showDialog(
+                              context: context,
+                              builder: (context) {
+                                return Dialog(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                          'Error when logging out: ${message[1]}'),
+                                      SizedBox(
+                                        height: 16,
+                                      ),
+                                      OutlinedButton(
+                                        onPressed: () {
+                                          logout();
+                                          if (context.mounted) {
+                                            Navigator.pop(context);
+                                            Navigator.pop(context);
+                                          }
+                                        },
+                                        child: Text(
+                                            'Logout anyways (only logs out this window)'),
+                                      ),
+                                      SizedBox(
+                                        height: 16,
+                                      ),
+                                      OutlinedButton(
+                                        onPressed: () {
+                                          if (context.mounted) {
+                                            Navigator.pop(context);
+                                          }
+                                        },
+                                        child: Text('Do nothing'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          }
+                        } else {
+                          assert(message[0] == 'T');
+                          assert(message.length == 1);
+                          if (data.username != null && data.password != null) {
+                            logout();
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                            }
+                          }
+                        }
+                      });
+                    },
+                    child: Text('Logout'),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Get icons from network'),
+                      CookieCheckbox(cookie: 'networkImages')
+                    ],
+                  )
                 ],
-              )
-            ],
-          );
-        });
+              );
+            }),
+        Positioned(
+          right: 0,
+          top: 0,
+          child: IconButton(
+            onPressed: () {
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
+            },
+            icon: Icon(Icons.close),
+          ),
+        ),
+      ],
+    );
   }
 }
