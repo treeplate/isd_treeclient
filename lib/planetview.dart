@@ -191,94 +191,99 @@ class GridWidget extends StatelessWidget {
       }
 
       // TODO: make a border around the gridfeature so the edge is obvious
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapUp: (TapUpDetails details) async {
-          int gridX = details.localPosition.dx *
-              gridFeature.width ~/
-              constraints.maxWidth;
-          int gridY = details.localPosition.dy *
-              gridFeature.height ~/
-              constraints.maxHeight;
-          if (gridFeature.cells[gridX + gridY * gridFeature.width] != null) {
-            showDialog(
-              context: context,
-              builder: (context) => ListenableBuilder(
-                listenable: data,
-                builder: (context, child) {
-                  return AssetDialog(
-                    asset:
-                        gridFeature.cells[gridX + gridY * gridFeature.width]!,
-                    data: data,
-                    server: server,
-                  );
-                },
-              ),
-            );
-            return;
-          }
-          List<String> rawCatalog = await server.send([
-            'play',
-            gridAssetID.system.value.toString(),
-            gridAssetID.id.toString(),
-            'get-buildings',
-            gridX.toString(),
-            gridY.toString()
-          ]);
-          if (rawCatalog[0] == 'T') {
-            int i = 1;
-            List<AssetClass> catalog = [];
-            while (i < rawCatalog.length) {
-              AssetClassID id = int.parse(rawCatalog[i]);
-              String icon = rawCatalog[i + 1];
-              String name = rawCatalog[i + 2];
-              String description = rawCatalog[i + 3];
-              catalog.add(AssetClass(id, icon, name, description));
-              i += 4;
-            }
-            catalog.sort((a, b) => a.id.compareTo(b.id));
-            if (context.mounted) {
+      return Container(
+        decoration: BoxDecoration(border: BoxBorder.all(width: 5, color: Colors.grey)),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapUp: (TapUpDetails details) async {
+            int gridX = details.localPosition.dx *
+                gridFeature.width ~/
+                constraints.maxWidth;
+            int gridY = details.localPosition.dy *
+                gridFeature.height ~/
+                constraints.maxHeight;
+            if (gridFeature.cells[gridX + gridY * gridFeature.width] != null) {
               showDialog(
                 context: context,
-                builder: (context) => BuildDialog(
-                  catalog: catalog,
-                  region: gridAssetID,
-                  gridX: gridX,
-                  gridY: gridY,
-                  server: server,
+                builder: (context) => ListenableBuilder(
+                  listenable: data,
+                  builder: (context, child) {
+                    return AssetDialog(
+                      asset:
+                          gridFeature.cells[gridX + gridY * gridFeature.width]!,
+                      data: data,
+                      server: server,
+                    );
+                  },
                 ),
               );
+              return;
             }
-          } else {
-            assert(rawCatalog[0] == 'F');
-            openErrorDialog(
-                'tried to get catalog, response: $rawCatalog', context);
-          }
-        },
-        child: SizedBox.expand(
-          child: Stack(
-            children: [
-              for (; computeNextI();)
-                Positioned(
-                  left: x * constraints.maxWidth / gridFeature.width,
-                  top: y * constraints.maxHeight / gridFeature.height,
-                  child: Container(
-                    width: constraints.maxWidth / gridFeature.width,
-                    height: constraints.maxHeight / gridFeature.height,
-                    color: (x + y).isEven ? Colors.blueGrey : Colors.grey,
-                    child: gridFeature.cells[x + y * gridFeature.width] == null
-                        ? null
-                        : AssetWidget(
-                            width: constraints.maxWidth / gridFeature.width,
-                            height: constraints.maxHeight / gridFeature.height,
-                            asset:
-                                gridFeature.cells[x + y * gridFeature.width]!,
-                            data: data,
-                            server: server,
-                          ),
+            List<String> rawCatalog = await server.send([
+              'play',
+              gridAssetID.system.value.toString(),
+              gridAssetID.id.toString(),
+              'get-buildings',
+              gridX.toString(),
+              gridY.toString()
+            ]);
+            if (rawCatalog[0] == 'T') {
+              int i = 1;
+              List<AssetClass> catalog = [];
+              while (i < rawCatalog.length) {
+                AssetClassID id = int.parse(rawCatalog[i]);
+                String icon = rawCatalog[i + 1];
+                String name = rawCatalog[i + 2];
+                String description = rawCatalog[i + 3];
+                catalog.add(AssetClass(id, icon, name, description));
+                i += 4;
+              }
+              catalog.sort((a, b) => a.id.compareTo(b.id));
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  builder: (context) => BuildDialog(
+                    catalog: catalog,
+                    region: gridAssetID,
+                    gridX: gridX,
+                    gridY: gridY,
+                    server: server,
                   ),
-                )
-            ],
+                );
+              }
+            } else {
+              assert(rawCatalog[0] == 'F');
+              openErrorDialog(
+                  'tried to get catalog, response: $rawCatalog', context);
+            }
+          },
+          child: SizedBox.expand(
+            child: Stack(
+              children: [
+                for (; computeNextI();)
+                  Positioned(
+                    left: x * constraints.maxWidth / gridFeature.width,
+                    top: y * constraints.maxHeight / gridFeature.height,
+                    child: Container(
+                      width: constraints.maxWidth / gridFeature.width,
+                      height: constraints.maxHeight / gridFeature.height,
+                      color: (x + y).isEven ? Colors.blueGrey : Colors.grey,
+                      child: gridFeature.cells[x + y * gridFeature.width] ==
+                              null
+                          ? null
+                          : AssetWidget(
+                              width: constraints.maxWidth / gridFeature.width,
+                              height:
+                                  constraints.maxHeight / gridFeature.height,
+                              asset:
+                                  gridFeature.cells[x + y * gridFeature.width]!,
+                              data: data,
+                              server: server,
+                            ),
+                    ),
+                  )
+              ],
+            ),
           ),
         ),
       );
