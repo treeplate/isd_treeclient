@@ -189,9 +189,10 @@ class GridWidget extends StatelessWidget {
         } while (gridFeature.cells[x + y * gridFeature.width] == null);
         return true;
       }
-      
+
       return Container(
-        decoration: BoxDecoration(border: BoxBorder.all(width: 5, color: Colors.grey)),
+        decoration:
+            BoxDecoration(border: BoxBorder.all(width: 5, color: Colors.grey)),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapUp: (TapUpDetails details) async {
@@ -470,39 +471,42 @@ class AssetDialog extends StatelessWidget {
     Asset asset = data.assets[this.asset]!;
     return Dialog(
       child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Stack(
           children: [
-            Row(
-              // TODO: make it MainAxisSize.min but find a way to put the x in the corner
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(),
-                Text(
-                  asset.name == null
-                      ? asset.className
-                      : '${asset.name} (${asset.className})',
-                  style: TextStyle(fontSize: 20),
-                ),
-                IconButton(
-                  onPressed: () {
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                    }
-                  },
-                  icon: Icon(Icons.close),
-                )
-              ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    asset.name == null
+                        ? asset.className
+                        : '${asset.name} (${asset.className})',
+                    style: TextStyle(fontSize: 20),
+                  ),
+                  Text(asset.description),
+                  ...asset.features.map((e) => describeFeature(
+                        e,
+                        data,
+                        this.asset.system,
+                        this.asset,
+                        server,
+                        context,
+                      ))
+                ],
+              ),
             ),
-            Text(asset.description),
-            ...asset.features.map((e) => describeFeature(
-                  e,
-                  data,
-                  this.asset.system,
-                  this.asset,
-                  server,
-                  context,
-                ))
+            Positioned(
+              right: 0,
+              child: IconButton(
+                onPressed: () {
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
+                },
+                icon: Icon(Icons.close),
+              ),
+            ),
           ],
         ),
       ),
