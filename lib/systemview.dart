@@ -200,17 +200,18 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
           ? !networkIcons.containsKey(asset.icon)
           : !icons.containsKey(asset.icon)) {
         final ImageProvider icon;
+        bool wasFromNetwork;
         if ((useNetworkImages ?? false) &&
             !failedNetworkIcons.contains(asset.icon) &&
             !pendingNetworkImages.contains(asset.icon)) {
           pendingNetworkImages.add(asset.icon);
+          wasFromNetwork = true;
           icon = NetworkImage(
               'https://interstellar-dynasties.space/icons/${asset.icon}.png');
         } else {
+          wasFromNetwork = false;
           icon = AssetImage('icons/${asset.icon}.png');
         }
-        bool wasFromNetwork = (useNetworkImages ?? false) &&
-            !failedNetworkIcons.contains(asset.icon);
         icon.resolve(ImageConfiguration()).addListener(
               ImageStreamListener(
                 (info, sync) {
@@ -219,13 +220,12 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
                       : icons)[asset.icon] = info.image;
                 },
                 onError: (exception, stackTrace) {
-                  if (mounted) {
+                  if (mounted && wasFromNetwork) {
                     openErrorDialog(
                       'Failure when fetching ${asset.icon} from server: $exception, $wasFromNetwork',
                       context,
                     );
                   }
-                  // TODO: make it not open a million dialogs when the asset isn't found
                   if (wasFromNetwork) {
                     failedNetworkIcons.add(asset.icon);
                   }
