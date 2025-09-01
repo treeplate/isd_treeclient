@@ -143,7 +143,7 @@ void main() async {
 
 void mainLoop(DataStructure data, NetworkConnection systemServer) {
   AssetID rootAsset = data.rootAssets.values.single;
-  Set<AssetID> messageIDs = data.findMessages(rootAsset);
+  Set<AssetID> messageIDs = data.findFeature<MessageFeature>(rootAsset);
   Set<MessageFeature> messages = messageIDs.map((e) {
     return data.assets[e]!.features.whereType<MessageFeature>().first;
   }).toSet();

@@ -65,7 +65,7 @@ class _InboxState extends State<Inbox> with TickerProviderStateMixin {
                   controller: tabController,
                   tabs: widget.data.rootAssets.keys.map((e) {
                     int messageCount = widget.data
-                        .findMessages(widget.data.rootAssets[e]!)
+                        .findFeature<MessageFeature>(widget.data.rootAssets[e]!)
                         .where((e) => widget.data.assets[e]!.features
                             .any((e) => e is MessageFeature && !e.isRead))
                         .length;
@@ -109,7 +109,7 @@ class SystemInbox extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       children: data
-          .findMessages(rootAsset)
+          .findFeature<MessageFeature>(rootAsset)
           .map((e) => InboxMessage(
                 message: e,
                 data: data,

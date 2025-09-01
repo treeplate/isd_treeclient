@@ -498,7 +498,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                       0,
                       (a, b) =>
                           a +
-                          data.findMessages(b)
+                          data.findFeature<MessageFeature>(b)
                               .where((e) => data.assets[e]!.features
                                   .any((e) => e is MessageFeature && !e.isRead))
                               .length);

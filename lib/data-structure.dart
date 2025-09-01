@@ -176,8 +176,7 @@ class DataStructure with ChangeNotifier {
   }
 
   Material getMaterial(MaterialID id, StarIdentifier system) {
-    Set<AssetID> messages = findMessages(rootAssets[system]!);
-    // TODO: knowledge can be from assets without message features
+    Set<AssetID> messages = findFeature<KnowledgeFeature>(rootAssets[system]!);
     for (AssetID message in messages) {
       Asset asset = assets[message]!;
       Iterable<KnowledgeFeature> knowledges = asset.features.whereType();
@@ -260,48 +259,48 @@ class DataStructure with ChangeNotifier {
     }
   }
 
-  Set<AssetID> findMessages(
+  Set<AssetID> findFeature<T extends Feature>(
     AssetID root,
   ) {
     Set<AssetID> result = {};
-    _findMessages(root, result);
+    _findFeature<T>(root, result);
     return result;
   }
 
-  void _findMessages(AssetID root, Set<AssetID> result) {
+  void _findFeature<T extends Feature>(AssetID root, Set<AssetID> result) {
     Asset rootAsset = assets[root]!;
     for (Feature feature in rootAsset.features) {
+      if (feature is T) result.add(root);
       switch (feature) {
         case SolarSystemFeature(children: List<SolarSystemChild> children):
           for (SolarSystemChild child in children) {
-            _findMessages(child.child, result);
+            _findFeature<T>(child.child, result);
           }
         case OrbitFeature(
             primaryChild: AssetID primaryChild,
             orbitingChildren: List<OrbitChild> orbitingChildren,
           ):
-          _findMessages(primaryChild, result);
+          _findFeature<T>(primaryChild, result);
           for (OrbitChild child in orbitingChildren) {
-            _findMessages(child.child, result);
+            _findFeature<T>(child.child, result);
           }
         case SurfaceFeature(regions: Map<(double, double), AssetID> regions):
           for (AssetID region in regions.values) {
-            _findMessages(region, result);
+            _findFeature<T>(region, result);
           }
         case GridFeature(cells: List<AssetID?> cells):
           for (AssetID? cell in cells) {
             if (cell != null) {
-              _findMessages(cell, result);
+              _findFeature<T>(cell, result);
             }
           }
         case MessageBoardFeature(messages: List<AssetID> messages):
           for (AssetID message in messages) {
-            _findMessages(message, result);
+            _findFeature<T>(message, result);
           }
-        case MessageFeature():
-          result.add(root);
         case ProxyFeature(child: AssetID child):
-          _findMessages(child, result);
+          _findFeature<T>(child, result);
+        case MessageFeature():
         case StructureFeature():
         case StarFeature():
         case SpaceSensorFeature():
