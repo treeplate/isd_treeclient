@@ -189,8 +189,7 @@ class GridWidget extends StatelessWidget {
         } while (gridFeature.cells[x + y * gridFeature.width] == null);
         return true;
       }
-
-      // TODO: make a border around the gridfeature so the edge is obvious
+      
       return Container(
         decoration: BoxDecoration(border: BoxBorder.all(width: 5, color: Colors.grey)),
         child: GestureDetector(
