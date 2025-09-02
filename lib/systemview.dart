@@ -191,6 +191,7 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
   }
 
   final List<String> pendingNetworkImages = [];
+  final List<String> noAssetImages = [];
 
   void tick(Duration duration) {
     asyncTick();
@@ -212,19 +213,26 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
           wasFromNetwork = false;
           icon = AssetImage('icons/${asset.icon}.png');
         }
+        bool wantedToUseNetworkImages = useNetworkImages ?? false;
         icon.resolve(ImageConfiguration()).addListener(
               ImageStreamListener(
                 (info, sync) {
-                  (useNetworkImages ?? false
+                  (wantedToUseNetworkImages
                       ? networkIcons
                       : icons)[asset.icon] = info.image;
                 },
                 onError: (exception, stackTrace) {
                   if (mounted && wasFromNetwork) {
                     openErrorDialog(
-                      'Failure when fetching ${asset.icon} from server: $exception, $wasFromNetwork',
+                      'Failure when fetching ${asset.icon} from server: $exception',
                       context,
                     );
+                  } else if (mounted && !noAssetImages.contains(asset.icon)) {
+                    openErrorDialog(
+                      'Could not find asset for icon ${asset.icon}: $exception',
+                      context,
+                    );
+                    noAssetImages.add(asset.icon);
                   }
                   if (wasFromNetwork) {
                     failedNetworkIcons.add(asset.icon);
