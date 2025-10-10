@@ -421,6 +421,14 @@ class BuilderFeature extends Feature {
   BuilderFeature(this.capacity, this.rate, this.structures);
 }
 
+class InternalSensorFeature extends Feature {}
+
+class InternalSensorStatusFeature extends Feature {
+  final int count;
+
+  InternalSensorStatusFeature(this.count);
+}
+
 typedef AssetClassID = int; // 32-bit signed, but can't be 0
 typedef MaterialID = int; // 32-bit signed, but can't be 0
 

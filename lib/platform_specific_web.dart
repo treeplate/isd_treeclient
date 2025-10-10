@@ -21,10 +21,11 @@ class WebSocketWrapper {
     });
     return socket.onMessage.map((MessageEvent message) => message.data).listen(
           (message) {
-            if (message is String)
+            if (message.isA<JSString>())
               onData(message);
-            else if (message is Blob) {
-              JSPromise<JSArrayBuffer> promise = message.arrayBuffer();
+            else {
+              JSPromise<JSArrayBuffer> promise =
+                  (message as Blob).arrayBuffer();
               promise.toDart.then((JSArrayBuffer arrayBuffer) {
                 onData(arrayBuffer.toDart);
               });

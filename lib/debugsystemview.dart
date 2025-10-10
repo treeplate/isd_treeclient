@@ -182,6 +182,16 @@ Widget renderFeature(Feature feature, DataStructure data, StarIdentifier system,
         feature: feature,
         data: data,
       );
+    case InternalSensorFeature():
+      return InternalSensorFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case InternalSensorStatusFeature():
+      return InternalSensorStatusFeatureWidget(
+        feature: feature,
+        data: data,
+      );
   }
 }
 
@@ -936,6 +946,52 @@ class BuilderFeatureWidget extends StatelessWidget {
           ),
         )
       ],
+    );
+  }
+}
+
+class InternalSensorFeatureWidget extends StatelessWidget {
+  const InternalSensorFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final InternalSensorFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          'Internal sensor.',
+        ),
+      ],
+    );
+  }
+}
+
+class InternalSensorStatusFeatureWidget extends StatelessWidget {
+  const InternalSensorStatusFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final InternalSensorStatusFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Indent(
+      child: Column(
+        children: [
+          Text(
+            'Can see ${feature}',
+          ),
+        ],
+      ),
     );
   }
 }

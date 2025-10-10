@@ -965,6 +965,10 @@ Widget describeFeature(
       ):
       return Text(
           'This is a builder that can build $capacity structures at a rate of ${rate * 1000} units per second. It is currently building ${structures.length} structures.');
+    case InternalSensorFeature():
+      return Text('This is an internal sensor.');
+    case InternalSensorStatusFeature():
+      continue nothing;
   }
 }
 

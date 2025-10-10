@@ -255,6 +255,8 @@ class DataStructure with ChangeNotifier {
         case GridSensorFeature():
         case GridSensorStatusFeature():
         case BuilderFeature():
+        case InternalSensorFeature():
+        case InternalSensorStatusFeature():
       }
     }
   }
@@ -320,6 +322,8 @@ class DataStructure with ChangeNotifier {
         case GridSensorFeature():
         case GridSensorStatusFeature():
         case BuilderFeature():
+        case InternalSensorFeature():
+        case InternalSensorStatusFeature():
           break;
       }
     }

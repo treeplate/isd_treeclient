@@ -327,6 +327,11 @@ Feature parseFeature(
         rawStructureID = reader.readUint32();
       }
       return BuilderFeature(capacity, rate, structures);
+    case 0x1B:
+      return InternalSensorFeature();
+    case 0x1C:
+      int count = reader.readUint32();
+      return InternalSensorStatusFeature(count);
     default:
       throw UnimplementedError('Unknown featureID $featureCode');
   }
