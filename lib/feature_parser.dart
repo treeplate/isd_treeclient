@@ -337,4 +337,4 @@ Feature parseFeature(
   }
 }
 
-const kClientVersion = 0x1A;
+const kClientVersion = 0x1C;

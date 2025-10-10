@@ -988,7 +988,7 @@ class InternalSensorStatusFeatureWidget extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            'Can see ${feature}',
+            'Can see ${feature.count} assets.',
           ),
         ],
       ),
