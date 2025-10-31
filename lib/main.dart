@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart' hide Material;
+import 'package:flutter/scheduler.dart';
 
 import 'binaryreader.dart';
 import 'debugsystemview.dart' as debugsystemview;
@@ -130,6 +131,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
   late TabController tabController =
       TabController(length: 4, vsync: this, initialIndex: 1);
 
+  late final Timer ticker;
+
   void initState() {
     super.initState();
     getCookie('previousError').then((e) {
@@ -141,16 +144,22 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         loginState = LoginState.loginServerConnectionError;
       });
     });
+    ticker = Timer.periodic(
+        Duration(seconds: 1),
+        ((_) =>
+            data.dynastyID == null ? null : getHighScores([data.dynastyID!])));
   }
 
   void parseLoginServerBinaryMessage(ByteBuffer data) {
     Uint32List uint32s = data.asUint32List();
     int fileID = uint32s[0];
     switch (fileID) {
+      case 0:
+        this.data.parseScores(data);
       case 1:
-        this.data.parseStars(uint32s, data);
+        this.data.parseStars(data);
       case 2:
-        this.data.parseSystems(uint32s, data);
+        this.data.parseSystems(data);
       default:
         openErrorDialog('Error - Unrecognised file ID: $fileID', context);
     }
@@ -164,6 +173,22 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         assert(message.length == 2);
         openErrorDialog(
             'Error: failed to get file $fileID - ${message[1]}', context);
+      }
+      assert(message.length == 1);
+      assert(message[0] == 'T');
+    });
+  }
+
+  void getHighScores(Iterable<DynastyID> ids) {
+    connectToLoginServer()
+        .then(
+            (e) => e.send(['get-high-scores', ...ids.map((e) => e.toString())]))
+        .then((message) {
+      if (message[0] == 'F') {
+        assert(message.length == 2);
+        openErrorDialog(
+            'Error: failed to get high scores for dynasties $ids - ${message[1]}',
+            context);
       }
       assert(message.length == 1);
       assert(message[0] == 'T');
@@ -454,6 +479,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     data.dispose();
     dynastyServer?.close();
     loginServer?.close();
+    ticker.cancel();
     for (NetworkConnection server in systemServers.values) {
       server.close();
     }
@@ -498,7 +524,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                       0,
                       (a, b) =>
                           a +
-                          data.findFeature<MessageFeature>(b)
+                          data
+                              .findFeature<MessageFeature>(b)
                               .where((e) => data.assets[e]!.features
                                   .any((e) => e is MessageFeature && !e.isRead))
                               .length);
@@ -657,22 +684,48 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
               LoginState.ready => ListenableBuilder(
                   listenable: data,
                   builder: (context, child) {
-                    return Center(
-                      child: TabBarView(
-                        controller: tabController,
-                        children: [
-                          GalaxyView(
-                            data: data,
-                            dynastyServer: dynastyServer,
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: TabBarView(
+                            controller: tabController,
+                            children: [
+                              GalaxyView(
+                                data: data,
+                                dynastyServer: dynastyServer,
+                              ),
+                              systemview.SystemSelector(data: data),
+                              debugsystemview.SystemSelector(data: data),
+                              planetview.SystemSelector(
+                                data: data,
+                                servers: systemServersBySystemID,
+                              ),
+                            ],
                           ),
-                          systemview.SystemSelector(data: data),
-                          debugsystemview.SystemSelector(data: data),
-                          planetview.SystemSelector(
-                            data: data,
-                            servers: systemServersBySystemID,
-                          ),
-                        ],
-                      ),
+                        ),
+                        VerticalDivider(),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text('LEADERBOARD'),
+                            ...(data.scores.entries.toList()
+                                  ..sort((a, b) => -a.value.scores.last.score
+                                      .compareTo(b.value.scores.last.score)))
+                                .map((e) => Text.rich(TextSpan(children: [
+                                      TextSpan(
+                                        text:
+                                            '${e.key == data.dynastyID ? 'You' : 'Dynasty'}',
+                                        style: TextStyle(
+                                            color: getColorForDynastyID(e.key)),
+                                      ),
+                                      TextSpan(
+                                        text:
+                                            '${e.value.scores.last.score} points',
+                                      ),
+                                    ])))
+                          ],
+                        ),
+                      ],
                     );
                   },
                 ),

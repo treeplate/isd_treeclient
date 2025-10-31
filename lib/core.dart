@@ -86,12 +86,12 @@ extension type Uint64((int, int) _value) {
 const Uint64 zero64 = Uint64.bigEndian(0, 0);
 
 // uses SI units
-String prettyPrintDuration(Uint64 duration) {
-  int milliseconds = (duration % 1000).toInt();
-  int seconds = ((duration / 1000) % 60).floor();
-  int minutes = ((duration / (1000 * 60)) % 60).floor();
-  int hours = ((duration / (1000 * 60 * 60)) % 24).floor();
-  int days = (duration / (1000 * 60 * 60 * 24)).floor();
+String prettyPrintDuration(Uint64 durationInMilliseconds) {
+  int milliseconds = (durationInMilliseconds % 1000).toInt();
+  int seconds = ((durationInMilliseconds / 1000) % 60).floor();
+  int minutes = ((durationInMilliseconds / (1000 * 60)) % 60).floor();
+  int hours = ((durationInMilliseconds / (1000 * 60 * 60)) % 24).floor();
+  int days = (durationInMilliseconds / (1000 * 60 * 60 * 24)).floor();
   if (days > 0) return '$days days and $hours hours';
   if (hours > 0)
     return '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';

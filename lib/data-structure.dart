@@ -12,6 +12,22 @@ const String kGalaxyDiameterCookieName = 'galaxy-diameter';
 const String kStarsCookieName = 'stars';
 const String kSystemsCookieName = 'systems';
 
+extension type Score._(({Uint64 time, double score}) _value) {
+  Uint64 get time => _value.time;
+  double get score => _value.score;
+
+  factory Score(Uint64 time, double score) =>
+      Score._((time: time, score: score));
+}
+
+extension type ScoreEntry._(
+    ({int index, List<Score> scores}) _value) {
+  int get index => _value.index;
+  List<Score> get scores => _value.scores;
+  factory ScoreEntry(int index, List<Score> scores) =>
+      ScoreEntry._((index: index, scores: scores));
+}
+
 class DataStructure with ChangeNotifier {
   String? username;
   String? password;
@@ -29,7 +45,8 @@ class DataStructure with ChangeNotifier {
   Map<StarIdentifier, double> timeFactors =
       {}; // system ID -> time factor of system
   Map<AssetID, Asset> assets = {};
-  int? dynastyID;
+  Map<DynastyID, ScoreEntry> scores = {};
+  DynastyID? dynastyID;
 
   void setCredentials(String username, String password) {
     setCookie(kUsernameCookieName, username);
@@ -74,8 +91,36 @@ class DataStructure with ChangeNotifier {
     notifyListeners();
   }
 
-  void parseStars(Uint32List rawStars1, ByteBuffer buffer) {
-    Uint32List rawStars = rawStars1.sublist(1);
+  void parseScores(ByteBuffer buffer) {
+    ByteData rawScores = buffer.asByteData(4);
+    int index = 0;
+    while (index < rawScores.lengthInBytes) {
+      DynastyID dynastyID = rawScores.getUint32(index, Endian.little);
+      int lastDataPoint = rawScores.getUint32(index + 4, Endian.little);
+      int dataLength = rawScores.getUint32(index + 8, Endian.little);
+      index += 12;
+      int subindex = index;
+      if (scores[dynastyID] == null) {
+        scores[dynastyID] = ScoreEntry(lastDataPoint, []);
+      }
+      List<Score> dynastyScores = scores[dynastyID]!.scores;
+      while (subindex < index + (dataLength * 16)) {
+        Uint64 timestamp = Uint64.littleEndian(
+            rawScores.getUint32(subindex, Endian.little), rawScores.getUint32(subindex + 4, Endian.little));
+        double score = rawScores.getFloat64(subindex + 8, Endian.little);
+        Score timedScore = Score(timestamp, score);
+        if (!dynastyScores.contains(timedScore)) {
+          dynastyScores.add(timedScore);
+        }
+        subindex += 16;
+      }
+      index = subindex;
+    }
+    notifyListeners();
+  }
+
+  void parseStars(ByteBuffer buffer) {
+    Uint32List rawStars = buffer.asUint32List(4);
     List<List<Offset>> stars = [];
     int categoryCount = rawStars[0];
     int category = 0;
@@ -103,8 +148,8 @@ class DataStructure with ChangeNotifier {
     notifyListeners();
   }
 
-  void parseSystems(Uint32List rawSystems1, ByteBuffer buffer) {
-    Uint32List rawSystems = rawSystems1.sublist(1);
+  void parseSystems(ByteBuffer buffer) {
+    Uint32List rawSystems = buffer.asUint32List(4);
     systems = {};
     int index = 0;
     while (index < rawSystems.length) {
@@ -116,7 +161,7 @@ class DataStructure with ChangeNotifier {
     notifyListeners();
   }
 
-  void setDynastyID(int id) {
+  void setDynastyID(DynastyID id) {
     dynastyID = id;
     notifyListeners();
   }
@@ -204,12 +249,12 @@ class DataStructure with ChangeNotifier {
     });
     getBinaryBlob(kStarsCookieName).then((rawStars) {
       if (rawStars != null) {
-        parseStars(rawStars.buffer.asUint32List(), rawStars.buffer);
+        parseStars(rawStars.buffer);
       }
     });
     getBinaryBlob(kSystemsCookieName).then((rawSystems) {
       if (rawSystems != null) {
-        parseSystems(rawSystems.buffer.asUint32List(), rawSystems.buffer);
+        parseSystems(rawSystems.buffer);
       }
     });
   }

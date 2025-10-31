@@ -36,7 +36,7 @@ class BinaryReader {
   }
 
   Uint64 readUint64() {
-    return Uint64.littleEndian(readUint32(), readUint32());
+    return endian == Endian.big ? Uint64.bigEndian(readUint32(), readUint32()) : Uint64.littleEndian(readUint32(), readUint32());
   }
 
   double readFloat64() {
