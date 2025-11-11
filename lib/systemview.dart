@@ -111,8 +111,8 @@ class OrbitAssetInformation extends AssetInformation {
   final OrbitChild child;
   final AssetInformation parent;
 
-  int get hashCode => child.hashCode;
-  operator ==(other) => other is OrbitAssetInformation && child == other.child;
+  int get hashCode => child.child.hashCode;
+  operator ==(other) => other is OrbitAssetInformation && child.child == other.child.child;
 
   OrbitAssetInformation(this.child, this.parent);
   @override
