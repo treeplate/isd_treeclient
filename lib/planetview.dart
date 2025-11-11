@@ -729,8 +729,7 @@ Widget describeFeature(
       );
     case MiningFeature(
         currentRate: double currentRate,
-        enabled: bool enabled,
-        active: bool active,
+        disabledReasoning: DisabledReasoning disabledReasoning,
         rateLimitedBySource: bool rateLimitedBySource,
         rateLimitedByTarget: bool rateLimitedByTarget,
         maxRate: double maxRate,
@@ -747,39 +746,10 @@ Widget describeFeature(
       return Column(
         children: [
           Text(
-            'Mining ${currentRate % .001 == 0 ? (currentRate * 1000).toInt() : currentRate * 1000} kilogram${currentRate == .001 ? '' : 's'} per second (${enabled ? active ? rateLimitString : 'not in region' : 'disabled'}).',
+            'Mining ${currentRate % .001 == 0 ? (currentRate * 1000).toInt() : currentRate * 1000} kilogram${currentRate == .001 ? '' : 's'} per second (${disabledReasoning == 0 ? rateLimitString : disabledReasoning.asString}).',
           ),
           Text(
               'Can mine ${maxRate % .001 == 0 ? (maxRate * 1000).toInt() : maxRate * 1000} kilogram${maxRate == .001 ? '' : 's'} per second.'),
-          SizedBox(width: 10),
-          OutlinedButton(
-            onPressed: () async {
-              List<String> result = await server.send(
-                [
-                  'play',
-                  system.value.toString(),
-                  asset.id.toString(),
-                  enabled ? 'disable' : 'enable',
-                ],
-              );
-              if (result.first == 'T') {
-                if (result.length != 2) {
-                  openErrorDialog(
-                      'unexpected response to enable/disable: $result',
-                      context);
-                } else {
-                  if (result.first != 'T') {
-                    openErrorDialog(
-                        'server thinks miner already enabled/disabled',
-                        context);
-                  }
-                }
-              } else {
-                openErrorDialog('enable/disable failed: $result', context);
-              }
-            },
-            child: Text(enabled ? 'Disable' : 'Enable'),
-          ),
         ],
       );
     case OrePileFeature(
@@ -858,8 +828,7 @@ Widget describeFeature(
     case RefiningFeature(
         ore: MaterialID? ore,
         currentRate: double currentRate,
-        enabled: bool enabled,
-        active: bool active,
+        disabledReasoning: DisabledReasoning disabledReasoning,
         rateLimitedBySource: bool rateLimitedBySource,
         rateLimitedByTarget: bool rateLimitedByTarget,
         maxRate: double maxRate,
@@ -882,41 +851,12 @@ Widget describeFeature(
               if (ore != null)
                 MaterialWidget(material: data.getMaterial(ore, system)),
               Text(
-                ' at a rate of ${currentRate % .001 == 0 ? (currentRate * 1000).toInt() : currentRate * 1000} kilogram${currentRate == .001 ? '' : 's'} per second (${enabled ? active ? rateLimitString : 'not in region' : 'disabled'}).',
+                ' at a rate of ${currentRate % .001 == 0 ? (currentRate * 1000).toInt() : currentRate * 1000} kilogram${currentRate == .001 ? '' : 's'} per second (${disabledReasoning == 0 ? rateLimitString : disabledReasoning.asString}).',
               ),
             ],
           ),
           Text(
               'Can refine ${maxRate % .001 == 0 ? (maxRate * 1000).toInt() : maxRate * 1000} kilogram${maxRate == .001 ? '' : 's'} per second.'),
-          SizedBox(width: 10),
-          OutlinedButton(
-            onPressed: () async {
-              List<String> result = await server.send(
-                [
-                  'play',
-                  system.value.toString(),
-                  asset.id.toString(),
-                  enabled ? 'disable' : 'enable',
-                ],
-              );
-              if (result.first == 'T') {
-                if (result.length != 2) {
-                  openErrorDialog(
-                      'unexpected response to enable/disable: $result',
-                      context);
-                } else {
-                  if (result.first != 'T') {
-                    openErrorDialog(
-                        'server thinks refiner already enabled/disabled',
-                        context);
-                  }
-                }
-              } else {
-                openErrorDialog('enable/disable failed: $result', context);
-              }
-            },
-            child: Text(enabled ? 'Disable' : 'Enable'),
-          ),
         ],
       );
     case MaterialPileFeature(
@@ -961,14 +901,43 @@ Widget describeFeature(
     case BuilderFeature(
         capacity: int capacity,
         rate: double rate,
+        disabledReasoning: DisabledReasoning disabledReasoning,
         structures: Set<AssetID> structures
       ):
       return Text(
-          'This is a builder that can build $capacity structures at a rate of ${rate * 1000} units per second. It is currently building ${structures.length} structures.');
+        'This is a builder that can build $capacity structures at a rate of ${rate * 1000} units per second. (${disabledReasoning == 0 ? 'currently building ${structures.length} structure${structures.length == 1 ? '' : 's'}.' : disabledReasoning.asString})',
+      );
     case InternalSensorFeature():
       return Text('This is an internal sensor.');
     case InternalSensorStatusFeature():
       continue nothing;
+    case OnOffFeature(enabled: bool enabled):
+      return OutlinedButton(
+        onPressed: () async {
+          List<String> result = await server.send(
+            [
+              'play',
+              system.value.toString(),
+              asset.id.toString(),
+              enabled ? 'disable' : 'enable',
+            ],
+          );
+          if (result.first == 'T') {
+            if (result.length != 2) {
+              openErrorDialog(
+                  'unexpected response to enable/disable: $result', context);
+            } else {
+              if (result.first != 'T') {
+                openErrorDialog(
+                    'server thinks miner already enabled/disabled', context);
+              }
+            }
+          } else {
+            openErrorDialog('enable/disable failed: $result', context);
+          }
+        },
+        child: Text(enabled ? 'Disable' : 'Enable'),
+      );
   }
 }
 
@@ -1015,3 +984,33 @@ class MaterialWidget extends StatelessWidget {
     );
   }
 }
+
+/*
+OutlinedButton(
+            onPressed: () async {
+              List<String> result = await server.send(
+                [
+                  'play',
+                  system.value.toString(),
+                  asset.id.toString(),
+                  enabled ? 'disable' : 'enable',
+                ],
+              );
+              if (result.first == 'T') {
+                if (result.length != 2) {
+                  openErrorDialog(
+                      'unexpected response to enable/disable: $result',
+                      context);
+                } else {
+                  if (result.first != 'T') {
+                    openErrorDialog(
+                        'server thinks miner already enabled/disabled',
+                        context);
+                  }
+                }
+              } else {
+                openErrorDialog('enable/disable failed: $result', context);
+              }
+            },
+            child: Text(enabled ? 'Disable' : 'Enable'),
+          ),*/

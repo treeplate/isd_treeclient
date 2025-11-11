@@ -295,16 +295,14 @@ sealed class ReferenceFeature extends Feature {
 
 class MiningFeature extends Feature {
   final double maxRate; // kg/ms
-  final bool enabled;
-  final bool active;
+  final DisabledReasoning disabledReasoning;
   final bool rateLimitedBySource;
   final bool rateLimitedByTarget;
   final double currentRate; // kg/ms
 
   MiningFeature(
     this.maxRate,
-    this.enabled,
-    this.active,
+    this.disabledReasoning,
     this.rateLimitedBySource,
     this.rateLimitedByTarget,
     this.currentRate,
@@ -340,8 +338,7 @@ class RegionFeature extends Feature {
 class RefiningFeature extends Feature {
   final MaterialID? ore;
   final double maxRate; // kg/ms
-  final bool enabled;
-  final bool active;
+  final DisabledReasoning disabledReasoning;
   final bool rateLimitedBySource;
   final bool rateLimitedByTarget;
   final double currentRate;
@@ -349,8 +346,7 @@ class RefiningFeature extends Feature {
   RefiningFeature(
     this.ore,
     this.maxRate,
-    this.enabled,
-    this.active,
+    this.disabledReasoning,
     this.rateLimitedBySource,
     this.rateLimitedByTarget,
     this.currentRate,
@@ -416,9 +412,10 @@ class GridSensorStatusFeature extends Feature {
 class BuilderFeature extends Feature {
   final int capacity;
   final double rate;
+  final DisabledReasoning disabledReasoning;
   final Set<AssetID> structures;
 
-  BuilderFeature(this.capacity, this.rate, this.structures);
+  BuilderFeature(this.capacity, this.rate, this.disabledReasoning, this.structures,);
 }
 
 class InternalSensorFeature extends Feature {}
@@ -429,9 +426,35 @@ class InternalSensorStatusFeature extends Feature {
   InternalSensorStatusFeature(this.count);
 }
 
+class OnOffFeature extends Feature {
+  final bool enabled;
+
+  OnOffFeature(this.enabled);
+}
+
 typedef AssetClassID = int; // 32-bit signed, but can't be 0
 typedef MaterialID = int; // 32-bit signed, but can't be 0
 typedef DynastyID = int; // 32-bit unsigned, but can't be 0
+
+extension type DisabledReasoning(int flags) {
+  String get asString {
+    assert(flags >= 0);
+    if (flags >= 4) {
+      return 'invalid flags $flags';
+    }
+    List<String> problems = [];
+    if (flags & 1 == 1) {
+      problems.add('manually disabled');
+    }
+    if (flags & 2 == 2) {
+      problems.add('not yet built');
+    }
+    if (flags & 4 == 4) {
+      problems.add('bad placement');
+    }
+    return problems.join(', ');
+  }
+}
 
 class AssetClass {
   final AssetClassID id;

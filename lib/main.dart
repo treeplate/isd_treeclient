@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart' hide Material;
-import 'package:flutter/scheduler.dart';
 
 import 'binaryreader.dart';
 import 'debugsystemview.dart' as debugsystemview;
@@ -144,10 +143,10 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         loginState = LoginState.loginServerConnectionError;
       });
     });
-    ticker = Timer.periodic(
-        Duration(seconds: 1),
-        ((_) =>
-            data.dynastyID == null ? null : getHighScores([data.dynastyID!])));
+    // ticker = Timer.periodic(
+    //     Duration(seconds: 1),
+    //     ((_) =>
+    //         data.dynastyID == null ? null : getHighScores([data.dynastyID!])));
   }
 
   void parseLoginServerBinaryMessage(ByteBuffer data) {
@@ -781,8 +780,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     });
   }
 
-  Future<NetworkConnection> connectToLoginServer() async {
-    if (loginServer != null) return loginServer!;
+  Future<NetworkConnection> connectToLoginServer() {
+    if (loginServer != null) return Future.value(loginServer!);
     Completer<NetworkConnection> result = Completer();
     NetworkConnection.fromURL(
       loginServerURL,

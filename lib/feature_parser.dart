@@ -230,15 +230,15 @@ Feature parseFeature(
       return ResearchFeature(topic);
     case 0x12:
       double maxRate = reader.readFloat64();
+      DisabledReasoning disabledReasoning = DisabledReasoning(reader.readUint32());
       int flags = reader.readUint8();
       double currentRate = reader.readFloat64();
       // TODO: check constraints for these flags
       return MiningFeature(
         maxRate,
+        disabledReasoning,
         flags & 0x1 == 1,
         flags & 0x2 == 2,
-        flags & 0x4 == 4,
-        flags & 0x8 == 8,
         currentRate,
       );
     case 0x13:
@@ -267,16 +267,16 @@ Feature parseFeature(
       MaterialID? ore = reader.readInt32();
       if (ore == 0) ore = null;
       double maxRate = reader.readFloat64();
+      DisabledReasoning disabledReasoning = DisabledReasoning(reader.readUint32());
       int flags = reader.readUint8();
       double currentRate = reader.readFloat64();
       // TODO: check constraints for these flags
       return RefiningFeature(
         ore,
         maxRate,
+        disabledReasoning,
         flags & 0x1 == 1,
         flags & 0x2 == 2,
-        flags & 0x4 == 4,
-        flags & 0x8 == 8,
         currentRate,
       );
     case 0x16:
@@ -320,21 +320,25 @@ Feature parseFeature(
     case 0x1A:
       int capacity = reader.readUint32();
       double rate = reader.readFloat64();
+      DisabledReasoning disabledReasoning = DisabledReasoning(reader.readUint32());
       Set<AssetID> structures = {};
       int rawStructureID = reader.readUint32();
       while(rawStructureID != 0) {
         structures.add(AssetID(systemID, rawStructureID));
         rawStructureID = reader.readUint32();
       }
-      return BuilderFeature(capacity, rate, structures);
+      return BuilderFeature(capacity, rate, disabledReasoning, structures);
     case 0x1B:
       return InternalSensorFeature();
     case 0x1C:
       int count = reader.readUint32();
       return InternalSensorStatusFeature(count);
+    case 0x1D:
+      bool enabled = reader.readUint8() == 1;
+      return OnOffFeature(enabled);
     default:
       throw UnimplementedError('Unknown featureID $featureCode');
   }
 }
 
-const kClientVersion = 0x1C;
+const kClientVersion = 0x1D;

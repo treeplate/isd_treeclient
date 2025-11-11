@@ -192,6 +192,11 @@ Widget renderFeature(Feature feature, DataStructure data, StarIdentifier system,
         feature: feature,
         data: data,
       );
+    case OnOffFeature():
+      return OnOffFeatureWidget(
+        feature: feature,
+        data: data,
+      );
   }
 }
 
@@ -787,7 +792,7 @@ class MiningFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Mining at a rate of ${feature.currentRate} kg/ms (out of ${feature.maxRate} max) (enabled: ${feature.enabled}, active: ${feature.active}, rateLimitedBySource: ${feature.rateLimitedBySource}, rateLimitedByTarget: ${feature.rateLimitedByTarget})',
+          'Mining at a rate of ${feature.currentRate} kg/ms (out of ${feature.maxRate} max) (disabledReasoning: ${feature.disabledReasoning}, rateLimitedBySource: ${feature.rateLimitedBySource}, rateLimitedByTarget: ${feature.rateLimitedByTarget})',
         ),
       ],
     );
@@ -859,7 +864,7 @@ class RefiningFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Refining ${feature.ore == null ? 'unknown material' : 'M${feature.ore!.toRadixString(16).padLeft(8, '0')}'} at a rate of ${feature.currentRate} kg/ms (out of ${feature.maxRate} max) (enabled: ${feature.enabled}, active: ${feature.active}, rateLimitedBySource: ${feature.rateLimitedBySource}, rateLimitedByTarget: ${feature.rateLimitedByTarget})',
+          'Refining ${feature.ore == null ? 'unknown material' : 'M${feature.ore!.toRadixString(16).padLeft(8, '0')}'} at a rate of ${feature.currentRate} kg/ms (out of ${feature.maxRate} max) (disabledReasoning: ${feature.disabledReasoning}, rateLimitedBySource: ${feature.rateLimitedBySource}, rateLimitedByTarget: ${feature.rateLimitedByTarget})',
         ),
       ],
     );
@@ -937,7 +942,7 @@ class BuilderFeatureWidget extends StatelessWidget {
     return Column(
       children: [
         Text(
-          'Can build ${feature.capacity} structures at a rate of ${feature.rate} kg/ms.',
+          'Can build ${feature.capacity} structures at a rate of ${feature.rate} kg/ms. (disabledReasoning: ${feature.disabledReasoning})',
         ),
         Text('Currently building:'),
         ...feature.structures.map(
@@ -992,6 +997,28 @@ class InternalSensorStatusFeatureWidget extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class OnOffFeatureWidget extends StatelessWidget {
+  const OnOffFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final OnOffFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          'Enabled: ${feature.enabled}',
+        ),
+      ],
     );
   }
 }

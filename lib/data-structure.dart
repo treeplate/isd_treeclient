@@ -302,6 +302,7 @@ class DataStructure with ChangeNotifier {
         case BuilderFeature():
         case InternalSensorFeature():
         case InternalSensorStatusFeature():
+        case OnOffFeature():
       }
     }
   }
@@ -369,6 +370,7 @@ class DataStructure with ChangeNotifier {
         case BuilderFeature():
         case InternalSensorFeature():
         case InternalSensorStatusFeature():
+        case OnOffFeature():
           break;
       }
     }
