@@ -17,6 +17,13 @@ class SystemSelector extends StatefulWidget {
 
 class _SystemSelectorState extends State<SystemSelector> {
   StarIdentifier? selectedSystem;
+
+  @override
+  void didUpdateWidget(covariant SystemSelector oldWidget) {
+    setState(() {});
+    super.didUpdateWidget(oldWidget);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.data.rootAssets.keys.length == 1) {
@@ -468,6 +475,10 @@ class AssetDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if(data.assets[this.asset] == null) {
+      Navigator.pop(context);
+      return Placeholder();
+    }
     Asset asset = data.assets[this.asset]!;
     return Dialog(
       child: SingleChildScrollView(
@@ -639,11 +650,12 @@ Widget describeFeature(
               server: server,
               gridAssetID: asset));
     case PopulationFeature(
-        population: Uint64 population,
+        population: int population,
+        jobs: int jobs,
         averageHappiness: double averageHappiness
       ):
       return Text(
-        'There are ${population.displayName} people here with an average of $averageHappiness happiness (${population.toDouble() * averageHappiness} total happiness)',
+        'There are $population people here ($jobs with jobs) with an average of $averageHappiness happiness (${population.toDouble() * averageHappiness} total happiness)',
       );
     case MessageBoardFeature():
       continue nothing;
@@ -937,6 +949,13 @@ Widget describeFeature(
           }
         },
         child: Text(enabled ? 'Disable' : 'Enable'),
+      );
+      case StaffingFeature(
+        jobs: int jobs,
+        staff: int staff,
+      ):
+      return Text(
+        'There are $staff people working here out of $jobs required.',
       );
   }
 }

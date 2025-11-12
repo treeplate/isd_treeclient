@@ -140,9 +140,10 @@ Feature parseFeature(
       }
       return GridFeature(cells, width, height, cellSize);
     case 0xb:
-      Uint64 population = reader.readUint64();
+      int population = reader.readUint32();
+      int jobs = reader.readUint32();
       double averageHappiness = reader.readFloat64();
-      return PopulationFeature(population, averageHappiness);
+      return PopulationFeature(population, jobs, averageHappiness);
     case 0xc:
       List<AssetID> messages = [];
       while (true) {
@@ -336,9 +337,13 @@ Feature parseFeature(
     case 0x1D:
       bool enabled = reader.readUint8() == 1;
       return OnOffFeature(enabled);
+    case 0x1E:
+      int jobs = reader.readUint32();
+      int staff = reader.readUint32();
+      return StaffingFeature(jobs, staff);
     default:
       throw UnimplementedError('Unknown featureID $featureCode');
   }
 }
 
-const kClientVersion = 0x1D;
+const kClientVersion = 0x1E;

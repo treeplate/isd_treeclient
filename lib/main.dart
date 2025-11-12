@@ -222,6 +222,13 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
   }
 
   Future<void> login() async {
+    if (loginServer == null) {
+      setState(() {
+      loginState = LoginState.connectingToLoginServer;
+        
+      });
+      await connectToLoginServer();
+    }
     setState(() {
       loginState = LoginState.waitingOnLoginServer;
     });

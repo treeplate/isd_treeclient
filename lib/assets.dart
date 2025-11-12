@@ -134,8 +134,8 @@ class MaterialLineItem {
   final int requiredQuantity;
   final int? materialID;
 
-  MaterialLineItem(this.componentName, this.materialID,
-      this.requiredQuantity, this.materialDescription);
+  MaterialLineItem(this.componentName, this.materialID, this.requiredQuantity,
+      this.materialDescription);
 }
 
 class StructureFeature extends Feature {
@@ -153,8 +153,12 @@ class StructureFeature extends Feature {
   final int hp0;
   final double hpFlowRate; // units/ms
   double getHP(Uint64 time) {
-    return min(getQuantity(time), hp0 + hpFlowRate * ((time - time0).toDouble()));
+    return min(
+      getQuantity(time),
+      hp0 + hpFlowRate * ((time - time0).toDouble()),
+    );
   }
+
   final int quantity0;
   final double quantityFlowRate; // units/ms
   double getQuantity(Uint64 time) {
@@ -231,10 +235,11 @@ class GridFeature extends Feature {
 }
 
 class PopulationFeature extends Feature {
-  final Uint64 population;
+  final int population;
+  final int jobs;
   final double averageHappiness;
 
-  PopulationFeature(this.population, this.averageHappiness);
+  PopulationFeature(this.population, this.jobs, this.averageHappiness);
 }
 
 class MessageBoardFeature extends Feature {
@@ -415,7 +420,12 @@ class BuilderFeature extends Feature {
   final DisabledReasoning disabledReasoning;
   final Set<AssetID> structures;
 
-  BuilderFeature(this.capacity, this.rate, this.disabledReasoning, this.structures,);
+  BuilderFeature(
+    this.capacity,
+    this.rate,
+    this.disabledReasoning,
+    this.structures,
+  );
 }
 
 class InternalSensorFeature extends Feature {}
@@ -432,6 +442,13 @@ class OnOffFeature extends Feature {
   OnOffFeature(this.enabled);
 }
 
+class StaffingFeature extends Feature {
+  final int jobs;
+  final int staff;
+
+  StaffingFeature(this.jobs, this.staff);
+}
+
 typedef AssetClassID = int; // 32-bit signed, but can't be 0
 typedef MaterialID = int; // 32-bit signed, but can't be 0
 typedef DynastyID = int; // 32-bit unsigned, but can't be 0
@@ -439,7 +456,7 @@ typedef DynastyID = int; // 32-bit unsigned, but can't be 0
 extension type DisabledReasoning(int flags) {
   String get asString {
     assert(flags >= 0);
-    if (flags >= 4) {
+    if (flags >= 16) {
       return 'invalid flags $flags';
     }
     List<String> problems = [];
@@ -451,6 +468,9 @@ extension type DisabledReasoning(int flags) {
     }
     if (flags & 4 == 4) {
       problems.add('bad placement');
+    }
+    if (flags & 8 == 8) {
+      problems.add('not enough staff');
     }
     return problems.join(', ');
   }

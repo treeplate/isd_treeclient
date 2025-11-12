@@ -197,6 +197,11 @@ Widget renderFeature(Feature feature, DataStructure data, StarIdentifier system,
         feature: feature,
         data: data,
       );
+    case StaffingFeature():
+      return StaffingFeatureWidget(
+        feature: feature,
+        data: data,
+      );
   }
 }
 
@@ -771,7 +776,7 @@ class PopulationFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-            '${feature.population.displayName} people with an average of ${feature.averageHappiness} happiness (${feature.population.toDouble() * feature.averageHappiness} total happiness)'),
+            '${feature.population} people (${feature.jobs} with jobs) with an average of ${feature.averageHappiness} happiness (${feature.population.toDouble() * feature.averageHappiness} total happiness)'),
       ],
     );
   }
@@ -1017,6 +1022,28 @@ class OnOffFeatureWidget extends StatelessWidget {
       children: [
         Text(
           'Enabled: ${feature.enabled}',
+        ),
+      ],
+    );
+  }
+}
+
+class StaffingFeatureWidget extends StatelessWidget {
+  const StaffingFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final StaffingFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          'Staff: ${feature.staff}/${feature.jobs}',
         ),
       ],
     );
