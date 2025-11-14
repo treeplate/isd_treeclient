@@ -119,26 +119,35 @@ class ZoomCurve extends Curve {
 
   double transformInternal(double t) {
     if (zoomFactor == 1) return t;
-    return (pow(zoomFactor, t)-1)/(zoomFactor-1);
+    return (pow(zoomFactor, t) - 1) / (zoomFactor - 1);
   }
 }
 
 class ZoomController extends ChangeNotifier {
-  static const Curve panCurve = Curves.easeInOutCubic;
+  static const Curve panCurve = Curves.linear;
 
   double _zoom;
   late double _oldZoom = _zoom;
   double get realZoom => _zoom;
   double? _zoomMidpoint;
+  bool panThenZoom = false;
   double get zoom {
-    if (_zoomMidpoint == null) {
-      return ZoomCurve(_zoom/_oldZoom)
-                  .transform(_animation.value) *
+    if (_zoomMidpoint == null && !panThenZoom) {
+      return ZoomCurve(_zoom / _oldZoom).transform(_animation.value) *
               (_zoom - _oldZoom) +
           _oldZoom;
     }
+    if (panThenZoom) {
+      if (_animation.value <= 1 / 2) {
+        return _oldZoom;
+      } else {
+        return ZoomCurve(_zoom / _oldZoom).transform(_animation.value * 2 - 1) *
+                (_zoom - _oldZoom) +
+            _oldZoom;
+      }
+    }
     if (_animation.value <= 1 / 3) {
-      return ZoomCurve(_zoomMidpoint!/_oldZoom)
+      return ZoomCurve(_zoomMidpoint! / _oldZoom)
                   .transform(_animation.value * 3) *
               (_zoomMidpoint! - _oldZoom) +
           _oldZoom;
@@ -146,7 +155,7 @@ class ZoomController extends ChangeNotifier {
     if (_animation.value <= 2 / 3) {
       return _zoomMidpoint!;
     }
-    return ZoomCurve(_zoom/_zoomMidpoint!)
+    return ZoomCurve(_zoom / _zoomMidpoint!)
                 .transform(_animation.value * 3 - 2) *
             (_zoom - _zoomMidpoint!) +
         _zoomMidpoint!;
@@ -156,15 +165,20 @@ class ZoomController extends ChangeNotifier {
   late Offset _oldScreenCenter = _screenCenter;
   Offset get realScreenCenter => _screenCenter;
   Offset get screenCenter {
-    if (_zoomMidpoint == null) {
+    if (_zoomMidpoint == null && !panThenZoom) {
       return (_screenCenter - _oldScreenCenter) *
               panCurve.transform(_animation.value) +
           _oldScreenCenter;
     }
-    if (_animation.value <= 1 / 3) {
+    if (_animation.value <= 1 / 3 && !panThenZoom) {
       return _oldScreenCenter;
     }
-    if (_animation.value <= 2 / 3) {
+    if (panThenZoom && _animation.value <= 1 / 2) {
+      return (_screenCenter - _oldScreenCenter) *
+              panCurve.transform(_animation.value * 2) +
+          _oldScreenCenter;
+    }
+    if (!panThenZoom && _animation.value <= 2 / 3) {
       return (_screenCenter - _oldScreenCenter) *
               panCurve.transform(_animation.value * 3 - 1) +
           _oldScreenCenter;
@@ -183,10 +197,14 @@ class ZoomController extends ChangeNotifier {
         (max((newScreenCenter.dx - _oldScreenCenter.dx).abs(),
                 (newScreenCenter.dy - _oldScreenCenter.dy).abs()) *
             2);
-    if (maxZoomThatHasGoalOnScreen < max(_oldZoom, newZoom)) {
+    if (maxZoomThatHasGoalOnScreen < _oldZoom) {
       _zoomMidpoint = maxZoomThatHasGoalOnScreen;
+      panThenZoom = false;
+    } else if (maxZoomThatHasGoalOnScreen < _zoom) {
+      panThenZoom = true;
     } else {
       _zoomMidpoint = null;
+      panThenZoom = false;
     }
     _animation.reset();
     _animation.animateTo(1);

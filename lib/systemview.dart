@@ -112,7 +112,8 @@ class OrbitAssetInformation extends AssetInformation {
   final AssetInformation parent;
 
   int get hashCode => child.child.hashCode;
-  operator ==(other) => other is OrbitAssetInformation && child.child == other.child.child;
+  operator ==(other) =>
+      other is OrbitAssetInformation && child.child == other.child.child;
 
   OrbitAssetInformation(this.child, this.parent);
   @override
@@ -154,10 +155,11 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
     super.didUpdateWidget(oldWidget);
     for (AssetInformation asset in flattenAssetTree()) {
       if (widget.data.assets[asset.getAsset(widget.data)]!.features
-          .any((e) => e is PlotControlFeature && e.isColonyShip)) {
+              .any((e) => e is PlotControlFeature && e.isColonyShip) &&
+          !(asset == screenFocus)) {
         screenFocus = asset;
-        systemZoomController.animateTo(
-            1e8, systemZoomController.realScreenCenter);
+        systemTime = widget.data.getTime(widget.system, DateTime.timestamp());
+        systemZoomController.animateTo(1e8, calculateOrbitForScreenFocus());
       }
     }
   }
