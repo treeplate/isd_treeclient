@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart' hide Material;
@@ -224,10 +225,13 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
   Future<void> login() async {
     if (loginServer == null) {
       setState(() {
-      loginState = LoginState.connectingToLoginServer;
-        
+        loginState = LoginState.connectingToLoginServer;
       });
-      await connectToLoginServer();
+      try {
+        await connectToLoginServer();
+      } on HttpException {
+        return login();
+      }
     }
     setState(() {
       loginState = LoginState.waitingOnLoginServer;
