@@ -201,6 +201,7 @@ class ZoomController extends ChangeNotifier {
       _zoomMidpoint = maxZoomThatHasGoalOnScreen;
       panThenZoom = false;
     } else if (maxZoomThatHasGoalOnScreen < _zoom) {
+      _zoomMidpoint = null;
       panThenZoom = true;
     } else {
       _zoomMidpoint = null;
@@ -227,7 +228,7 @@ class ZoomController extends ChangeNotifier {
       : _zoom = zoom,
         _screenCenter = screenCenter {
     _animation = AnimationController(
-        vsync: vsync, duration: Duration(seconds: 5), value: 1);
+        vsync: vsync, duration: Duration(seconds: 3), value: 1);
     _animation.addListener(notifyListeners);
   }
 }

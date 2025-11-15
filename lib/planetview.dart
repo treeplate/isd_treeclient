@@ -548,15 +548,19 @@ Widget describeFeature(
       throw StateError('surface on planet');
     case RegionFeature():
       throw StateError('surface on planet');
-    case StructureFeature(materials: List<MaterialLineItem> materials):
-      if (feature.minHP == null) {
+    case StructureFeature(
+        materials: List<MaterialLineItem> materials,
+        maxHP: int maxHP,
+        minHP: int? minHP,
+      ):
+      if (minHP == null) {
         return Placeholder();
       }
       const int minLineItemHeight = 35;
       final double minLineItemFraction = materials
               .reduce((a, b) => a.requiredQuantity < b.requiredQuantity ? a : b)
               .requiredQuantity /
-          feature.maxHP;
+          maxHP;
       final double totalHeight = minLineItemHeight / minLineItemFraction;
       final ThemeData theme = Theme.of(context);
       return ContinuousBuilder(builder: (context) {
@@ -575,11 +579,11 @@ Widget describeFeature(
                           color: Colors.grey,
                           width: 10,
                           height:
-                              totalHeight * e.requiredQuantity / feature.maxHP,
+                              totalHeight * e.requiredQuantity / maxHP,
                         ),
                         Container(
                           height:
-                              totalHeight * e.requiredQuantity / feature.maxHP,
+                              totalHeight * e.requiredQuantity / maxHP,
                           width: 10,
                           decoration: BoxDecoration(
                             border: BoxBorder.fromLTRB(
@@ -622,7 +626,7 @@ Widget describeFeature(
                   feature.getQuantity(
                     data.getTime(system, DateTime.timestamp()),
                   ) /
-                  feature.maxHP,
+                  maxHP,
             ),
             Container(
               color: Colors.green,
@@ -631,7 +635,7 @@ Widget describeFeature(
                   feature.getHP(
                     data.getTime(system, DateTime.timestamp()),
                   ) /
-                  feature.maxHP,
+                  maxHP,
             ),
           ],
         );
