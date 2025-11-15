@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide Material;
 import 'package:isd_treeclient/core.dart';
+import 'knowledge.dart';
 import 'ui-core.dart';
 import 'assets.dart';
 import 'data-structure.dart';
@@ -554,15 +555,13 @@ Widget describeFeature(
         minHP: int? minHP,
       ):
       if (maxHP == 0) {
-        return ContinuousBuilder(
-          builder: (context) {
-            return Text('This has ${feature.getQuantity(
-              data.getTime(system, DateTime.timestamp()),
-            ).toStringAsFixed(2)} units of material and ${feature.getHP(
-              data.getTime(system, DateTime.timestamp()),
-            ).toStringAsFixed(2)} units built.');
-          }
-        );
+        return ContinuousBuilder(builder: (context) {
+          return Text('This has ${feature.getQuantity(
+                data.getTime(system, DateTime.timestamp()),
+              ).toStringAsFixed(2)} units of material and ${feature.getHP(
+                data.getTime(system, DateTime.timestamp()),
+              ).toStringAsFixed(2)} units built.');
+        });
       }
       const int minLineItemHeight = 35;
       final double minLineItemFraction = materials
@@ -1015,25 +1014,7 @@ class MaterialWidget extends StatelessWidget {
         showDialog(
           context: context,
           builder: (context) {
-            return Dialog(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ISDIcon(icon: material.icon, width: 32, height: 32),
-                      Text(material.name, style: TextStyle(fontSize: 20))
-                    ],
-                  ),
-                  Text(material.description),
-                  Text(material.isFluid ? 'A fluid.' : 'A solid.'),
-                  if (material.isPressurized) Text('Pressurized.'),
-                  Text(
-                      'Density: ${material.massPerCubicMeter} kilograms per cubic meter.')
-                ],
-              ),
-            );
+            return MaterialDialog(material: material);
           },
         );
       },

@@ -1,6 +1,8 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:isd_treeclient/knowledge.dart';
+import 'package:isd_treeclient/ui-core.dart';
 import 'assets.dart';
 import 'calendar.dart';
 import 'data-structure.dart';
@@ -134,6 +136,9 @@ class InboxMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     MessageFeature messageFeature =
         data.assets[message]!.features.whereType<MessageFeature>().single;
+    KnowledgeFeature? knowledgeFeature = data.assets[message]!.features
+        .whereType<KnowledgeFeature>()
+        .singleOrNull;
     return TextButton(
       child: DefaultTextStyle(
         style: DefaultTextStyle.of(context).style.copyWith(
@@ -141,45 +146,86 @@ class InboxMessage extends StatelessWidget {
                   messageFeature.isRead ? FontWeight.normal : FontWeight.bold,
             ),
         child: LayoutBuilder(builder: (context, constraints) {
-          return Row(
+          return Column(
             children: [
-              SizedBox(
-                width: 150,
-                child: Text(
-                  messageFeature.from,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              SizedBox(
-                width: max(0, constraints.maxWidth - 250),
-                child: Text.rich(
-                  TextSpan(
-                    text: messageFeature.subject,
-                    children: [
-                      TextSpan(
-                        text: ' - ${messageFeature.text.replaceAll('\n', ' ')}',
-                        style: DefaultTextStyle.of(context).style.copyWith(
-                              fontWeight: messageFeature.isRead
-                                  ? FontWeight.w300
-                                  : FontWeight.normal,
-                            ),
-                      ),
-                    ],
+              Row(
+                children: [
+                  SizedBox(
+                    width: 150,
+                    child: Text(
+                      messageFeature.from,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  SizedBox(
+                    width: max(0, constraints.maxWidth - 250),
+                    child: Text.rich(
+                      TextSpan(
+                        text: messageFeature.subject,
+                        children: [
+                          TextSpan(
+                            text:
+                                ' - ${messageFeature.text.replaceAll('\n', ' ')}',
+                            style: DefaultTextStyle.of(context).style.copyWith(
+                                  fontWeight: messageFeature.isRead
+                                      ? FontWeight.w300
+                                      : FontWeight.normal,
+                                ),
+                          ),
+                        ],
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Expanded(
+                    child: Container(),
+                  ),
+                  SizedBox(
+                    width: 100,
+                    child: Text(
+                      calendar.dateName(messageFeature.timestamp) +
+                          ' ' +
+                          calendar.timeName(messageFeature.timestamp),
+                    ),
+                  ),
+                ],
               ),
-              Expanded(
-                child: Container(),
-              ),
-              SizedBox(
-                width: 100,
-                child: Text(
-                  calendar.dateName(messageFeature.timestamp) +
-                      ' ' +
-                      calendar.timeName(messageFeature.timestamp),
-                ),
-              ),
+              if (knowledgeFeature != null &&
+                  knowledgeFeature.classes.length +
+                          knowledgeFeature.materials.length >
+                      0)
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 150,
+                    ),
+                    ...knowledgeFeature.classes.values
+                        .map((e) => Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: AttachmentButton(
+                                  icon: e.icon,
+                                  name: e.name,
+                                  openDialog: (context) =>
+                                      AssetClassDialog(assetClass: e)),
+                            ))
+                        .followedBy(knowledgeFeature.materials.values
+                            .map((e) => Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: AttachmentButton(
+                                    icon: e.icon,
+                                    name: e.name,
+                                    openDialog: (context) =>
+                                        MaterialDialog(material: e),
+                                  ),
+                                )))
+                        .take(3),
+                    if (knowledgeFeature.classes.length +
+                            knowledgeFeature.materials.length >
+                        3)
+                      Text(
+                          '+${knowledgeFeature.classes.length + knowledgeFeature.materials.length - 3}')
+                  ],
+                )
             ],
           );
         }),
@@ -192,12 +238,16 @@ class InboxMessage extends StatelessWidget {
           'mark-read'
         ]);
         showDialog(
-            context: context,
-            builder: (context) => Dialog(
-                child: InboxMessageDialog(
-                    message: messageFeature,
-                    server: server,
-                    messageAsset: message)));
+          context: context,
+          builder: (context) => Dialog(
+            child: InboxMessageDialog(
+              message: messageFeature,
+              knowledge: knowledgeFeature,
+              server: server,
+              asset: message,
+            ),
+          ),
+        );
       },
     );
   }
@@ -207,11 +257,13 @@ class InboxMessageDialog extends StatelessWidget {
   const InboxMessageDialog(
       {super.key,
       required this.message,
+      required this.knowledge,
       required this.server,
-      required this.messageAsset});
+      required this.asset});
   final MessageFeature message;
+  final KnowledgeFeature? knowledge;
   final NetworkConnection server;
-  final AssetID messageAsset;
+  final AssetID asset;
 
   @override
   Widget build(BuildContext context) {
@@ -249,23 +301,82 @@ class InboxMessageDialog extends StatelessWidget {
                   .copyWith(fontWeight: FontWeight.w300),
             ),
             Expanded(child: Container()),
-            Text(
-                '${calendar.dateName(message.timestamp)} ${calendar.timeName(message.timestamp)} (${message.timestamp.displayName})')
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                '${calendar.dateName(message.timestamp)} ${calendar.timeName(message.timestamp)} (${message.timestamp.displayName})',
+              ),
+            ),
+            OutlinedButton(
+              onPressed: () {
+                server.send([
+                  'play',
+                  asset.system.value.toString(),
+                  asset.id.toString(),
+                  message.isRead ? 'mark-unread' : 'mark-read'
+                ]);
+              },
+              child: Text(message.isRead ? 'Mark as unread' : 'Mark as read'),
+            )
           ],
         ),
         SelectableText(message.text),
-        OutlinedButton(
-          onPressed: () {
-            server.send([
-              'play',
-              messageAsset.system.value.toString(),
-              messageAsset.id.toString(),
-              message.isRead ? 'mark-unread' : 'mark-read'
-            ]);
-          },
-          child: Text(message.isRead ? 'Mark as unread' : 'Mark as read'),
-        )
+        if (knowledge != null &&
+            knowledge!.classes.length + knowledge!.materials.length > 0)
+          Divider(),
+        if (knowledge != null)
+          Wrap(children: [
+            ...knowledge!.classes.values
+                .map((e) => Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: AttachmentButton(
+                          icon: e.icon,
+                          name: e.name,
+                          openDialog: (context) =>
+                              AssetClassDialog(assetClass: e)),
+                    ))
+                .followedBy(knowledge!.materials.values.map((e) => Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: AttachmentButton(
+                        icon: e.icon,
+                        name: e.name,
+                        openDialog: (context) => MaterialDialog(material: e),
+                      ),
+                    )))
+          ]),
       ],
     );
+  }
+}
+
+class AttachmentButton extends StatelessWidget {
+  const AttachmentButton(
+      {super.key,
+      required this.icon,
+      required this.name,
+      required this.openDialog});
+
+  final String icon;
+  final String name;
+  final Widget Function(BuildContext context) openDialog;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+        onPressed: () {
+          showDialog(context: context, builder: openDialog);
+        },
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ColoredBox(
+                color: Colors.grey,
+                child: Padding(
+                  padding: const EdgeInsets.all(1),
+                  child: ISDIcon(icon: icon, width: 16, height: 16),
+                )),
+            Text(name)
+          ],
+        ));
   }
 }
