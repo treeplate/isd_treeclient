@@ -553,8 +553,16 @@ Widget describeFeature(
         maxHP: int maxHP,
         minHP: int? minHP,
       ):
-      if (minHP == null) {
-        return Placeholder();
+      if (maxHP == 0) {
+        return ContinuousBuilder(
+          builder: (context) {
+            return Text('This has ${feature.getQuantity(
+              data.getTime(system, DateTime.timestamp()),
+            ).toStringAsFixed(2)} units of material and ${feature.getHP(
+              data.getTime(system, DateTime.timestamp()),
+            ).toStringAsFixed(2)} units built.');
+          }
+        );
       }
       const int minLineItemHeight = 35;
       final double minLineItemFraction = materials
@@ -578,12 +586,10 @@ Widget describeFeature(
                         Container(
                           color: Colors.grey,
                           width: 10,
-                          height:
-                              totalHeight * e.requiredQuantity / maxHP,
+                          height: totalHeight * e.requiredQuantity / maxHP,
                         ),
                         Container(
-                          height:
-                              totalHeight * e.requiredQuantity / maxHP,
+                          height: totalHeight * e.requiredQuantity / maxHP,
                           width: 10,
                           decoration: BoxDecoration(
                             border: BoxBorder.fromLTRB(
@@ -637,6 +643,15 @@ Widget describeFeature(
                   ) /
                   maxHP,
             ),
+            if (minHP != null)
+              Positioned(
+                top: totalHeight * minHP / maxHP,
+                child: Container(
+                  color: Colors.pink,
+                  width: 10,
+                  height: 1,
+                ),
+              ),
           ],
         );
       });
@@ -670,10 +685,10 @@ Widget describeFeature(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'There are $population people here ($jobs with jobs) with an average of $averageHappiness happiness (${population.toDouble() * averageHappiness} total happiness)',
+            'There are $population people here ($jobs with jobs) with an average of $averageHappiness happiness (${population.toDouble() * averageHappiness} total happiness).',
           ),
           Text(
-              'This houses $maxPopulation people, and is currently ${disabledReasoning == 0 ? 'in working condition' : disabledReasoning.asString}')
+              'This houses $maxPopulation people, and is currently ${disabledReasoning == 0 ? 'in working condition' : disabledReasoning.asString}.')
         ],
       );
     case MessageBoardFeature():
