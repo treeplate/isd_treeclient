@@ -456,7 +456,7 @@ typedef DynastyID = int; // 32-bit unsigned, but can't be 0
 extension type DisabledReasoning(int flags) {
   String get asString {
     assert(flags >= 0);
-    if (flags >= 16) {
+    if (flags >= 0x20) {
       return 'invalid flags $flags';
     }
     List<String> problems = [];
@@ -471,6 +471,9 @@ extension type DisabledReasoning(int flags) {
     }
     if (flags & 8 == 8) {
       problems.add('not enough staff');
+    }
+    if (flags & 0x10 == 0x10) {
+      problems.add('no owner');
     }
     return problems.join(', ');
   }
