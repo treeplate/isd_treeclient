@@ -253,7 +253,7 @@ class InboxMessageDialog extends StatelessWidget {
                 '${calendar.dateName(message.timestamp)} ${calendar.timeName(message.timestamp)} (${message.timestamp.displayName})')
           ],
         ),
-        Text(message.text),
+        SelectableText(message.text),
         OutlinedButton(
           onPressed: () {
             server.send([
