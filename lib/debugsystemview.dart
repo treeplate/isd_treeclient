@@ -455,7 +455,7 @@ class ResearchFeatureWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Researching "${feature.topic}"'),
+        Text('Researching "${feature.topic}" (disabledReasoning: ${feature.disabledReasoning})'),
       ],
     );
   }
@@ -678,7 +678,7 @@ class SpaceSensorFeatureWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Space sensor'),
+        Text('Space sensor (disabledReasoning: ${feature.disabledReasoning})'),
         Text('  Maximum steps up to an orbit: ${feature.reach}'),
         Text('  Maximum steps up after orbit: ${feature.up}'),
         Text('  Maximum steps down after going up: ${feature.down}'),
@@ -730,7 +730,7 @@ class GridSensorFeatureWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Grid sensor'),
+        Text('Grid sensor (disabledReasoning: ${feature.disabledReasoning}).'),
       ],
     );
   }
@@ -776,7 +776,7 @@ class PopulationFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-            '${feature.population} people (${feature.jobs} with jobs) with an average of ${feature.averageHappiness} happiness (${feature.population.toDouble() * feature.averageHappiness} total happiness)'),
+            '${feature.population} people (${feature.jobs} with jobs, disabledReasoning: ${feature.disabledReasoning}) out of ${feature.maxPopulation} max with an average of ${feature.averageHappiness} happiness (${feature.population.toDouble() * feature.averageHappiness} total happiness)'),
       ],
     );
   }
@@ -975,7 +975,7 @@ class InternalSensorFeatureWidget extends StatelessWidget {
     return Column(
       children: [
         Text(
-          'Internal sensor.',
+          'Internal sensor (disabledReasoning: ${feature.disabledReasoning}).',
         ),
       ],
     );

@@ -184,6 +184,8 @@ class StarFeature extends Feature {
 }
 
 class SpaceSensorFeature extends Feature {
+  final DisabledReasoning disabledReasoning;
+
   /// Max steps up tree to nearest orbit.
   final int reach;
 
@@ -195,7 +197,8 @@ class SpaceSensorFeature extends Feature {
 
   /// The minimum size of assets that these sensors can detect (in meters).
   final double resolution;
-  SpaceSensorFeature(this.reach, this.up, this.down, this.resolution);
+  SpaceSensorFeature(
+      this.disabledReasoning, this.reach, this.up, this.down, this.resolution);
 }
 
 class SpaceSensorStatusFeature extends Feature {
@@ -235,11 +238,14 @@ class GridFeature extends Feature {
 }
 
 class PopulationFeature extends Feature {
+  final DisabledReasoning disabledReasoning;
   final int population;
+  final int maxPopulation;
   final int jobs;
   final double averageHappiness;
 
-  PopulationFeature(this.population, this.jobs, this.averageHappiness);
+  PopulationFeature(this.disabledReasoning, this.population, this.maxPopulation,
+      this.jobs, this.averageHappiness);
 }
 
 class MessageBoardFeature extends Feature {
@@ -288,9 +294,10 @@ class KnowledgeFeature extends Feature {
 }
 
 class ResearchFeature extends Feature {
+  final DisabledReasoning disabledReasoning;
   final String topic;
 
-  ResearchFeature(this.topic);
+  ResearchFeature(this.disabledReasoning, this.topic);
 }
 
 sealed class ReferenceFeature extends Feature {
@@ -405,7 +412,11 @@ class MaterialStackFeature extends Feature {
   );
 }
 
-class GridSensorFeature extends Feature {}
+class GridSensorFeature extends Feature {
+  final DisabledReasoning disabledReasoning;
+
+  GridSensorFeature(this.disabledReasoning);
+}
 
 class GridSensorStatusFeature extends Feature {
   final int count;
@@ -428,7 +439,11 @@ class BuilderFeature extends Feature {
   );
 }
 
-class InternalSensorFeature extends Feature {}
+class InternalSensorFeature extends Feature {
+  final DisabledReasoning disabledReasoning;
+
+  InternalSensorFeature(this.disabledReasoning);
+}
 
 class InternalSensorStatusFeature extends Feature {
   final int count;
@@ -453,6 +468,14 @@ typedef AssetClassID = int; // 32-bit signed, but can't be 0
 typedef MaterialID = int; // 32-bit signed, but can't be 0
 typedef DynastyID = int; // 32-bit unsigned, but can't be 0
 
+String joinCommaAnd(List<String> args) {
+  if (args.isEmpty) return '';
+  if (args.length == 1) return args.single;
+  if (args.length == 2) return args.join(' and ');
+  return args.getRange(0, args.length - 1).join(', ') + ', and ' + args.last;
+}
+
+// 32-bit unsigned
 extension type DisabledReasoning(int flags) {
   String get asString {
     assert(flags >= 0);
@@ -467,15 +490,15 @@ extension type DisabledReasoning(int flags) {
       problems.add('not yet built');
     }
     if (flags & 4 == 4) {
-      problems.add('bad placement');
+      problems.add('in the wrong place');
     }
     if (flags & 8 == 8) {
-      problems.add('not enough staff');
+      problems.add('not fully staffed');
     }
     if (flags & 0x10 == 0x10) {
-      problems.add('no owner');
+      problems.add('not owned');
     }
-    return problems.join(', ');
+    return joinCommaAnd(problems);
   }
 }
 

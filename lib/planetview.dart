@@ -73,6 +73,7 @@ class _PlanetSelectorState extends State<PlanetSelector> {
   AssetID? selectedPlanet;
 
   List<AssetID> walkTreeForPlanets() {
+    if (widget.data.assets.isEmpty) return [];
     Asset rootAsset =
         widget.data.assets[widget.data.rootAssets[widget.system]]!;
     List<AssetID> frontier = [
@@ -142,6 +143,8 @@ class PlanetView extends StatefulWidget {
 class _PlanetViewState extends State<PlanetView> {
   @override
   Widget build(BuildContext context) {
+    if (widget.data.assets.isEmpty)
+      return Text('Error: failed to parse system');
     Map<(double, double), AssetID> regions = widget
         .data.assets[widget.planet]!.features
         .whereType<SurfaceFeature>()
@@ -475,7 +478,7 @@ class AssetDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if(data.assets[this.asset] == null) {
+    if (data.assets[this.asset] == null) {
       Navigator.pop(context);
       return Placeholder();
     }
@@ -633,8 +636,11 @@ Widget describeFeature(
           ],
         );
       });
-    case SpaceSensorFeature():
-      return Text('This is a space sensor.');
+    case SpaceSensorFeature(
+        disabledReasoning: DisabledReasoning disabledReasoning
+      ):
+      return Text(
+          'This is a space sensor (${disabledReasoning == 0 ? 'enabled' : disabledReasoning.asString}).');
     case SpaceSensorStatusFeature():
       continue nothing;
     case PlotControlFeature(isColonyShip: bool isColonyShip):
@@ -650,12 +656,21 @@ Widget describeFeature(
               server: server,
               gridAssetID: asset));
     case PopulationFeature(
+        disabledReasoning: DisabledReasoning disabledReasoning,
         population: int population,
+        maxPopulation: int maxPopulation,
         jobs: int jobs,
         averageHappiness: double averageHappiness
       ):
-      return Text(
-        'There are $population people here ($jobs with jobs) with an average of $averageHappiness happiness (${population.toDouble() * averageHappiness} total happiness)',
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'There are $population people here ($jobs with jobs) with an average of $averageHappiness happiness (${population.toDouble() * averageHappiness} total happiness)',
+          ),
+          Text(
+              'This houses $maxPopulation people, and is currently ${disabledReasoning == 0 ? 'in working condition' : disabledReasoning.asString}')
+        ],
       );
     case MessageBoardFeature():
       continue nothing;
@@ -670,11 +685,14 @@ Widget describeFeature(
       );
     case KnowledgeFeature():
       return Placeholder();
-    case ResearchFeature(topic: String topic):
+    case ResearchFeature(
+        disabledReasoning: DisabledReasoning disabledReasoning,
+        topic: String topic
+      ):
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Researching: '),
+          Text('${disabledReasoning == 0 ? 'Researching' : 'Will research'}: '),
           TextButton(
             onPressed: () async {
               List<String> result = await server.send(
@@ -737,6 +755,7 @@ Widget describeFeature(
             },
             child: Text('$topic'),
           ),
+          if (disabledReasoning != 0) Text('(${disabledReasoning.asString})')
         ],
       );
     case MiningFeature(
@@ -906,8 +925,11 @@ Widget describeFeature(
           Text('s / $capacity possible'),
         ]);
       });
-    case GridSensorFeature():
-      return Text('This is a grid sensor.');
+    case GridSensorFeature(
+        disabledReasoning: DisabledReasoning disabledReasoning,
+      ):
+      return Text(
+          'This is a grid sensor (${disabledReasoning == 0 ? 'enabled' : disabledReasoning.asString}).');
     case GridSensorStatusFeature():
       continue nothing;
     case BuilderFeature(
@@ -919,8 +941,11 @@ Widget describeFeature(
       return Text(
         'This is a builder that can build $capacity structures at a rate of ${rate * 1000} units per second. (${disabledReasoning == 0 ? 'currently building ${structures.length} structure${structures.length == 1 ? '' : 's'}.' : disabledReasoning.asString})',
       );
-    case InternalSensorFeature():
-      return Text('This is an internal sensor.');
+    case InternalSensorFeature(
+        disabledReasoning: DisabledReasoning disabledReasoning,
+      ):
+      return Text(
+          'This is an internal sensor (${disabledReasoning == 0 ? 'enabled' : disabledReasoning.asString}).');
     case InternalSensorStatusFeature():
       continue nothing;
     case OnOffFeature(enabled: bool enabled):
@@ -950,7 +975,7 @@ Widget describeFeature(
         },
         child: Text(enabled ? 'Disable' : 'Enable'),
       );
-      case StaffingFeature(
+    case StaffingFeature(
         jobs: int jobs,
         staff: int staff,
       ):
@@ -1003,33 +1028,3 @@ class MaterialWidget extends StatelessWidget {
     );
   }
 }
-
-/*
-OutlinedButton(
-            onPressed: () async {
-              List<String> result = await server.send(
-                [
-                  'play',
-                  system.value.toString(),
-                  asset.id.toString(),
-                  enabled ? 'disable' : 'enable',
-                ],
-              );
-              if (result.first == 'T') {
-                if (result.length != 2) {
-                  openErrorDialog(
-                      'unexpected response to enable/disable: $result',
-                      context);
-                } else {
-                  if (result.first != 'T') {
-                    openErrorDialog(
-                        'server thinks miner already enabled/disabled',
-                        context);
-                  }
-                }
-              } else {
-                openErrorDialog('enable/disable failed: $result', context);
-              }
-            },
-            child: Text(enabled ? 'Disable' : 'Enable'),
-          ),*/

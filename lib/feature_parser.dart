@@ -94,6 +94,7 @@ Feature parseFeature(
       );
     case 5:
       return SpaceSensorFeature(
+        DisabledReasoning(reader.readUint32()),
         reader.readUint32(),
         reader.readUint32(),
         reader.readUint32(),
@@ -140,10 +141,14 @@ Feature parseFeature(
       }
       return GridFeature(cells, width, height, cellSize);
     case 0xb:
+      DisabledReasoning disabledReasoning =
+          DisabledReasoning(reader.readUint32());
       int population = reader.readUint32();
+      int maxPopulation = reader.readUint32();
       int jobs = reader.readUint32();
       double averageHappiness = reader.readFloat64();
-      return PopulationFeature(population, jobs, averageHappiness);
+      return PopulationFeature(
+          disabledReasoning, population, maxPopulation, jobs, averageHappiness);
     case 0xc:
       List<AssetID> messages = [];
       while (true) {
@@ -181,7 +186,7 @@ Feature parseFeature(
     case 0xe:
       int id = reader.readUint32();
       Map<MaterialID, Uint64> materials = {};
-      while(id != 0) {
+      while (id != 0) {
         materials[id] = reader.readUint64();
         id = reader.readInt32();
       }
@@ -227,11 +232,14 @@ Feature parseFeature(
       }
       return KnowledgeFeature(classes, materials);
     case 0x11:
+      DisabledReasoning disabledReasoning =
+          DisabledReasoning(reader.readUint32());
       String topic = reader.readString();
-      return ResearchFeature(topic);
+      return ResearchFeature(disabledReasoning, topic);
     case 0x12:
       double maxRate = reader.readFloat64();
-      DisabledReasoning disabledReasoning = DisabledReasoning(reader.readUint32());
+      DisabledReasoning disabledReasoning =
+          DisabledReasoning(reader.readUint32());
       int flags = reader.readUint8();
       double currentRate = reader.readFloat64();
       // TODO: check constraints for these flags
@@ -268,7 +276,8 @@ Feature parseFeature(
       MaterialID? ore = reader.readInt32();
       if (ore == 0) ore = null;
       double maxRate = reader.readFloat64();
-      DisabledReasoning disabledReasoning = DisabledReasoning(reader.readUint32());
+      DisabledReasoning disabledReasoning =
+          DisabledReasoning(reader.readUint32());
       int flags = reader.readUint8();
       double currentRate = reader.readFloat64();
       // TODO: check constraints for these flags
@@ -311,7 +320,7 @@ Feature parseFeature(
         data.getTime(systemID, DateTime.timestamp()),
       );
     case 0x18:
-      return GridSensorFeature();
+      return GridSensorFeature(DisabledReasoning(reader.readUint32()));
     case 0x19:
       int? grid = reader.readUint32();
       return GridSensorStatusFeature(
@@ -321,16 +330,17 @@ Feature parseFeature(
     case 0x1A:
       int capacity = reader.readUint32();
       double rate = reader.readFloat64();
-      DisabledReasoning disabledReasoning = DisabledReasoning(reader.readUint32());
+      DisabledReasoning disabledReasoning =
+          DisabledReasoning(reader.readUint32());
       Set<AssetID> structures = {};
       int rawStructureID = reader.readUint32();
-      while(rawStructureID != 0) {
+      while (rawStructureID != 0) {
         structures.add(AssetID(systemID, rawStructureID));
         rawStructureID = reader.readUint32();
       }
       return BuilderFeature(capacity, rate, disabledReasoning, structures);
     case 0x1B:
-      return InternalSensorFeature();
+      return InternalSensorFeature(DisabledReasoning(reader.readUint32()));
     case 0x1C:
       int count = reader.readUint32();
       return InternalSensorStatusFeature(count);
