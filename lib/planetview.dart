@@ -480,7 +480,7 @@ class AssetDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     if (data.assets[this.asset] == null) {
       Navigator.pop(context);
-      return Placeholder();
+      return CircularProgressIndicator();
     }
     Asset asset = data.assets[this.asset]!;
     return Dialog(
