@@ -701,8 +701,28 @@ Widget describeFeature(
       return Container(
         width: 0,
       );
-    case KnowledgeFeature():
-      return Placeholder();
+    case KnowledgeFeature(
+        classes: Map<AssetClassID, AssetClass> classes,
+        materials: Map<MaterialID, Material> materials
+      ):
+      return Column(
+        children: [
+          Text('This has information about:'),
+          ...classes.values
+              .map((e) => Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: AssetClassWidget(assetClass: e),
+                  ))
+              .followedBy(
+                materials.values.map(
+                  (e) => Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: MaterialWidget(material: e),
+                  ),
+                ),
+              ),
+        ],
+      );
     case ResearchFeature(
         disabledReasoning: DisabledReasoning disabledReasoning,
         topic: String topic
@@ -1023,6 +1043,32 @@ class MaterialWidget extends StatelessWidget {
         children: [
           ISDIcon(icon: material.icon, width: 32, height: 32),
           Text(material.name)
+        ],
+      ),
+    );
+  }
+}
+
+class AssetClassWidget extends StatelessWidget {
+  const AssetClassWidget({super.key, required this.assetClass});
+  final AssetClass assetClass;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: () {
+        showDialog(
+          context: context,
+          builder: (context) {
+            return AssetClassDialog(assetClass: assetClass);
+          },
+        );
+      },
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ISDIcon(icon: assetClass.icon, width: 32, height: 32),
+          Text(assetClass.name)
         ],
       ),
     );
