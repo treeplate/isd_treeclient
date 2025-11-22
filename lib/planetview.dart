@@ -480,8 +480,22 @@ class AssetDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (data.assets[this.asset] == null) {
-      Navigator.pop(context);
-      return CircularProgressIndicator();
+      return Dialog(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('This no longer exists.'),
+              OutlinedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: Text('ok')),
+            ],
+          ),
+        ),
+      );
     }
     Asset asset = data.assets[this.asset]!;
     return Dialog(
