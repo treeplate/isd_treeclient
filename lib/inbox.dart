@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:isd_treeclient/core.dart';
 import 'package:isd_treeclient/knowledge.dart';
 import 'package:isd_treeclient/ui-core.dart';
 import 'assets.dart';
@@ -117,9 +118,11 @@ class SystemInbox extends StatelessWidget {
                 data: data,
                 server: server,
               ))
-          .toList(),
+          .toList()..sort((a,b) => -getTimestamp(a).compareTo(getTimestamp(b))),
     );
   }
+
+  Uint64 getTimestamp(InboxMessage a) => data.assets[a.message]!.features.whereType<MessageFeature>().single.timestamp;
 }
 
 class InboxMessage extends StatelessWidget {

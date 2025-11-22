@@ -17,6 +17,12 @@ extension type Uint64((int, int) _value) {
   double toDouble() => (msh.toDouble() * integerLimit32) + lsh;
   int toInt() => ((msh * integerLimit32) + lsh);
 
+  int compareTo(Uint64 other) {
+    int mshc =  msh.compareTo(other.msh);
+    if (mshc != 0) return mshc;
+    return lsh.compareTo(other.lsh);
+  }
+
   Uint64 operator *(int multiplier) {
     return Uint64.bigEndian(
         ((msh * multiplier) + ((lsh * multiplier) ~/ integerLimit32)) &
