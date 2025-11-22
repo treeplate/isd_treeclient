@@ -280,6 +280,8 @@ class DataStructure with ChangeNotifier {
           result.addAll(messages);
         case ProxyFeature(child: AssetID child):
           result.add(child);
+        case AssetPileFeature(assets: List<AssetID> assets):
+          result.addAll(assets);
         case MessageFeature():
         case StructureFeature():
         case StarFeature():
@@ -349,6 +351,10 @@ class DataStructure with ChangeNotifier {
           }
         case ProxyFeature(child: AssetID child):
           _findFeature<T>(child, result);
+        case AssetPileFeature(assets: List<AssetID> assets):
+          for (AssetID message in assets) {
+            _findFeature<T>(message, result);
+          }
         case MessageFeature():
         case StructureFeature():
         case StarFeature():

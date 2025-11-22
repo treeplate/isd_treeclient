@@ -353,9 +353,17 @@ Feature parseFeature(
       int jobs = reader.readUint32();
       int staff = reader.readUint32();
       return StaffingFeature(jobs, staff);
+    case 0x1F:
+      List<AssetID> assets = [];
+      while (true) {
+        int id = reader.readUint32();
+        if (id == 0) break;
+        assets.add(AssetID(systemID, id));
+      }
+      return AssetPileFeature(assets);
     default:
       throw UnimplementedError('Unknown featureID $featureCode');
   }
 }
 
-const kClientVersion = 0x1E;
+const kClientVersion = 0x1F;

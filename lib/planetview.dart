@@ -513,13 +513,68 @@ class AssetDialog extends StatelessWidget {
             ),
             Positioned(
               right: 0,
-              child: IconButton(
-                onPressed: () {
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                  }
-                },
-                icon: Icon(Icons.close),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => Dialog(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('Are you sure you want to destroy this?'),
+                                SizedBox(
+                                  height: 10,
+                                ),
+                                OutlinedButton(
+                                  onPressed: () {
+                                    server.send(
+                                      [
+                                        'play',
+                                        this.asset.system.value.toString(),
+                                        this.asset.id.toString(),
+                                        'dismantle',
+                                      ],
+                                    ).then((List<String> result) {
+                                      Navigator.pop(context);
+                                      if (result.first != 'T') {
+                                        openErrorDialog(
+                                          'dismantle response: $result',
+                                          context,
+                                        );
+                                        return;
+                                      }
+                                    });
+                                  },
+                                  child: Text('Destroy'),
+                                ),
+                                OutlinedButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                  },
+                                  child: Text('Cancel'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.delete),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                      }
+                    },
+                    icon: Icon(Icons.close),
+                  ),
+                ],
               ),
             ),
           ],
@@ -666,13 +721,14 @@ Widget describeFeature(
       return Text('This is the colony ship.');
     case GridFeature():
       return SizedBox(
-          width: 300,
-          height: 300,
-          child: GridWidget(
-              gridFeature: feature,
-              data: data,
-              server: server,
-              gridAssetID: asset));
+        width: 300,
+        height: 300,
+        child: GridWidget(
+            gridFeature: feature,
+            data: data,
+            server: server,
+            gridAssetID: asset),
+      );
     case PopulationFeature(
         disabledReasoning: DisabledReasoning disabledReasoning,
         population: int population,
@@ -1019,6 +1075,20 @@ Widget describeFeature(
       ):
       return Text(
         'There are $staff people working here out of $jobs required.',
+      );
+    case AssetPileFeature(assets: List<AssetID> assets):
+      return Column(
+        children: [
+          ...assets.map(
+            (asset) => AssetWidget(
+              asset: asset,
+              data: data,
+              width: 100,
+              height: 100,
+              server: server,
+            ),
+          ),
+        ],
       );
   }
 }

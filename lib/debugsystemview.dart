@@ -202,6 +202,11 @@ Widget renderFeature(Feature feature, DataStructure data, StarIdentifier system,
         feature: feature,
         data: data,
       );
+    case AssetPileFeature():
+      return AssetPileFeatureWidget(
+        feature: feature,
+        data: data,
+      );
   }
 }
 
@@ -433,8 +438,8 @@ class RubblePileFeatureWidget extends StatelessWidget {
       children: [
         Text('Pile of rubble'),
         Text('Contains ${feature.totalUnitCount.displayName} units:'),
-        ...feature.materials.entries.map(
-            (e) => Text('${e.key}: ${e.value.displayName}'))
+        ...feature.materials.entries
+            .map((e) => Text('${e.key}: ${e.value.displayName}'))
       ],
     );
   }
@@ -455,7 +460,9 @@ class ResearchFeatureWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Researching "${feature.topic}" (disabledReasoning: ${feature.disabledReasoning})'),
+        Text(
+          'Researching "${feature.topic}" (disabledReasoning: ${feature.disabledReasoning})',
+        ),
       ],
     );
   }
@@ -706,9 +713,11 @@ class SpaceSensorStatusFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-            '  Enclosing orbit: ${nearestOrbit == null ?  feature.nearestOrbit == null ? 'no orbit reached' : '<nonexistent asset>' : nearestOrbit.name ?? 'an unnamed ${nearestOrbit.className}'}'),
+          '  Enclosing orbit: ${nearestOrbit == null ? feature.nearestOrbit == null ? 'no orbit reached' : '<nonexistent asset>' : nearestOrbit.name ?? 'an unnamed ${nearestOrbit.className}'}',
+        ),
         Text(
-            '  Top asset reached: ${topAsset == null ? feature.topAsset == null ? 'no top asset' : '<nonexistent asset>' : topAsset.name ?? 'an unnamed ${topAsset.className}'}'),
+          '  Top asset reached: ${topAsset == null ? feature.topAsset == null ? 'no top asset' : '<nonexistent asset>' : topAsset.name ?? 'an unnamed ${topAsset.className}'}',
+        ),
         Text('  Count of reached assets: ${feature.count}'),
       ],
     );
@@ -1044,6 +1053,36 @@ class StaffingFeatureWidget extends StatelessWidget {
       children: [
         Text(
           'Staff: ${feature.staff}/${feature.jobs}',
+        ),
+      ],
+    );
+  }
+}
+
+class AssetPileFeatureWidget extends StatelessWidget {
+  const AssetPileFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+
+  final AssetPileFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Pile of assets',
+        ),
+        ...feature.assets.map(
+          (e) => AssetWidget(
+            asset: e,
+            data: data,
+            collapseOrbits: false,
+          ),
         ),
       ],
     );

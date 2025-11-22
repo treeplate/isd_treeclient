@@ -464,6 +464,12 @@ class StaffingFeature extends Feature {
   StaffingFeature(this.jobs, this.staff);
 }
 
+class AssetPileFeature extends Feature {
+  final List<AssetID> assets;
+
+  AssetPileFeature(this.assets);
+}
+
 typedef AssetClassID = int; // 32-bit signed, but can't be 0
 typedef MaterialID = int; // 32-bit signed, but can't be 0
 typedef DynastyID = int; // 32-bit unsigned, but can't be 0
