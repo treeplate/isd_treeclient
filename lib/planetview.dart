@@ -556,10 +556,16 @@ class AssetDialog extends StatelessWidget {
                                     ).then((List<String> result) {
                                       Navigator.pop(context);
                                       if (result.first != 'T') {
-                                        openErrorDialog(
-                                          'dismantle response: $result',
-                                          context,
-                                        );
+                                        assert(result.first == 'F');
+                                        assert(result.length == 2);
+                                        if (result.last == 'no destructors') {
+                                          openErrorDialog('No people were found to destroy this.', context);
+                                        } else {
+                                          openErrorDialog(
+                                            'dismantle response: $result',
+                                            context,
+                                          );
+                                        }
                                         return;
                                       }
                                     });
