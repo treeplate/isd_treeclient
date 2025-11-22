@@ -840,7 +840,17 @@ class _DebugCommandSenderWidgetState extends State<DebugCommandSenderWidget> {
   TextEditingController semicolonSeparatedArgs = TextEditingController();
 
   void sendMessage() {
-    int assetIDV = int.parse(assetID.text.substring(1), radix: 16);
+    if (!assetID.text.startsWith('A')) {
+      openErrorDialog('Failure parsing asset ID: Asset IDs must start with A.', context);
+      return;
+    }
+    int assetIDV;
+    try {
+      assetIDV = int.parse(assetID.text.substring(1), radix: 16);
+    } catch (e) {
+      openErrorDialog('Failure when trying to parse asset ID: $e', context);
+      return;
+    }
     String commandV = command.text;
     List<String> args = semicolonSeparatedArgs.text.isEmpty
         ? []

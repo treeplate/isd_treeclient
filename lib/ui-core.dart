@@ -14,22 +14,25 @@ void openErrorDialog(String message, BuildContext context) {
     context: context,
     builder: (context) {
       return Dialog(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('$message'),
-            SizedBox(
-              height: 16,
-            ),
-            OutlinedButton(
-              onPressed: () {
-                if (context.mounted) {
-                  Navigator.pop(context);
-                }
-              },
-              child: Text('Ok'),
-            )
-          ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('$message'),
+              SizedBox(
+                height: 16,
+              ),
+              OutlinedButton(
+                onPressed: () {
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
+                },
+                child: Text('Ok'),
+              )
+            ],
+          ),
         ),
       );
     },
