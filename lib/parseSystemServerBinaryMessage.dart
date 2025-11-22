@@ -7,7 +7,8 @@ import 'feature_parser.dart';
 
 import 'core.dart';
 
-Set<StarIdentifier> parseSystemServerBinaryMessage(BinaryReader message, DataStructure data) {
+Set<StarIdentifier> parseSystemServerBinaryMessage(
+    BinaryReader message, DataStructure data) {
   Set<StarIdentifier> systems = {};
   while (!message.done) {
     int id = message.readUint32();
@@ -87,6 +88,8 @@ Set<StarIdentifier> parseSystemServerBinaryMessage(BinaryReader message, DataStr
         }
         data.assets.remove(asset);
       }
+
+      assert(data.assets[rootAssetID] != null);
     } else {
       switch (id) {
         default:

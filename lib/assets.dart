@@ -202,8 +202,8 @@ class SpaceSensorFeature extends Feature {
 }
 
 class SpaceSensorStatusFeature extends Feature {
-  final AssetID nearestOrbit;
-  final AssetID topAsset;
+  final AssetID? nearestOrbit;
+  final AssetID? topAsset;
   final int count;
 
   SpaceSensorStatusFeature(this.nearestOrbit, this.topAsset, this.count);

@@ -101,9 +101,11 @@ Feature parseFeature(
         reader.readFloat64(),
       );
     case 6:
+      int nearestOrbit = reader.readUint32();
+      int topAsset = reader.readUint32();
       return SpaceSensorStatusFeature(
-        AssetID(systemID, reader.readUint32()),
-        AssetID(systemID, reader.readUint32()),
+        nearestOrbit == 0 ? null : AssetID(systemID, nearestOrbit),
+        topAsset == 0 ? null : AssetID(systemID, topAsset),
         reader.readUint32(),
       );
     case 7:

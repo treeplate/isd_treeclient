@@ -706,9 +706,9 @@ class SpaceSensorStatusFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-            '  Enclosing orbit: ${nearestOrbit == null ? '<nonexistent asset>' : nearestOrbit.name ?? 'an unnamed ${nearestOrbit.className}'}'),
+            '  Enclosing orbit: ${nearestOrbit == null ?  feature.nearestOrbit == null ? 'no orbit reached' : '<nonexistent asset>' : nearestOrbit.name ?? 'an unnamed ${nearestOrbit.className}'}'),
         Text(
-            '  Top asset reached: ${topAsset == null ? '<nonexistent asset>' : topAsset.name ?? 'an unnamed ${topAsset.className}'}'),
+            '  Top asset reached: ${topAsset == null ? feature.topAsset == null ? 'no top asset' : '<nonexistent asset>' : topAsset.name ?? 'an unnamed ${topAsset.className}'}'),
         Text('  Count of reached assets: ${feature.count}'),
       ],
     );
