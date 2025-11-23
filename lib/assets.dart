@@ -275,9 +275,9 @@ class MessageFeature extends Feature {
 class RubblePileFeature extends Feature {
   // material id -> units of material
   final Map<MaterialID, Uint64> materials;
-  final Uint64 totalUnitCount;
+  final Uint64 remainingUnitCount;
 
-  RubblePileFeature(this.materials, this.totalUnitCount);
+  RubblePileFeature(this.materials, this.remainingUnitCount);
 }
 
 class ProxyFeature extends Feature {

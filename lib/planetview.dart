@@ -532,62 +532,6 @@ class AssetDialog extends StatelessWidget {
                 children: [
                   IconButton(
                     onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => Dialog(
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text('Are you sure you want to destroy this?'),
-                                SizedBox(
-                                  height: 10,
-                                ),
-                                OutlinedButton(
-                                  onPressed: () {
-                                    server.send(
-                                      [
-                                        'play',
-                                        this.asset.system.value.toString(),
-                                        this.asset.id.toString(),
-                                        'dismantle',
-                                      ],
-                                    ).then((List<String> result) {
-                                      Navigator.pop(context);
-                                      if (result.first != 'T') {
-                                        assert(result.first == 'F');
-                                        assert(result.length == 2);
-                                        if (result.last == 'no destructors') {
-                                          openErrorDialog('No people were found to destroy this.', context);
-                                        } else {
-                                          openErrorDialog(
-                                            'dismantle response: $result',
-                                            context,
-                                          );
-                                        }
-                                        return;
-                                      }
-                                    });
-                                  },
-                                  child: Text('Destroy'),
-                                ),
-                                OutlinedButton(
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                  },
-                                  child: Text('Cancel'),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                    icon: Icon(Icons.delete),
-                  ),
-                  IconButton(
-                    onPressed: () {
                       if (context.mounted) {
                         Navigator.pop(context);
                       }
@@ -646,86 +590,149 @@ Widget describeFeature(
       final double totalHeight = minLineItemHeight / minLineItemFraction;
       final ThemeData theme = Theme.of(context);
       return ContinuousBuilder(builder: (context) {
-        return Stack(
+        return Column(
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+            Stack(
               children: [
-                ...materials.map(
-                  (e) {
-                    return Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          color: Colors.grey,
-                          width: 10,
-                          height: totalHeight * e.requiredQuantity / maxHP,
-                        ),
-                        Container(
-                          height: totalHeight * e.requiredQuantity / maxHP,
-                          width: 10,
-                          decoration: BoxDecoration(
-                            border: BoxBorder.fromLTRB(
-                              top: BorderSide(color: theme.dividerColor),
-                              right: BorderSide(color: theme.dividerColor),
-                              bottom: BorderSide(color: theme.dividerColor),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ...materials.map(
+                      (e) {
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              color: Colors.grey,
+                              width: 10,
+                              height: totalHeight * e.requiredQuantity / maxHP,
                             ),
-                          ),
-                        ),
-                        Container(
-                          width: 10,
-                          decoration: BoxDecoration(
-                            border: BoxBorder.fromLTRB(
-                              top: BorderSide(color: theme.dividerColor),
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 5,
-                        ),
-                        if (e.componentName != null)
-                          Text('${e.componentName} - '),
-                        Text('${e.requiredQuantity} x '),
-                        e.materialID == null
-                            ? Text('${e.materialDescription}')
-                            : MaterialWidget(
-                                material:
-                                    data.getMaterial(e.materialID!, system),
+                            Container(
+                              height: totalHeight * e.requiredQuantity / maxHP,
+                              width: 10,
+                              decoration: BoxDecoration(
+                                border: BoxBorder.fromLTRB(
+                                  top: BorderSide(color: theme.dividerColor),
+                                  right: BorderSide(color: theme.dividerColor),
+                                  bottom: BorderSide(color: theme.dividerColor),
+                                ),
                               ),
-                      ],
-                    );
-                  },
+                            ),
+                            Container(
+                              width: 10,
+                              decoration: BoxDecoration(
+                                border: BoxBorder.fromLTRB(
+                                  top: BorderSide(color: theme.dividerColor),
+                                ),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 5,
+                            ),
+                            if (e.componentName != null)
+                              Text('${e.componentName} - '),
+                            Text('${e.requiredQuantity} x '),
+                            e.materialID == null
+                                ? Text('${e.materialDescription}')
+                                : MaterialWidget(
+                                    material:
+                                        data.getMaterial(e.materialID!, system),
+                                  ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
                 ),
+                Container(
+                  color: const Color.fromARGB(255, 174, 230, 176),
+                  width: 10,
+                  height: totalHeight *
+                      feature.getQuantity(
+                        data.getTime(system, DateTime.timestamp()),
+                      ) /
+                      maxHP,
+                ),
+                Container(
+                  color: Colors.green,
+                  width: 10,
+                  height: totalHeight *
+                      feature.getHP(
+                        data.getTime(system, DateTime.timestamp()),
+                      ) /
+                      maxHP,
+                ),
+                if (minHP != null)
+                  Positioned(
+                    top: totalHeight * minHP / maxHP,
+                    child: Container(
+                      color: Colors.pink,
+                      width: 10,
+                      height: 1,
+                    ),
+                  ),
               ],
             ),
-            Container(
-              color: const Color.fromARGB(255, 174, 230, 176),
-              width: 10,
-              height: totalHeight *
-                  feature.getQuantity(
-                    data.getTime(system, DateTime.timestamp()),
-                  ) /
-                  maxHP,
+            OutlinedButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => Dialog(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                              'Are you sure you want to dismantle this structure?'),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          OutlinedButton(
+                            onPressed: () {
+                              server.send(
+                                [
+                                  'play',
+                                  asset.system.value.toString(),
+                                  asset.id.toString(),
+                                  'dismantle',
+                                ],
+                              ).then((List<String> result) {
+                                Navigator.pop(context);
+                                if (result.first != 'T') {
+                                  assert(result.first == 'F');
+                                  assert(result.length == 2);
+                                  if (result.last == 'no destructors') {
+                                    openErrorDialog(
+                                        'No people were found to dismantle this structure.',
+                                        context);
+                                  } else {
+                                    openErrorDialog(
+                                      'dismantle response: $result',
+                                      context,
+                                    );
+                                  }
+                                  return;
+                                }
+                              });
+                            },
+                            child: Text('Destroy'),
+                          ),
+                          OutlinedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: Text('Cancel'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+              child: Text('Dismantle'),
             ),
-            Container(
-              color: Colors.green,
-              width: 10,
-              height: totalHeight *
-                  feature.getHP(
-                    data.getTime(system, DateTime.timestamp()),
-                  ) /
-                  maxHP,
-            ),
-            if (minHP != null)
-              Positioned(
-                top: totalHeight * minHP / maxHP,
-                child: Container(
-                  color: Colors.pink,
-                  width: 10,
-                  height: 1,
-                ),
-              ),
           ],
         );
       });
@@ -770,8 +777,24 @@ Widget describeFeature(
       continue nothing;
     case MessageFeature():
       throw StateError('message outside messageboard');
-    case RubblePileFeature():
-      return Text('There is a pile of rubble.');
+    case RubblePileFeature(
+        remainingUnitCount: Uint64 remainingUnitCount,
+        materials: Map<int, Uint64> materials
+      ):
+      return Column(
+        children: [
+          Text(
+              'There is a pile of rubble with:'),
+          ...materials.entries.map((e) => Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  MaterialWidget(material: data.getMaterial(e.key, system)),
+                  Text('${e.value.displayName} unit${e.value.lsh==1?'':'s'}')
+                ],
+              ),),
+            if(!remainingUnitCount.isZero) Text('Unknown: ${remainingUnitCount.displayName} units')
+        ],
+      );
     nothing:
     case ProxyFeature():
       return Container(

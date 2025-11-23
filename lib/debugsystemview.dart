@@ -437,9 +437,9 @@ class RubblePileFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Pile of rubble'),
-        Text('Contains ${feature.totalUnitCount.displayName} units:'),
+        Text('- ${feature.remainingUnitCount.displayName} unknown units'),
         ...feature.materials.entries
-            .map((e) => Text('${e.key}: ${e.value.displayName}'))
+            .map((e) => Text('- ${e.value.displayName} units of ${e.key}'))
       ],
     );
   }

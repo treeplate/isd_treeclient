@@ -46,6 +46,7 @@ class WebSocketWrapper {
     _doneReloading = Completer();
     reloading = true;
     do {
+      // TODO: make sure this works
       try {
         socket = await WebSocket.connect(name);
         socket.pingInterval = pingInterval;
