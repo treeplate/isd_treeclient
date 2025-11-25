@@ -210,7 +210,7 @@ class DataStructure with ChangeNotifier {
     for (Feature feature in asset.features) {
       switch (feature) {
         case OrbitFeature(primaryChild: AssetID child):
-          return getAssetIdentifyingName(child);
+          return 'Orbit of ${getAssetIdentifyingName(child)}';
         case StarFeature(starID: StarIdentifier id):
           return '${id.displayName}';
         default:

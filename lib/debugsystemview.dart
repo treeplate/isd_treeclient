@@ -1183,17 +1183,16 @@ class AssetWidget extends StatelessWidget {
                       children: [
                         SelectableText(
                           data.getAssetIdentifyingName(this.asset),
-                          style: TextStyle(fontSize: 20),
+                          style: TextTheme.of(context).headlineSmall,
                         ),
+                        SelectableText('Asset ID: A${this.asset.id.toRadixString(16).padLeft(6, '0')}'),
                         if (asset.name != null)
                           Text(
                             '${asset.assetClass.name}${asset.assetClass.id == null ? '' : ' (class ID ${asset.assetClass.id})'}',
-                            style: TextStyle(fontSize: 10),
                           )
                         else if (asset.assetClass.id != null)
                           Text(
                             'Class ID ${asset.assetClass.id}',
-                            style: TextStyle(fontSize: 10),
                           ),
                         Text(asset.assetClass.description),
                         Text(
