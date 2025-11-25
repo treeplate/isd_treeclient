@@ -36,10 +36,7 @@ Set<StarIdentifier> parseSystemServerBinaryMessage(
         double massFlowRate = message.readFloat64();
         double size = message.readFloat64();
         String name = message.readString();
-        AssetClassID classID = message.readInt32();
-        String icon = message.readString();
-        String className = message.readString();
-        String description = message.readString();
+        AssetClass assetClass = message.readAssetClass(false)!;
         List<Feature> features = [];
         while (true) {
           int featureCode = message.readUint32();
@@ -71,10 +68,7 @@ Set<StarIdentifier> parseSystemServerBinaryMessage(
             owner == 0 ? null : owner,
             size,
             name == '' ? null : name,
-            classID == 0 ? null : classID,
-            icon,
-            className,
-            description,
+            assetClass,
             time0.$2,
           ),
         );

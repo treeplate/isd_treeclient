@@ -200,20 +200,20 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
     for (AssetInformation assetInfo in flattenAssetTree()) {
       Asset asset = widget.data.assets[assetInfo.getAsset(widget.data)]!;
       if (useNetworkImages ?? false
-          ? !networkIcons.containsKey(asset.icon)
-          : !icons.containsKey(asset.icon)) {
+          ? !networkIcons.containsKey(asset.assetClass.icon)
+          : !icons.containsKey(asset.assetClass.icon)) {
         final ImageProvider icon;
         bool wasFromNetwork;
         if ((useNetworkImages ?? false) &&
-            !failedNetworkIcons.contains(asset.icon) &&
-            !pendingNetworkImages.contains(asset.icon)) {
-          pendingNetworkImages.add(asset.icon);
+            !failedNetworkIcons.contains(asset.assetClass.icon) &&
+            !pendingNetworkImages.contains(asset.assetClass.icon)) {
+          pendingNetworkImages.add(asset.assetClass.icon);
           wasFromNetwork = true;
           icon = NetworkImage(
-              'https://interstellar-dynasties.space/icons/${asset.icon}.png');
+              'https://interstellar-dynasties.space/icons/${asset.assetClass.icon}.png');
         } else {
           wasFromNetwork = false;
-          icon = AssetImage('icons/${asset.icon}.png');
+          icon = AssetImage('icons/${asset.assetClass.icon}.png');
         }
         bool wantedToUseNetworkImages = useNetworkImages ?? false;
         icon.resolve(ImageConfiguration()).addListener(
@@ -221,23 +221,24 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
                 (info, sync) {
                   (wantedToUseNetworkImages
                       ? networkIcons
-                      : icons)[asset.icon] = info.image;
+                      : icons)[asset.assetClass.icon] = info.image;
                 },
                 onError: (exception, stackTrace) {
                   if (mounted && wasFromNetwork) {
                     openErrorDialog(
-                      'Failure when fetching ${asset.icon} from server: $exception',
+                      'Failure when fetching ${asset.assetClass.icon} from server: $exception',
                       context,
                     );
-                  } else if (mounted && !noAssetImages.contains(asset.icon)) {
+                  } else if (mounted &&
+                      !noAssetImages.contains(asset.assetClass.icon)) {
                     openErrorDialog(
-                      'Could not find asset for icon ${asset.icon}: $exception',
+                      'Could not find asset for icon ${asset.assetClass.icon}: $exception',
                       context,
                     );
-                    noAssetImages.add(asset.icon);
+                    noAssetImages.add(asset.assetClass.icon);
                   }
                   if (wasFromNetwork) {
-                    failedNetworkIcons.add(asset.icon);
+                    failedNetworkIcons.add(asset.assetClass.icon);
                   }
                 },
               ),
@@ -315,6 +316,9 @@ class _SystemViewState extends State<SystemView> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.data.rootAssets[widget.system] == null) {
+      return CircularProgressIndicator();
+    }
     Asset rootAsset =
         widget.data.assets[widget.data.rootAssets[widget.system]!]!;
     return LayoutBuilder(builder: (context, constraints) {
@@ -543,7 +547,7 @@ class SystemRenderer extends CustomPainter {
           ..color = asset.owner == null
               ? Colors.grey
               : getColorForDynastyID(asset.owner!));
-    final ui.Image? icon = icons[asset.icon];
+    final ui.Image? icon = icons[asset.assetClass.icon];
     if (icon != null) {
       paintImage(
         canvas: canvas,

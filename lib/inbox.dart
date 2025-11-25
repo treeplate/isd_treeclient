@@ -202,7 +202,7 @@ class InboxMessage extends StatelessWidget {
                     SizedBox(
                       width: 150,
                     ),
-                    ...knowledgeFeature.classes.values
+                    ...knowledgeFeature.classes
                         .map((e) => Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: AttachmentButton(
@@ -329,7 +329,7 @@ class InboxMessageDialog extends StatelessWidget {
           Divider(),
         if (knowledge != null)
           Wrap(children: [
-            ...knowledge!.classes.values
+            ...knowledge!.classes
                 .map((e) => Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: AttachmentButton(

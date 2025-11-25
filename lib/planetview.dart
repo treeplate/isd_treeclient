@@ -190,14 +190,14 @@ class GridWidget extends StatelessWidget {
       bool computeNextI() {
         do {
           x++;
-          if (x >= gridFeature.width) {
+          if (x >= gridFeature.dimension) {
             x = 0;
             y++;
-            if (y >= gridFeature.height) {
+            if (y >= gridFeature.dimension) {
               return false;
             }
           }
-        } while (gridFeature.cells[x + y * gridFeature.width] == null);
+        } while (gridFeature.cells[x + y * gridFeature.dimension] == null);
         return true;
       }
 
@@ -208,20 +208,21 @@ class GridWidget extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTapUp: (TapUpDetails details) async {
             int gridX = details.localPosition.dx *
-                gridFeature.width ~/
+                gridFeature.dimension ~/
                 constraints.maxWidth;
             int gridY = details.localPosition.dy *
-                gridFeature.height ~/
+                gridFeature.dimension ~/
                 constraints.maxHeight;
-            if (gridFeature.cells[gridX + gridY * gridFeature.width] != null) {
+            if (gridFeature.cells[gridX + gridY * gridFeature.dimension] !=
+                null) {
               showDialog(
                 context: context,
                 builder: (context) => ListenableBuilder(
                   listenable: data,
                   builder: (context, child) {
                     return AssetDialog(
-                      asset:
-                          gridFeature.cells[gridX + gridY * gridFeature.width]!,
+                      asset: gridFeature
+                          .cells[gridX + gridY * gridFeature.dimension]!,
                       data: data,
                       server: server,
                     );
@@ -230,42 +231,17 @@ class GridWidget extends StatelessWidget {
               );
               return;
             }
-            List<String> rawCatalog = await server.send([
-              'play',
-              gridAssetID.system.value.toString(),
-              gridAssetID.id.toString(),
-              'get-buildings',
-              gridX.toString(),
-              gridY.toString()
-            ]);
-            if (rawCatalog[0] == 'T') {
-              int i = 1;
-              List<AssetClass> catalog = [];
-              while (i < rawCatalog.length) {
-                AssetClassID id = int.parse(rawCatalog[i]);
-                String icon = rawCatalog[i + 1];
-                String name = rawCatalog[i + 2];
-                String description = rawCatalog[i + 3];
-                catalog.add(AssetClass(id, icon, name, description));
-                i += 4;
-              }
-              catalog.sort((a, b) => a.id.compareTo(b.id));
-              if (context.mounted) {
-                showDialog(
-                  context: context,
-                  builder: (context) => BuildDialog(
-                    catalog: catalog,
-                    region: gridAssetID,
-                    gridX: gridX,
-                    gridY: gridY,
-                    server: server,
-                  ),
-                );
-              }
-            } else {
-              assert(rawCatalog[0] == 'F');
-              openErrorDialog(
-                  'tried to get catalog, response: $rawCatalog', context);
+            if (context.mounted) {
+              showDialog(
+                context: context,
+                builder: (context) => BuildDialog(
+                  catalog: gridFeature.buildables,
+                  region: gridAssetID,
+                  gridX: gridX,
+                  gridY: gridY,
+                  server: server,
+                ),
+              );
             }
           },
           child: SizedBox.expand(
@@ -273,21 +249,21 @@ class GridWidget extends StatelessWidget {
               children: [
                 for (; computeNextI();)
                   Positioned(
-                    left: x * constraints.maxWidth / gridFeature.width,
-                    top: y * constraints.maxHeight / gridFeature.height,
+                    left: x * constraints.maxWidth / gridFeature.dimension,
+                    top: y * constraints.maxHeight / gridFeature.dimension,
                     child: Container(
-                      width: constraints.maxWidth / gridFeature.width,
-                      height: constraints.maxHeight / gridFeature.height,
+                      width: constraints.maxWidth / gridFeature.dimension,
+                      height: constraints.maxHeight / gridFeature.dimension,
                       color: (x + y).isEven ? Colors.blueGrey : Colors.grey,
-                      child: gridFeature.cells[x + y * gridFeature.width] ==
+                      child: gridFeature.cells[x + y * gridFeature.dimension] ==
                               null
                           ? null
                           : AssetWidget(
-                              width: constraints.maxWidth / gridFeature.width,
+                              width: constraints.maxWidth / gridFeature.dimension,
                               height:
-                                  constraints.maxHeight / gridFeature.height,
+                                  constraints.maxHeight / gridFeature.dimension,
                               asset:
-                                  gridFeature.cells[x + y * gridFeature.width]!,
+                                  gridFeature.cells[x + y * gridFeature.dimension]!,
                               data: data,
                               server: server,
                             ),
@@ -310,7 +286,7 @@ class BuildDialog extends StatelessWidget {
       required this.gridY,
       required this.server,
       required this.region});
-  final List<AssetClass> catalog;
+  final List<Buildable> catalog;
   final int gridX;
   final int gridY;
   final AssetID region;
@@ -345,7 +321,8 @@ class BuildDialog extends StatelessWidget {
               child: ListView.builder(
                 itemCount: catalog.length,
                 itemBuilder: (context, int i) {
-                  AssetClass e = catalog[i];
+                  AssetClass assetClass = catalog[i].assetClass;
+                  int size = catalog[i].size;
                   return TextButton(
                     onPressed: () async {
                       List<String> response = await server.send([
@@ -355,7 +332,7 @@ class BuildDialog extends StatelessWidget {
                         'build',
                         gridX.toString(),
                         gridY.toString(),
-                        e.id.toString()
+                        assetClass.id.toString()
                       ]);
 
                       if (response[0] == 'T') {
@@ -380,12 +357,13 @@ class BuildDialog extends StatelessWidget {
                             ISDIcon(
                               height: 32,
                               width: 32,
-                              icon: e.icon,
+                              icon: assetClass.icon,
                             ),
-                            Text(e.name),
+                            Text(assetClass.name),
                           ],
                         ),
-                        Text(e.description)
+                        Text(assetClass.description),
+                        Text('${size}x${size}'),
                       ],
                     ),
                   );
@@ -424,7 +402,7 @@ class AssetWidget extends StatelessWidget {
           return Stack(
             children: [
               ISDIcon(
-                icon: asset.icon,
+                icon: asset.assetClass.icon,
                 width: width,
                 height: height,
               ),
@@ -458,7 +436,7 @@ class AssetWidget extends StatelessWidget {
       }
     }
     return ISDIcon(
-      icon: asset.icon,
+      icon: asset.assetClass.icon,
       width: width,
       height: height,
     );
@@ -509,11 +487,11 @@ class AssetDialog extends StatelessWidget {
                 children: [
                   Text(
                     asset.name == null
-                        ? asset.className
-                        : '${asset.name} (${asset.className})',
+                        ? asset.assetClass.name
+                        : '${asset.name} (${asset.assetClass.name})',
                     style: TextStyle(fontSize: 20),
                   ),
-                  Text(asset.description),
+                  Text(asset.assetClass.description),
                   ...asset.features.map((e) => describeFeature(
                         e,
                         data,
@@ -783,16 +761,19 @@ Widget describeFeature(
       ):
       return Column(
         children: [
-          Text(
-              'There is a pile of rubble with:'),
-          ...materials.entries.map((e) => Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  MaterialWidget(material: data.getMaterial(e.key, system)),
-                  Text('${e.value.displayName} unit${e.value.lsh==1?'':'s'}')
-                ],
-              ),),
-            if(!remainingUnitCount.isZero) Text('Unknown: ${remainingUnitCount.displayName} units')
+          Text('There is a pile of rubble with:'),
+          ...materials.entries.map(
+            (e) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                MaterialWidget(material: data.getMaterial(e.key, system)),
+                Text(
+                    '${e.value.displayName} unit${e.value.lsh == 1 ? '' : 's'}')
+              ],
+            ),
+          ),
+          if (!remainingUnitCount.isZero)
+            Text('Unknown: ${remainingUnitCount.displayName} units')
         ],
       );
     nothing:
@@ -801,13 +782,13 @@ Widget describeFeature(
         width: 0,
       );
     case KnowledgeFeature(
-        classes: Map<AssetClassID, AssetClass> classes,
+        classes: List<AssetClass> classes,
         materials: Map<MaterialID, Material> materials
       ):
       return Column(
         children: [
           Text('This has information about:'),
-          ...classes.values
+          ...classes
               .map((e) => Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: AssetClassWidget(assetClass: e),

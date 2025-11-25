@@ -41,10 +41,7 @@ class Asset {
 
   final double size; // in meters
   final String? name;
-  final AssetClassID? classID;
-  final String icon;
-  final String className;
-  final String description;
+  final AssetClass assetClass;
   final Set<AssetID> references = {};
 
   Asset(
@@ -54,10 +51,7 @@ class Asset {
     this.owner,
     this.size,
     this.name,
-    this.classID,
-    this.icon,
-    this.className,
-    this.description,
+    this.assetClass,
     this.time0,
   );
 }
@@ -227,14 +221,17 @@ class SurfaceFeature extends Feature {
       regions; //key is (x,y) where coordinates represent distance from center of surface to center of region in meters
 }
 
+/// size: uint8 (how big is the asset compared to the grid cells)
+typedef Buildable = ({AssetClass assetClass, int size});
+
 class GridFeature extends Feature {
-  GridFeature(this.cells, this.width, this.height, this.cellSize);
+  GridFeature(this.cells, this.dimension, this.cellSize, this.buildables);
 
   final List<AssetID?> cells;
-  final int width;
-  final int height;
-  // meters
+  final int dimension;
+  /// in meters
   final double cellSize;
+  final List<Buildable> buildables;
 }
 
 class PopulationFeature extends Feature {
@@ -287,7 +284,7 @@ class ProxyFeature extends Feature {
 }
 
 class KnowledgeFeature extends Feature {
-  final Map<AssetClassID, AssetClass> classes;
+  final List<AssetClass> classes;
   final Map<MaterialID, Material> materials;
 
   KnowledgeFeature(this.classes, this.materials);
@@ -509,7 +506,7 @@ extension type DisabledReasoning(int flags) {
 }
 
 class AssetClass {
-  final AssetClassID id;
+  final AssetClassID? id;
   final String icon;
   final String name;
   final String description;

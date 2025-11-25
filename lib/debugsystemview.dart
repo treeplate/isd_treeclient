@@ -306,7 +306,7 @@ class GridFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '${feature.width}x${feature.height} grid of cells each with diameter ${feature.cellSize}m',
+          'Square grid ${feature.dimension} cells wide each with diameter ${feature.cellSize}m',
         ),
         ...feature.cells
             .map(
@@ -323,6 +323,21 @@ class GridFeatureWidget extends StatelessWidget {
                     ),
             )
             .whereType<Widget>(),
+        Text('You can build:'),
+        ...feature.buildables.map(
+          (e) => Indent(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AssetClassWidget(
+                  assetClass: e.assetClass,
+                ),
+                Text('id: ${e.assetClass.id}, size in cells: ${e.size}')
+              ],
+            ),
+          ),
+        )
       ],
     );
   }
@@ -484,27 +499,9 @@ class KnowledgeFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Research'),
-        for (MapEntry<AssetClassID, AssetClass> assetClass
-            in feature.classes.entries) ...[
-          Text('Knowledge about asset class ${assetClass.key}'),
-          Indent(
-            child: Row(
-              children: [
-                Container(
-                  color: Colors.grey,
-                  child: ISDIcon(
-                    width: 32,
-                    height: 32,
-                    icon: assetClass.value.icon,
-                  ),
-                ),
-                Text('${assetClass.value.name}'),
-              ],
-            ),
-          ),
-          Indent(
-            child: Text('${assetClass.value.description}'),
-          ),
+        for (AssetClass assetClass in feature.classes) ...[
+          Text('Knowledge about asset class ${assetClass.id!}'),
+          Indent(child: AssetClassWidget(assetClass: assetClass)),
         ],
         for (MapEntry<MaterialID, Material> material
             in feature.materials.entries) ...[
@@ -545,6 +542,39 @@ class KnowledgeFeatureWidget extends StatelessWidget {
                 'mass per cubic meter: ${material.value.massPerCubicMeter}kg'),
           ),
         ],
+      ],
+    );
+  }
+}
+
+class AssetClassWidget extends StatelessWidget {
+  const AssetClassWidget({
+    super.key,
+    required this.assetClass,
+  });
+
+  final AssetClass assetClass;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              color: Colors.grey,
+              child: ISDIcon(
+                width: 32,
+                height: 32,
+                icon: assetClass.icon,
+              ),
+            ),
+            Text('${assetClass.name}'),
+          ],
+        ),
+        Text('${assetClass.description}')
       ],
     );
   }
@@ -713,10 +743,10 @@ class SpaceSensorStatusFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '  Enclosing orbit: ${nearestOrbit == null ? feature.nearestOrbit == null ? 'no orbit reached' : '<nonexistent asset>' : nearestOrbit.name ?? 'an unnamed ${nearestOrbit.className}'}',
+          '  Enclosing orbit: ${nearestOrbit == null ? feature.nearestOrbit == null ? 'no orbit reached' : '<nonexistent asset>' : nearestOrbit.name ?? 'an unnamed ${nearestOrbit.assetClass.name}'}',
         ),
         Text(
-          '  Top asset reached: ${topAsset == null ? feature.topAsset == null ? 'no top asset' : '<nonexistent asset>' : topAsset.name ?? 'an unnamed ${topAsset.className}'}',
+          '  Top asset reached: ${topAsset == null ? feature.topAsset == null ? 'no top asset' : '<nonexistent asset>' : topAsset.name ?? 'an unnamed ${topAsset.assetClass.name}'}',
         ),
         Text('  Count of reached assets: ${feature.count}'),
       ],
@@ -762,7 +792,7 @@ class GridSensorStatusFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-            '  Top asset reached: ${topAsset == null ? '<nonexistent asset>' : topAsset.name ?? 'an unnamed ${topAsset.className}'}'),
+            '  Top asset reached: ${topAsset == null ? '<nonexistent asset>' : topAsset.name ?? 'an unnamed ${topAsset.assetClass.name}'}'),
         Text('  Count of reached assets: ${feature.count}'),
       ],
     );
@@ -1157,15 +1187,15 @@ class AssetWidget extends StatelessWidget {
                         ),
                         if (asset.name != null)
                           Text(
-                            '${asset.className}${asset.classID == null ? '' : ' (class ID ${asset.classID})'}',
+                            '${asset.assetClass}${asset.assetClass.id == null ? '' : ' (class ID ${asset.assetClass.id})'}',
                             style: TextStyle(fontSize: 10),
                           )
-                        else if (asset.classID != null)
+                        else if (asset.assetClass.id != null)
                           Text(
-                            'Class ID ${asset.classID}',
+                            'Class ID ${asset.assetClass.id}',
                             style: TextStyle(fontSize: 10),
                           ),
-                        Text(asset.description),
+                        Text(asset.assetClass.description),
                         Text(
                             'Owner: ${asset.owner == 0 ? 'nobody' : asset.owner == data.dynastyID ? 'you' : asset.owner}'),
                         SelectableText(
@@ -1192,14 +1222,14 @@ class AssetWidget extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(2),
                       child: ISDIcon(
-                        icon: asset.icon,
+                        icon: asset.assetClass.icon,
                         width: 32,
                         height: 32,
                       ),
                     ),
                   ),
                   Text(
-                    '${asset.name ?? asset.className}',
+                    '${asset.name ?? asset.assetClass.name}',
                     style: asset.owner == null
                         ? DefaultTextStyle.of(context).style
                         : TextStyle(

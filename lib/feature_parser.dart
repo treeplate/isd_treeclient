@@ -130,18 +130,26 @@ Feature parseFeature(
       return SurfaceFeature(regions);
     case 0xa:
       double cellSize = reader.readFloat64();
-      int width = reader.readUint32();
-      int height = reader.readUint32();
-      List<AssetID?> cells = List.filled(width * height, null);
+      int dimension = reader.readUint32();
+      List<AssetID?> cells = List.filled(dimension * dimension, null);
       while (true) {
         int id = reader.readUint32();
         if (id == 0) break;
         int x = reader.readUint32();
         int y = reader.readUint32();
-        cells[x + y * width] = AssetID(systemID, id);
-        notReferenced.remove(cells[x + y * width]);
+        cells[x + y * dimension] = AssetID(systemID, id);
+        notReferenced.remove(cells[x + y * dimension]);
       }
-      return GridFeature(cells, width, height, cellSize);
+      List<Buildable> buildables = [];
+      while (true) {
+        AssetClass? assetClass = reader.readAssetClass(true);
+        if (assetClass == null) {
+          break;
+        }
+        int size = reader.readUint8();
+        buildables.add((assetClass: assetClass, size: size));
+      }
+      return GridFeature(cells, dimension, cellSize, buildables);
     case 0xb:
       DisabledReasoning disabledReasoning =
           DisabledReasoning(reader.readUint32());
@@ -201,16 +209,13 @@ Feature parseFeature(
       return ProxyFeature(child);
     case 0x10:
       int type = reader.readUint8();
-      Map<AssetClassID, AssetClass> classes = {};
+      List<AssetClass> classes = [];
       Map<MaterialID, Material> materials = {};
       while (type != 0) {
         switch (type) {
           case 1:
-            AssetClassID id = reader.readInt32();
-            String icon = reader.readString();
-            String name = reader.readString();
-            String description = reader.readString();
-            classes[id] = AssetClass(id, icon, name, description);
+            AssetClass assetClass = reader.readAssetClass(true)!;
+            classes.add(assetClass);
           case 2:
             MaterialID id = reader.readInt32();
             String icon = reader.readString();

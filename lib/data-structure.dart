@@ -217,7 +217,7 @@ class DataStructure with ChangeNotifier {
       }
     }
     return asset.name ??
-        'A${id.id.toRadixString(16).padLeft(6, '0')} (${asset.className})';
+        'A${id.id.toRadixString(16).padLeft(6, '0')} (${asset.assetClass.name})';
   }
 
   Material getMaterial(MaterialID id, StarIdentifier system) {

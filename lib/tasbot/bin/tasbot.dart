@@ -40,6 +40,7 @@ void build(NetworkConnection server, AssetID grid, int x, int y,
 }
 
 void main() async {
+  // TODO: update this
   DateTime startTime = DateTime.timestamp();
   NetworkConnection loginServer = await NetworkConnection.fromURL(
     loginServerURL,
@@ -106,6 +107,7 @@ void main() async {
     print('Connecting to system server...');
     DataStructure data = DataStructure();
     Map<int, String> stringTable = {};
+    Map<int, AssetClass> assetClassTable = {};
     late NetworkConnection systemServer;
     systemServer = await NetworkConnection.fromURL(
       systemServerURL,
@@ -113,7 +115,7 @@ void main() async {
         print('system server unrequested message: $message');
       },
       binaryMessageHandler: (ByteBuffer message) {
-        BinaryReader reader = BinaryReader(message, stringTable, Endian.little);
+        BinaryReader reader = BinaryReader(message, stringTable, assetClassTable, Endian.little);
         data.galaxyDiameter = 1;
         parseSystemServerBinaryMessage(reader, data);
         mainLoop(data, systemServer);
@@ -150,9 +152,9 @@ void mainLoop(DataStructure data, NetworkConnection systemServer) {
   if (messages.any((e) =>
       e.from == 'Director of Research' && e.subject == 'Congratulations')) {
     AssetID spaceship =
-        data.assets.entries.singleWhere((e) => e.value.classID == -3).key;
+        data.assets.entries.singleWhere((e) => e.value.assetClass.id == -3).key;
     AssetID? grid = data.assets.entries
-        .where((e) => e.value.classID == -201)
+        .where((e) => e.value.assetClass.id == -201)
         .singleOrNull
         ?.key;
     if (grid == null) {
@@ -163,15 +165,15 @@ void mainLoop(DataStructure data, NetworkConnection systemServer) {
     }
     if (messages.any((e) => e.subject == 'Communicating with our creator')) {
       AssetID? church = data.assets.entries
-          .where((e) => e.value.classID == 1)
+          .where((e) => e.value.assetClass.id == 1)
           .firstOrNull
           ?.key;
       if (church == null) {
         GridFeature gridFeature =
             data.assets[grid]!.features.whereType<GridFeature>().single;
         int position = gridFeature.cells.indexOf(null);
-        int x = position % gridFeature.width;
-        int y = position ~/ gridFeature.width;
+        int x = position % gridFeature.dimension;
+        int y = position ~/ gridFeature.dimension;
         print('Got churches, building one...');
         build(systemServer, grid, x, y, 1);
         return;
@@ -184,7 +186,7 @@ void mainLoop(DataStructure data, NetworkConnection systemServer) {
               systemServer, spaceship, 'The Impact of Religion on Society');
         }
         AssetID? church2 = data.assets.entries
-            .where((e) => e.value.classID == 1)
+            .where((e) => e.value.assetClass.id == 1)
             .skip(1)
             .firstOrNull
             ?.key;
@@ -192,8 +194,8 @@ void mainLoop(DataStructure data, NetworkConnection systemServer) {
           GridFeature gridFeature =
               data.assets[grid]!.features.whereType<GridFeature>().single;
           int position = gridFeature.cells.indexOf(null);
-          int x = position % gridFeature.width;
-          int y = position ~/ gridFeature.width;
+          int x = position % gridFeature.dimension;
+          int y = position ~/ gridFeature.dimension;
           print('Building second church...');
           build(systemServer, grid, x, y, 1);
           return;
@@ -201,7 +203,7 @@ void mainLoop(DataStructure data, NetworkConnection systemServer) {
           print('Built second church, researching City Development...');
           setTopic(systemServer, church2, 'City Development');
           AssetID? church3 = data.assets.entries
-            .where((e) => e.value.classID == 1)
+            .where((e) => e.value.assetClass.id == 1)
             .skip(2)
             .firstOrNull
             ?.key;
@@ -209,8 +211,8 @@ void mainLoop(DataStructure data, NetworkConnection systemServer) {
           GridFeature gridFeature =
               data.assets[grid]!.features.whereType<GridFeature>().single;
           int position = gridFeature.cells.indexOf(null);
-          int x = position % gridFeature.width;
-          int y = position ~/ gridFeature.width;
+          int x = position % gridFeature.dimension;
+          int y = position ~/ gridFeature.dimension;
           print('Building third church...');
           build(systemServer, grid, x, y, 1);
           return;
@@ -222,15 +224,15 @@ void mainLoop(DataStructure data, NetworkConnection systemServer) {
       }
     } else if (messages.any((e) => e.subject == 'Stuff in holes')) {
       AssetID? hole = data.assets.entries
-          .where((e) => e.value.classID == 5)
+          .where((e) => e.value.assetClass.id == 5)
           .firstOrNull
           ?.key;
       if (hole == null) {
         GridFeature gridFeature =
             data.assets[grid]!.features.whereType<GridFeature>().single;
         int position = gridFeature.cells.indexOf(null);
-        int x = position % gridFeature.width;
-        int y = position ~/ gridFeature.width;
+        int x = position % gridFeature.dimension;
+        int y = position ~/ gridFeature.dimension;
         print('Got archeological holes, building one...');
         build(systemServer, grid, x, y, 5);
         return;

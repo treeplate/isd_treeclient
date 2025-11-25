@@ -260,6 +260,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
   void connectToSystemServer(String server) {
     connect(server).then((socket) async {
       Map<int, String> stringTable = {};
+      Map<int, AssetClass> assetClassTable = {};
       late NetworkConnection systemServer;
       systemServer = NetworkConnection(
         socket,
@@ -279,8 +280,8 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                     .map((e) => e.key)) {
                   systemServersBySystemID.remove(star);
                 }
-                BinaryReader reader =
-                    BinaryReader(data, stringTable, Endian.little);
+                BinaryReader reader = BinaryReader(
+                    data, stringTable, assetClassTable, Endian.little);
                 Set<StarIdentifier> systems = parseSystemServerBinaryMessage(
                   reader,
                   this.data,
@@ -296,6 +297,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         },
         onReset: (NetworkConnection systemServer) {
           stringTable.clear();
+          assetClassTable.clear();
           onSystemServerReset(systemServer, server);
         },
         onError: (e, st) {
@@ -841,7 +843,8 @@ class _DebugCommandSenderWidgetState extends State<DebugCommandSenderWidget> {
 
   void sendMessage() {
     if (!assetID.text.startsWith('A')) {
-      openErrorDialog('Failure parsing asset ID: Asset IDs must start with A.', context);
+      openErrorDialog(
+          'Failure parsing asset ID: Asset IDs must start with A.', context);
       return;
     }
     int assetIDV;
@@ -923,7 +926,7 @@ class _DebugCommandSenderWidgetState extends State<DebugCommandSenderWidget> {
         SizedBox(
           width: 100,
           child: TextField(
-            decoration: InputDecoration(label: Text('Arguments')),
+            decoration: InputDecoration(label: Text('Args (;)')),
             controller: semicolonSeparatedArgs,
           ),
         ),

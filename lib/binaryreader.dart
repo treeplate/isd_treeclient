@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
+
 import 'core.dart';
+import 'assets.dart';
 
 class BinaryReader {
   int _index = 0;
@@ -8,6 +10,7 @@ class BinaryReader {
   final Uint8List _rawData;
   final Endian endian;
   final Map<int, String> stringTable;
+  final Map<int, AssetClass> assetClassTable;
 
   bool get done => _index >= _rawData.length;
 
@@ -29,14 +32,15 @@ class BinaryReader {
 
   int readInt32() {
     if (_index > _rawData.length - 4)
-      throw StateError(
-          'called readInt32 without enough bytes to read a Int32');
+      throw StateError('called readInt32 without enough bytes to read a Int32');
     _index += 4;
     return _data.getInt32(_index - 4, endian);
   }
 
   Uint64 readUint64() {
-    return endian == Endian.big ? Uint64.bigEndian(readUint32(), readUint32()) : Uint64.littleEndian(readUint32(), readUint32());
+    return endian == Endian.big
+        ? Uint64.bigEndian(readUint32(), readUint32())
+        : Uint64.littleEndian(readUint32(), readUint32());
   }
 
   double readFloat64() {
@@ -64,7 +68,32 @@ class BinaryReader {
     return result;
   }
 
-  BinaryReader(ByteBuffer buffer, this.stringTable, this.endian)
-      : _rawData = buffer.asUint8List(),
+  AssetClass? readAssetClass(bool noZero) {
+    int id = readInt32();
+    if (id != 0) {
+      AssetClass? result = assetClassTable[id];
+      if (result != null) {
+        return result;
+      }
+    } else if (noZero) {
+      return null;
+    }
+    String icon = readString();
+    String name = readString();
+    String description = readString();
+    AssetClass result =
+        AssetClass(id == 0 ? null : id, icon, name, description);
+    if (id != 0) {
+      assetClassTable[id] = result;
+    }
+    return result;
+  }
+
+  BinaryReader(
+    ByteBuffer buffer,
+    this.stringTable,
+    this.assetClassTable,
+    this.endian,
+  )   : _rawData = buffer.asUint8List(),
         _data = buffer.asByteData();
 }
