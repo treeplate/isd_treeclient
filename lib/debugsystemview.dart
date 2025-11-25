@@ -1187,7 +1187,7 @@ class AssetWidget extends StatelessWidget {
                         ),
                         if (asset.name != null)
                           Text(
-                            '${asset.assetClass}${asset.assetClass.id == null ? '' : ' (class ID ${asset.assetClass.id})'}',
+                            '${asset.assetClass.name}${asset.assetClass.id == null ? '' : ' (class ID ${asset.assetClass.id})'}',
                             style: TextStyle(fontSize: 10),
                           )
                         else if (asset.assetClass.id != null)
