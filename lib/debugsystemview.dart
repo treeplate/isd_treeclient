@@ -631,7 +631,9 @@ class StructureFeatureWidget extends StatelessWidget {
           (e) => Text(
             '  ${e.materialID == null ? 'unknown material' : 'M${e.materialID!.toRadixString(16).padLeft(8, '0')}'} (${e.materialDescription}) - ${e.componentName == null ? '' : '${e.componentName} '}(max ${e.requiredQuantity})',
           ),
-        )
+        ),
+        Text(
+            'Builder: ${feature.builder == null ? '<no builder>' : 'A${feature.builder!.id.toRadixString(16).padLeft(6, '0')}'}'),
       ],
     );
   }
@@ -1185,7 +1187,9 @@ class AssetWidget extends StatelessWidget {
                           data.getAssetIdentifyingName(this.asset),
                           style: TextTheme.of(context).headlineSmall,
                         ),
-                        SelectableText('Asset ID: A${this.asset.id.toRadixString(16).padLeft(6, '0')}'),
+                        SelectableText(
+                          'Asset ID: A${this.asset.id.toRadixString(16).padLeft(6, '0')}',
+                        ),
                         if (asset.name != null)
                           Text(
                             '${asset.assetClass.name}${asset.assetClass.id == null ? '' : ' (class ID ${asset.assetClass.id})'}',

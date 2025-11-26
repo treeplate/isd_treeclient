@@ -143,6 +143,14 @@ class StructureFeature extends Feature {
     return result.toInt();
   }
 
+  final AssetID? builder;
+
+  final int quantity0;
+  final double quantityFlowRate; // units/ms
+  double getQuantity(Uint64 time) {
+    return quantity0 + quantityFlowRate * ((time - time0).toDouble());
+  }
+
   final Uint64 time0;
   final int hp0;
   final double hpFlowRate; // units/ms
@@ -153,15 +161,10 @@ class StructureFeature extends Feature {
     );
   }
 
-  final int quantity0;
-  final double quantityFlowRate; // units/ms
-  double getQuantity(Uint64 time) {
-    return quantity0 + quantityFlowRate * ((time - time0).toDouble());
-  }
-
   final int? minHP;
   StructureFeature(
     this.materials,
+    this.builder,
     this.quantity0,
     this.quantityFlowRate,
     this.hp0,
@@ -229,6 +232,7 @@ class GridFeature extends Feature {
 
   final List<AssetID?> cells;
   final int dimension;
+
   /// in meters
   final double cellSize;
   final List<Buildable> buildables;

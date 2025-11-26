@@ -259,11 +259,12 @@ class GridWidget extends StatelessWidget {
                               null
                           ? null
                           : AssetWidget(
-                              width: constraints.maxWidth / gridFeature.dimension,
+                              width:
+                                  constraints.maxWidth / gridFeature.dimension,
                               height:
                                   constraints.maxHeight / gridFeature.dimension,
-                              asset:
-                                  gridFeature.cells[x + y * gridFeature.dimension]!,
+                              asset: gridFeature
+                                  .cells[x + y * gridFeature.dimension]!,
                               data: data,
                               server: server,
                             ),
@@ -550,6 +551,7 @@ Widget describeFeature(
         materials: List<MaterialLineItem> materials,
         maxHP: int maxHP,
         minHP: int? minHP,
+        builder: AssetID? builder,
       ):
       if (maxHP == 0) {
         return ContinuousBuilder(builder: (context) {
@@ -695,7 +697,7 @@ Widget describeFeature(
                                 }
                               });
                             },
-                            child: Text('Destroy'),
+                            child: Text('Dismantle'),
                           ),
                           OutlinedButton(
                             onPressed: () {
@@ -711,6 +713,7 @@ Widget describeFeature(
               },
               child: Text('Dismantle'),
             ),
+            if (builder != null) Text('Currently being built.'),
           ],
         );
       });
@@ -773,7 +776,31 @@ Widget describeFeature(
             ),
           ),
           if (!remainingUnitCount.isZero)
-            Text('Unknown: ${remainingUnitCount.displayName} units')
+            Text('Unknown: ${remainingUnitCount.displayName} units'),
+          OutlinedButton(
+            onPressed: () {
+              server.send(
+                [
+                  'play',
+                  asset.system.value.toString(),
+                  asset.id.toString(),
+                  'dismantle',
+                ],
+              ).then((List<String> result) {
+                Navigator.pop(context);
+                if (result.first != 'T') {
+                  assert(result.first == 'F');
+                  assert(result.length == 2);
+                  openErrorDialog(
+                    'dismantle response: $result',
+                    context,
+                  );
+                  return;
+                }
+              });
+            },
+            child: Text('Dismantle'),
+          ),
         ],
       );
     nothing:

@@ -78,6 +78,7 @@ Feature parseFeature(
         ));
         max = reader.readUint32();
       }
+      int builder = reader.readUint32();
       int quantity = reader.readUint32();
       double quantityFlowRate = reader.readFloat64();
       int hp = reader.readUint32();
@@ -85,6 +86,7 @@ Feature parseFeature(
       int minHP = reader.readUint32();
       return StructureFeature(
         materials,
+        builder == 0 ? null : AssetID(systemID, builder),
         quantity,
         quantityFlowRate,
         hp,
