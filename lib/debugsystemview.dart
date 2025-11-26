@@ -313,13 +313,18 @@ class GridFeatureWidget extends StatelessWidget {
               (e) => e == null
                   ? null
                   : Indent(
-                      child: e == null
-                          ? Text('<empty>')
-                          : AssetWidget(
-                              asset: e,
-                              data: data,
-                              collapseOrbits: false,
-                            ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AssetWidget(
+                                  asset: e.asset,
+                                  data: data,
+                                  collapseOrbits: false,
+                                ),
+                          Text('size ${e.size}x${e.size}')
+                        ],
+                      ),
                     ),
             )
             .whereType<Widget>(),

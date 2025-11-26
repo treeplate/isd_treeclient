@@ -49,11 +49,6 @@ Set<StarIdentifier> parseSystemServerBinaryMessage(
               notReferenced,
               data,
             );
-            if (feature is ReferenceFeature) {
-              for (AssetID asset in feature.references) {
-                data.assets[asset]!.references.add(assetID);
-              }
-            }
             features.add(feature);
           } catch (e) {
             throw Exception('$e');
@@ -74,13 +69,7 @@ Set<StarIdentifier> parseSystemServerBinaryMessage(
         );
       }
       for (AssetID asset in notReferenced) {
-        for (AssetID asset2 in data.assets[asset]!.references) {
-          for (ReferenceFeature feature
-              in data.assets[asset2]?.features.whereType() ?? []) {
-            feature.removeReferences(asset);
-          }
-        }
-        data.assets.remove(asset);
+        data.removeAsset(asset);
       }
 
       assert(data.assets[rootAssetID] != null);

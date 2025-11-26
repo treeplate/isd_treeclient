@@ -363,12 +363,14 @@ class _ISDIconState extends State<ISDIcon> {
   }
 
   void reload() async {
+    // TODO: do this syncronously if possible?
     useNetworkImages = await getCookie(useNetworkImagesCookieName) == 'true';
     if (mounted) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
+    // TODO: this should only really be called when the cookies change, consider a changenotifier or something for the cookies?
     reload();
     return (useNetworkImages ?? false) &&
             !failedNetworkIcons.contains(widget.icon)

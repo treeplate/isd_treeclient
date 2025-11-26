@@ -133,14 +133,15 @@ Feature parseFeature(
     case 0xa:
       double cellSize = reader.readFloat64();
       int dimension = reader.readUint32();
-      List<AssetID?> cells = List.filled(dimension * dimension, null);
+      List<Building?> cells = List.filled(dimension * dimension, null);
       while (true) {
         int id = reader.readUint32();
         if (id == 0) break;
         int x = reader.readUint32();
         int y = reader.readUint32();
-        cells[x + y * dimension] = AssetID(systemID, id);
-        notReferenced.remove(cells[x + y * dimension]);
+        int size = reader.readUint8();
+        cells[x + y * dimension] = (asset: AssetID(systemID, id), size: size);
+        notReferenced.remove(cells[x + y * dimension]!.asset);
       }
       List<Buildable> buildables = [];
       while (true) {
@@ -366,6 +367,7 @@ Feature parseFeature(
         int id = reader.readUint32();
         if (id == 0) break;
         assets.add(AssetID(systemID, id));
+        notReferenced.remove(assets.last);
       }
       return AssetPileFeature(assets);
     default:

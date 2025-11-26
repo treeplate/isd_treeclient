@@ -222,9 +222,14 @@ class GridWidget extends StatelessWidget {
                   builder: (context, child) {
                     return AssetDialog(
                       asset: gridFeature
-                          .cells[gridX + gridY * gridFeature.dimension]!,
+                          .cells[gridX + gridY * gridFeature.dimension]!.asset,
                       data: data,
                       server: server,
+                      closeDialog: () {
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
+                      },
                     );
                   },
                 ),
@@ -259,12 +264,18 @@ class GridWidget extends StatelessWidget {
                               null
                           ? null
                           : AssetWidget(
-                              width:
-                                  constraints.maxWidth / gridFeature.dimension,
-                              height:
-                                  constraints.maxHeight / gridFeature.dimension,
+                              width: constraints.maxWidth *
+                                  gridFeature
+                                      .cells[x + y * gridFeature.dimension]!
+                                      .size /
+                                  gridFeature.dimension,
+                              height: constraints.maxHeight *
+                                  gridFeature
+                                      .cells[x + y * gridFeature.dimension]!
+                                      .size /
+                                  gridFeature.dimension,
                               asset: gridFeature
-                                  .cells[x + y * gridFeature.dimension]!,
+                                  .cells[x + y * gridFeature.dimension]!.asset,
                               data: data,
                               server: server,
                             ),
@@ -427,6 +438,11 @@ class AssetWidget extends StatelessWidget {
                           asset: child,
                           data: data,
                           server: server,
+                          closeDialog: () {
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                            }
+                          },
                         );
                       },
                     ),
@@ -453,39 +469,50 @@ class AssetWidget extends StatelessWidget {
   }
 }
 
-class AssetDialog extends StatelessWidget {
-  const AssetDialog({
+class AssetDialog extends StatefulWidget {
+  AssetDialog({
     super.key,
     required this.asset,
     required this.data,
     required this.server,
+    required this.closeDialog,
   });
 
   final AssetID asset;
   final DataStructure data;
   final NetworkConnection server;
+  final void Function() closeDialog;
+
+  @override
+  State<AssetDialog> createState() => _AssetDialogState();
+}
+
+class _AssetDialogState extends State<AssetDialog> {
+  @override
+  void initState() {
+    super.initState();
+    widget.data.addListener(listener);
+  }
+
+  void listener() {
+    if (widget.data.assets[widget.asset] == null) {
+      widget.data.removeListener(listener);
+      widget.closeDialog();
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.data.removeListener(listener);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (data.assets[this.asset] == null) {
-      return Dialog(
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('This no longer exists.'),
-              OutlinedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: Text('ok')),
-            ],
-          ),
-        ),
-      );
+    if (widget.data.assets[widget.asset] == null) {
+      return Container();
     }
-    Asset asset = data.assets[this.asset]!;
+    Asset asset = widget.data.assets[widget.asset]!;
     return Dialog(
       child: SingleChildScrollView(
         child: Stack(
@@ -504,10 +531,10 @@ class AssetDialog extends StatelessWidget {
                   Text(asset.assetClass.description),
                   ...asset.features.map((e) => describeFeature(
                         e,
-                        data,
-                        this.asset.system,
-                        this.asset,
-                        server,
+                        widget.data,
+                        widget.asset.system,
+                        widget.asset,
+                        widget.server,
                         context,
                       ))
                 ],

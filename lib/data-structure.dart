@@ -196,6 +196,11 @@ class DataStructure with ChangeNotifier {
     notifyListeners();
   }
 
+  void removeAsset(AssetID id) {
+    assets.remove(id);
+    notifyListeners();
+  }
+
   // see [rootAssets]
   void setRootAsset(StarIdentifier system, AssetID id) {
     rootAssets[system] = id;
@@ -274,8 +279,8 @@ class DataStructure with ChangeNotifier {
           result.addAll(orbitingChildren.map((e) => e.child));
         case SurfaceFeature(regions: Map<(double, double), AssetID> regions):
           result.addAll(regions.values);
-        case GridFeature(cells: List<AssetID?> cells):
-          result.addAll(cells.where((e) => e != null).cast());
+        case GridFeature(cells: List<Building?> cells):
+          result.addAll(cells.where((e) => e != null).map((e) => e!.asset!));
         case MessageBoardFeature(messages: List<AssetID> messages):
           result.addAll(messages);
         case ProxyFeature(child: AssetID child):
@@ -339,10 +344,10 @@ class DataStructure with ChangeNotifier {
           for (AssetID region in regions.values) {
             _findFeature<T>(region, result);
           }
-        case GridFeature(cells: List<AssetID?> cells):
-          for (AssetID? cell in cells) {
+        case GridFeature(cells: List<Building?> cells):
+          for (Building? cell in cells) {
             if (cell != null) {
-              _findFeature<T>(cell, result);
+              _findFeature<T>(cell.asset, result);
             }
           }
         case MessageBoardFeature(messages: List<AssetID> messages):

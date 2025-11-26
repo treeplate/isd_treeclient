@@ -226,11 +226,12 @@ class SurfaceFeature extends Feature {
 
 /// size: uint8 (how big is the asset compared to the grid cells)
 typedef Buildable = ({AssetClass assetClass, int size});
+typedef Building = ({AssetID asset, int size});
 
 class GridFeature extends Feature {
   GridFeature(this.cells, this.dimension, this.cellSize, this.buildables);
 
-  final List<AssetID?> cells;
+  final List<Building?> cells;
   final int dimension;
 
   /// in meters
@@ -299,11 +300,6 @@ class ResearchFeature extends Feature {
   final String topic;
 
   ResearchFeature(this.disabledReasoning, this.topic);
-}
-
-sealed class ReferenceFeature extends Feature {
-  void removeReferences(AssetID asset);
-  Set<AssetID> get references;
 }
 
 class MiningFeature extends Feature {
