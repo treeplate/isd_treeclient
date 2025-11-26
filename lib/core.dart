@@ -18,7 +18,7 @@ extension type Uint64((int, int) _value) {
   int toInt() => ((msh * integerLimit32) + lsh);
 
   int compareTo(Uint64 other) {
-    int mshc =  msh.compareTo(other.msh);
+    int mshc = msh.compareTo(other.msh);
     if (mshc != 0) return mshc;
     return lsh.compareTo(other.lsh);
   }
@@ -42,11 +42,8 @@ extension type Uint64((int, int) _value) {
   }
 
   Uint64 operator %(int divisor) {
-    // TODO: this function is wrong
-    if ((divisor ~/ integerLimit32) == 0) {
-      return Uint64.bigEndian(0, lsh % divisor);
-    }
-    return Uint64.bigEndian(msh % (divisor ~/ integerLimit32), lsh % divisor);
+    int carry = msh % divisor;
+    return Uint64.fromInt((lsh + (carry * integerLimit32)) % divisor);
   }
 
   Uint64 operator +(Uint64 addend) {
