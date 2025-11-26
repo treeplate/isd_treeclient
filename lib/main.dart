@@ -668,7 +668,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                       Text(
                           'You have no visibility into anything. You should create another account.'),
                       Text(
-                          'This probably means the system server is not running or broken.'),
+                          'This sometimes means the system server is not running or broken.'),
                       OutlinedButton(
                           onPressed: () => openAccountDialog(context),
                           child: Text('Change username or password')),

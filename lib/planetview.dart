@@ -235,7 +235,7 @@ class GridWidget extends StatelessWidget {
               showDialog(
                 context: context,
                 builder: (context) => BuildDialog(
-                  catalog: gridFeature.buildables,
+                  data: data,
                   region: gridAssetID,
                   gridX: gridX,
                   gridY: gridY,
@@ -282,12 +282,12 @@ class GridWidget extends StatelessWidget {
 class BuildDialog extends StatelessWidget {
   const BuildDialog(
       {super.key,
-      required this.catalog,
+      required this.data,
       required this.gridX,
       required this.gridY,
       required this.server,
       required this.region});
-  final List<Buildable> catalog;
+  final DataStructure data;
   final int gridX;
   final int gridY;
   final AssetID region;
@@ -297,82 +297,91 @@ class BuildDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       clipBehavior: Clip.antiAlias,
-      child: SizedBox(
-        width: 400,
-        height: 400,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: ListenableBuilder(
+        listenable: data,
+        builder: (BuildContext context, Widget? child) {
+          GridFeature gridFeature =
+              data.assets[region]!.features.whereType<GridFeature>().single;
+          return SizedBox(
+            width: 400,
+            height: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(),
-                Text('Build at $gridX, $gridY'),
-                IconButton(
-                  onPressed: () {
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                    }
-                  },
-                  icon: Icon(Icons.close),
-                )
-              ],
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: catalog.length,
-                itemBuilder: (context, int i) {
-                  AssetClass assetClass = catalog[i].assetClass;
-                  int size = catalog[i].size;
-                  return TextButton(
-                    onPressed: () async {
-                      List<String> response = await server.send([
-                        'play',
-                        region.system.value.toString(),
-                        region.id.toString(),
-                        'build',
-                        gridX.toString(),
-                        gridY.toString(),
-                        assetClass.id.toString()
-                      ]);
-
-                      if (response[0] == 'T') {
-                        assert(response.length == 1);
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(),
+                    Text('Build at $gridX, $gridY'),
+                    IconButton(
+                      onPressed: () {
                         if (context.mounted) {
                           Navigator.pop(context);
                         }
-                      } else {
-                        assert(response[0] == 'F');
-                        if (context.mounted) {
-                          openErrorDialog(
-                              'tried to build, response: $response', context);
-                        }
-                      }
-                    },
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
+                      },
+                      icon: Icon(Icons.close),
+                    )
+                  ],
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: gridFeature.buildables.length,
+                    itemBuilder: (context, int i) {
+                      AssetClass assetClass =
+                          gridFeature.buildables[i].assetClass;
+                      int size = gridFeature.buildables[i].size;
+                      return TextButton(
+                        onPressed: () async {
+                          List<String> response = await server.send([
+                            'play',
+                            region.system.value.toString(),
+                            region.id.toString(),
+                            'build',
+                            gridX.toString(),
+                            gridY.toString(),
+                            assetClass.id.toString()
+                          ]);
+
+                          if (response[0] == 'T') {
+                            assert(response.length == 1);
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                            }
+                          } else {
+                            assert(response[0] == 'F');
+                            if (context.mounted) {
+                              openErrorDialog(
+                                  'tried to build, response: $response',
+                                  context);
+                            }
+                          }
+                        },
+                        child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            ISDIcon(
-                              height: 32,
-                              width: 32,
-                              icon: assetClass.icon,
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ISDIcon(
+                                  height: 32,
+                                  width: 32,
+                                  icon: assetClass.icon,
+                                ),
+                                Text(assetClass.name),
+                              ],
                             ),
-                            Text(assetClass.name),
+                            Text(assetClass.description),
+                            Text('${size}x${size}'),
                           ],
                         ),
-                        Text(assetClass.description),
-                        Text('${size}x${size}'),
-                      ],
-                    ),
-                  );
-                },
-              ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -695,6 +704,7 @@ Widget describeFeature(
                                   }
                                   return;
                                 }
+                                assert(result.length == 1);
                               });
                             },
                             child: Text('Dismantle'),
@@ -787,7 +797,6 @@ Widget describeFeature(
                   'dismantle',
                 ],
               ).then((List<String> result) {
-                Navigator.pop(context);
                 if (result.first != 'T') {
                   assert(result.first == 'F');
                   assert(result.length == 2);
@@ -797,6 +806,7 @@ Widget describeFeature(
                   );
                   return;
                 }
+                assert(result.length == 1);
               });
             },
             child: Text('Dismantle'),
