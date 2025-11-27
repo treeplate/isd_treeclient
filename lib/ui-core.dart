@@ -363,8 +363,7 @@ class _ISDIconState extends State<ISDIcon> {
   }
 
   void reload() async {
-    // TODO: do this syncronously if possible?
-    useNetworkImages = await getCookie(useNetworkImagesCookieName) == 'true';
+    useNetworkImages = (cookieCache[useNetworkImagesCookieName] ?? await getCookie(useNetworkImagesCookieName)) == 'true';
     if (mounted) setState(() {});
   }
 

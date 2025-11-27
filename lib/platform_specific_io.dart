@@ -63,7 +63,8 @@ class WebSocketWrapper {
           if (waitingTime < Duration(minutes: 1)) {
             waitingTime *= 2;
           }
-          Duration duration = waitingTime + waitingTime * (_random.nextDouble() - .5);
+          Duration duration =
+              waitingTime + waitingTime * (_random.nextDouble() - .5);
           await Future.delayed(
             duration,
           );
@@ -99,15 +100,16 @@ Future<WebSocketWrapper> connect(String serverUrl) async {
 
 File? _cookieStorage;
 Directory? _binaryDataDirectory;
-Map<String, String>? _cookieCache;
+Map<String, String> cookieCache = {};
+bool cookiesCached = false;
 
 Future<String?> getCookie(String name) async {
   await getCookiesFromFile();
-  return _cookieCache![name];
+  return cookieCache[name];
 }
 
 Future<void> getCookiesFromFile() async {
-  if (_cookieCache == null) {
+  if (!cookiesCached) {
     if (_cookieStorage == null) {
       Directory documentsDirectory = await getApplicationDocumentsDirectory();
       _cookieStorage = File(documentsDirectory.path + '/cookies.save');
@@ -116,9 +118,9 @@ Future<void> getCookiesFromFile() async {
       try {
         String fileContents = _cookieStorage!.readAsStringSync();
         if (fileContents == '') {
-          _cookieCache = {};
+          cookieCache = {};
         } else {
-          _cookieCache = Map.fromEntries(
+          cookieCache = Map.fromEntries(
             fileContents.split('\n\x00').map(
               (String line) {
                 List<String> parts = line.split(':\x00');
@@ -130,26 +132,28 @@ Future<void> getCookiesFromFile() async {
             ),
           );
         }
+        cookieCache.addAll(cookieCache);
       } catch (e) {
-        _cookieCache = {
+        cookieCache = {
           'previousError': '$e',
         };
       }
     } else {
-      _cookieCache = {};
+      cookieCache = {};
     }
+    cookiesCached = true;
   }
 }
 
 void setCookie(String name, String? value) async {
   await getCookiesFromFile();
   if (value == null) {
-    _cookieCache!.remove(name);
+    cookieCache.remove(name);
   } else {
-    _cookieCache![name] = value;
+    cookieCache[name] = value;
   }
   _cookieStorage!.writeAsStringSync(
-    _cookieCache!.entries
+    cookieCache.entries
         .map((MapEntry<String, String> entry) =>
             '${entry.key}:\x00${entry.value}')
         .join('\n\x00'),

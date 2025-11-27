@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:js_interop';
 import 'dart:typed_data';
+import 'package:isd_treeclient/platform_specific_stub.dart';
 import 'package:web/web.dart';
 
 class WebSocketWrapper {
@@ -83,14 +84,20 @@ Future<WebSocketWrapper> connect(String serverUrl) async {
 }
 
 Future<String?> getCookie(String name) async {
-  return window.localStorage.getItem(name);
+  String? item = window.localStorage.getItem(name);
+  if (item != null) {
+    cookieCache[name] = item;
+  }
+  return item;
 }
 
 void setCookie(String name, String? value) {
   if (value == null) {
     window.localStorage.removeItem(name);
+    cookieCache.remove(name);
   } else {
     window.localStorage.setItem(name, value);
+    cookieCache[name] = value;
   }
 }
 
