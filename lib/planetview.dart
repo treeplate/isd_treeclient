@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart' hide Material;
 import 'package:isd_treeclient/core.dart';
 import 'knowledge.dart';
@@ -157,18 +159,96 @@ class _PlanetViewState extends State<PlanetView> {
           .whereType<GridFeature>()
           .single;
 
-      return GridWidget(
-          gridFeature: region,
-          data: widget.data,
-          server: widget.server,
-          gridAssetID: regionID);
+      return LayoutBuilder(builder: (context, constraints) {
+        double regionSize =
+            min(constraints.biggest.height, constraints.biggest.width / 2);
+        return Row(
+          children: [
+            Expanded(
+                child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SelectableText(
+                    'System ID: ${widget.planet.system.displayName}'),
+                SelectableText('Planet ID: ${widget.planet.displayName}'),
+                SelectableText('Dynasty ID: ${widget.data.dynastyID}'),
+              ],
+            )),
+            Expanded(
+              flex: 2,
+              child: Center(
+                child: Container(
+                  width: regionSize,
+                  height: regionSize,
+                  color: Colors.green,
+                  child: InteractiveViewer(
+                    minScale: 1,
+                    maxScale: double.infinity,
+                    child: GridWidget(
+                      gridFeature: region,
+                      data: widget.data,
+                      server: widget.server,
+                      gridAssetID: regionID,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+                child: ListView(
+              children: [
+                ...region.buildables.map((Buildable buildable) => Center(
+                    child: BuildableWidget(
+                        buildable, regionSize / region.dimension)))
+              ],
+            )),
+          ],
+        );
+      });
     } else {
       return Text('Unimplemented: multiple regions');
     }
   }
 }
 
-class GridWidget extends StatelessWidget {
+class BuildableWidget extends StatefulWidget {
+  const BuildableWidget(this.buildable, this.cellSize, {super.key});
+
+  final Buildable buildable;
+  final double cellSize;
+
+  @override
+  State<BuildableWidget> createState() => _BuildableWidgetState();
+}
+
+class _BuildableWidgetState extends State<BuildableWidget> {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Draggable<Buildable>(
+          child: ISDIcon(
+              icon: widget.buildable.assetClass.icon,
+              width: widget.buildable.size * widget.cellSize,
+              height: widget.buildable.size * widget.cellSize),
+          feedback: ISDIcon(
+            icon: widget.buildable.assetClass.icon,
+            width: widget.buildable.size * widget.cellSize,
+            height: widget.buildable.size * widget.cellSize,
+            opacity: .5,
+          ),
+          data: widget.buildable,
+        ),
+        Text(widget.buildable.assetClass.name),
+        Text(widget.buildable.assetClass.description),
+        Divider(),
+      ],
+    );
+  }
+}
+
+class GridWidget extends StatefulWidget {
   const GridWidget({
     super.key,
     required this.gridFeature,
@@ -183,218 +263,259 @@ class GridWidget extends StatelessWidget {
   final AssetID gridAssetID;
 
   @override
+  State<GridWidget> createState() => _GridWidgetState();
+}
+
+class _GridWidgetState extends State<GridWidget> {
+  Rect? draggedBuildable;
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
-      int x = -1;
-      int y = 0;
-      bool computeNextI() {
-        do {
-          x++;
-          if (x >= gridFeature.dimension) {
-            x = 0;
-            y++;
-            if (y >= gridFeature.dimension) {
-              return false;
-            }
-          }
-        } while (gridFeature.cells[x + y * gridFeature.dimension] == null);
-        return true;
-      }
-
-      return Container(
-        decoration:
-            BoxDecoration(border: BoxBorder.all(width: 5, color: Colors.grey)),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapUp: (TapUpDetails details) async {
-            int gridX = details.localPosition.dx *
-                gridFeature.dimension ~/
-                constraints.maxWidth;
-            int gridY = details.localPosition.dy *
-                gridFeature.dimension ~/
-                constraints.maxHeight;
-            if (gridFeature.cells[gridX + gridY * gridFeature.dimension] !=
-                null) {
-              showDialog(
-                context: context,
-                builder: (context) => ListenableBuilder(
-                  listenable: data,
-                  builder: (context, child) {
-                    return AssetDialog(
-                      asset: gridFeature
-                          .cells[gridX + gridY * gridFeature.dimension]!.asset,
-                      data: data,
-                      server: server,
-                      closeDialog: () {
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                        }
-                      },
-                    );
-                  },
-                ),
-              );
-              return;
-            }
-            if (context.mounted) {
-              showDialog(
-                context: context,
-                builder: (context) => BuildDialog(
-                  data: data,
-                  region: gridAssetID,
-                  gridX: gridX,
-                  gridY: gridY,
-                  server: server,
-                ),
-              );
-            }
+      return SizedBox.expand(
+        child: DragTarget<Buildable>(
+          onWillAcceptWithDetails: (DragTargetDetails<Buildable> details) {
+            return true;
           },
-          child: SizedBox.expand(
-            child: Stack(
+          onMove: (DragTargetDetails<Buildable> details) {
+            Offset localPosition = (context.findRenderObject() as RenderBox)
+                .globalToLocal(details.offset);
+            Offset scaledPosition = localPosition.scale(
+                widget.gridFeature.dimension / constraints.maxWidth,
+                widget.gridFeature.dimension / constraints.maxHeight);
+            int gridX = scaledPosition.dx.floor();
+            int gridY = scaledPosition.dy.floor();
+            setState(() {
+              draggedBuildable = Offset(gridX.toDouble(), gridY.toDouble()) &
+                  Size.square(details.data.size.toDouble());
+            });
+          },
+          onLeave: (Buildable? data) {
+            draggedBuildable = null;
+          },
+          onAcceptWithDetails: (details) {
+            draggedBuildable = null;
+            Offset localPosition = (context.findRenderObject() as RenderBox)
+                .globalToLocal(details.offset);
+            Offset scaledPosition = localPosition.scale(
+                widget.gridFeature.dimension / constraints.maxWidth,
+                widget.gridFeature.dimension / constraints.maxHeight);
+            int gridX = scaledPosition.dx.floor();
+            int gridY = scaledPosition.dy.floor();
+            buildAt(
+              widget.gridFeature,
+              widget.gridAssetID,
+              gridX,
+              gridY,
+              details.data,
+            );
+          },
+          builder: (BuildContext context, List<Buildable?> candidateData,
+              List<dynamic> rejectedData) {
+            return Stack(
               children: [
-                for (; computeNextI();)
+                for (Building building in widget.gridFeature.buildings)
                   Positioned(
-                    left: x * constraints.maxWidth / gridFeature.dimension,
-                    top: y * constraints.maxHeight / gridFeature.dimension,
+                    left: building.x *
+                        constraints.maxWidth /
+                        widget.gridFeature.dimension,
+                    top: building.y *
+                        constraints.maxHeight /
+                        widget.gridFeature.dimension,
                     child: Container(
-                      width: constraints.maxWidth / gridFeature.dimension,
-                      height: constraints.maxHeight / gridFeature.dimension,
-                      color: (x + y).isEven ? Colors.blueGrey : Colors.grey,
-                      child: gridFeature.cells[x + y * gridFeature.dimension] ==
-                              null
-                          ? null
-                          : AssetWidget(
-                              width: constraints.maxWidth *
-                                  gridFeature
-                                      .cells[x + y * gridFeature.dimension]!
-                                      .size /
-                                  gridFeature.dimension,
-                              height: constraints.maxHeight *
-                                  gridFeature
-                                      .cells[x + y * gridFeature.dimension]!
-                                      .size /
-                                  gridFeature.dimension,
-                              asset: gridFeature
-                                  .cells[x + y * gridFeature.dimension]!.asset,
-                              data: data,
-                              server: server,
-                            ),
+                      width: constraints.maxWidth *
+                          building.size /
+                          widget.gridFeature.dimension,
+                      height: constraints.maxHeight *
+                          building.size /
+                          widget.gridFeature.dimension,
+                      child: AssetWidget(
+                        width: constraints.maxWidth *
+                            building.size /
+                            widget.gridFeature.dimension,
+                        height: constraints.maxHeight *
+                            building.size /
+                            widget.gridFeature.dimension,
+                        asset: building.asset,
+                        data: widget.data,
+                        server: widget.server,
+                      ),
                     ),
-                  )
+                  ),
+                if (draggedBuildable != null) ...[
+                  Positioned(
+                    top: constraints.maxWidth *
+                        draggedBuildable!.top /
+                        widget.gridFeature.dimension,
+                    left: constraints.maxHeight *
+                        draggedBuildable!.left /
+                        widget.gridFeature.dimension,
+                    child: Container(
+                      decoration: BoxDecoration(border: BoxBorder.all()),
+                      width: constraints.maxWidth *
+                          draggedBuildable!.width /
+                          widget.gridFeature.dimension,
+                      height: constraints.maxHeight *
+                          draggedBuildable!.height /
+                          widget.gridFeature.dimension,
+                    ),
+                  ),
+                  ...getCollisions(widget.gridFeature, widget.gridAssetID,
+                          draggedBuildable!)
+                      .map(
+                    (Rect rect) => Positioned(
+                      top: constraints.maxWidth *
+                          rect.top /
+                          widget.gridFeature.dimension,
+                      left: constraints.maxHeight *
+                          rect.left /
+                          widget.gridFeature.dimension,
+                      child: Container(
+                        color: Colors.red.withAlpha(128),
+                        width: constraints.maxWidth *
+                            rect.width /
+                            widget.gridFeature.dimension,
+                        height: constraints.maxHeight *
+                            rect.height /
+                            widget.gridFeature.dimension,
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ),
-          ),
+            );
+          },
         ),
       );
     });
   }
-}
 
-class BuildDialog extends StatelessWidget {
-  const BuildDialog(
-      {super.key,
-      required this.data,
-      required this.gridX,
-      required this.gridY,
-      required this.server,
-      required this.region});
-  final DataStructure data;
-  final int gridX;
-  final int gridY;
-  final AssetID region;
-  final NetworkConnection server;
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      clipBehavior: Clip.antiAlias,
-      child: ListenableBuilder(
-        listenable: data,
-        builder: (BuildContext context, Widget? child) {
-          GridFeature gridFeature =
-              data.assets[region]!.features.whereType<GridFeature>().single;
-          return SizedBox(
-            width: 400,
-            height: 400,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(),
-                    Text('Build at $gridX, $gridY'),
-                    IconButton(
-                      onPressed: () {
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                        }
-                      },
-                      icon: Icon(Icons.close),
-                    )
-                  ],
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: gridFeature.buildables.length,
-                    itemBuilder: (context, int i) {
-                      AssetClass assetClass =
-                          gridFeature.buildables[i].assetClass;
-                      int size = gridFeature.buildables[i].size;
-                      return TextButton(
-                        onPressed: () async {
-                          List<String> response = await server.send([
-                            'play',
-                            region.system.value.toString(),
-                            region.id.toString(),
-                            'build',
-                            gridX.toString(),
-                            gridY.toString(),
-                            assetClass.id.toString()
-                          ]);
-
-                          if (response[0] == 'T') {
-                            assert(response.length == 1);
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                            }
-                          } else {
-                            assert(response[0] == 'F');
-                            if (context.mounted) {
-                              openErrorDialog(
-                                  'tried to build, response: $response',
-                                  context);
-                            }
-                          }
-                        },
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ISDIcon(
-                                  height: 32,
-                                  width: 32,
-                                  icon: assetClass.icon,
-                                ),
-                                Text(assetClass.name),
-                              ],
-                            ),
-                            Text(assetClass.description),
-                            Text('${size}x${size}'),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+  List<Rect> getCollisions(
+      GridFeature grid, AssetID gridAssetID, Rect draggedBuildable) {
+    List<Rect> result = [];
+    if (draggedBuildable.right > grid.dimension) {
+      result.add(
+        Rect.fromLTRB(
+          grid.dimension.toDouble(),
+          draggedBuildable.top,
+          draggedBuildable.right,
+          draggedBuildable.bottom,
+        ),
+      );
+    }
+    if (draggedBuildable.bottom > grid.dimension) {
+      result.add(
+        Rect.fromLTRB(
+          draggedBuildable.left,
+          grid.dimension.toDouble(),
+          draggedBuildable.right,
+          draggedBuildable.bottom,
+        ),
+      );
+    }
+    if (draggedBuildable.left < 0) {
+      result.add(
+        Rect.fromLTRB(
+          draggedBuildable.left,
+          draggedBuildable.top,
+          0,
+          draggedBuildable.bottom,
+        ),
+      );
+    }
+    if (draggedBuildable.top < 0) {
+      result.add(
+        Rect.fromLTRB(
+          draggedBuildable.left,
+          draggedBuildable.top,
+          draggedBuildable.right,
+          0,
+        ),
+      );
+    }
+    for (Building building in grid.buildings) {
+      if (building.x < draggedBuildable.right &&
+          building.x + building.size > draggedBuildable.left &&
+          building.y < draggedBuildable.bottom &&
+          building.y + building.size > draggedBuildable.top) {
+        Asset newGridAsset = widget.data.assets[building.asset]!;
+        if (newGridAsset.features.whereType<GridFeature>().isEmpty) {
+          result.add(
+            draggedBuildable.intersect(
+              Rect.fromLTWH(
+                building.x.toDouble(),
+                building.y.toDouble(),
+                building.size.toDouble(),
+                building.size.toDouble(),
+              ),
             ),
           );
-        },
-      ),
-    );
+        } else {
+          result.addAll(
+            getCollisions(
+              newGridAsset.features.whereType<GridFeature>().single,
+              building.asset,
+              draggedBuildable.shift(
+                -Offset(
+                  building.x.toDouble(),
+                  building.y.toDouble(),
+                ),
+              ),
+            ).map(
+              (e) => e.shift(
+                Offset(
+                  building.x.toDouble(),
+                  building.y.toDouble(),
+                ),
+              ),
+            ),
+          );
+        }
+      }
+    }
+    return result;
+  }
+
+  void buildAt(GridFeature grid, AssetID gridAssetID, int gridX, int gridY,
+      Buildable buildable) {
+    if (gridX + buildable.size > grid.dimension ||
+        gridY + buildable.size > grid.dimension ||
+        gridX < 0 ||
+        gridY < 0) {
+      return;
+    }
+    for (Building building in grid.buildings) {
+      if (building.x < (gridX + buildable.size) &&
+          building.x + building.size > gridX &&
+          building.y < (gridY + buildable.size) &&
+          building.y + building.size > gridY) {
+        Asset newGridAsset = widget.data.assets[building.asset]!;
+        if (newGridAsset.features.whereType<GridFeature>().isEmpty) {
+          return;
+        }
+        return buildAt(newGridAsset.features.whereType<GridFeature>().single,
+            building.asset, gridX - building.x, gridY - building.y, buildable);
+      }
+    }
+    widget.server.send([
+      'play',
+      gridAssetID.system.value.toString(),
+      gridAssetID.id.toString(),
+      'build',
+      gridX.toString(),
+      gridY.toString(),
+      buildable.assetClass.id!.toString(),
+    ]).then((List<String> response) {
+      if (response[0] == 'T') {
+        assert(response.length == 1);
+      } else {
+        assert(response[0] == 'F');
+        if (context.mounted) {
+          openErrorDialog('tried to build, response: $response', context);
+        }
+      }
+    });
+    return;
   }
 }
 
@@ -420,51 +541,144 @@ class AssetWidget extends StatelessWidget {
     for (Feature feature in asset.features) {
       switch (feature) {
         case ProxyFeature(child: AssetID child):
-          return Stack(
-            children: [
-              ISDIcon(
-                icon: asset.assetClass.icon,
-                width: width,
-                height: height,
-              ),
-              Center(
-                child: IconButton(
-                  onPressed: () => showDialog(
-                    context: context,
-                    builder: (context) => ListenableBuilder(
-                      listenable: data,
-                      builder: (context, _child) {
-                        return AssetDialog(
-                          asset: child,
-                          data: data,
-                          server: server,
-                          closeDialog: () {
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                            }
+          return Container(
+            child: Stack(
+              children: [
+                AssetIconWidget(
+                  data: data,
+                  assetID: this.asset,
+                  server: server,
+                  asset: asset,
+                  width: width,
+                  height: height,
+                ),
+                Container(
+                  width: width,
+                  height: height,
+                  child: Center(
+                    child: IconButton(
+                      padding: EdgeInsets.all(0),
+                      onPressed: () => showDialog(
+                        context: context,
+                        builder: (context) => ListenableBuilder(
+                          listenable: data,
+                          builder: (context, _child) {
+                            return AssetDialog(
+                              asset: child,
+                              data: data,
+                              server: server,
+                              closeDialog: () {
+                                if (context.mounted) {
+                                  Navigator.pop(context);
+                                }
+                              },
+                            );
                           },
-                        );
-                      },
+                        ),
+                      ),
+                      icon: AssetWidget(
+                        asset: child,
+                        data: data,
+                        width: width * data.assets[child]!.size / asset.size,
+                        height: height * data.assets[child]!.size / asset.size,
+                        server: server,
+                      ),
                     ),
                   ),
-                  icon: AssetWidget(
-                    asset: child,
+                )
+              ],
+            ),
+          );
+        case GridFeature():
+          return Container(
+            child: Stack(
+              children: [
+                AssetIconWidget(
+                  data: data,
+                  assetID: this.asset,
+                  server: server,
+                  asset: asset,
+                  width: width,
+                  height: height,
+                  opacity: .5,
+                ),
+                Container(
+                  width: width,
+                  height: height,
+                  child: GridWidget(
+                    gridFeature: feature,
                     data: data,
-                    width: width * data.assets[child]!.size / asset.size,
-                    height: height * data.assets[child]!.size / asset.size,
+                    gridAssetID: this.asset,
                     server: server,
                   ),
-                ),
-              )
-            ],
+                )
+              ],
+            ),
           );
         default:
       }
     }
-    return ISDIcon(
-      icon: asset.assetClass.icon,
+    return AssetIconWidget(
+      data: data,
+      assetID: this.asset,
+      server: server,
+      asset: asset,
       width: width,
       height: height,
+    );
+  }
+}
+
+class AssetIconWidget extends StatelessWidget {
+  const AssetIconWidget({
+    super.key,
+    required this.data,
+    required this.assetID,
+    required this.server,
+    required this.asset,
+    required this.width,
+    required this.height,
+    this.opacity = 1,
+  });
+
+  final DataStructure data;
+  final AssetID assetID;
+  final NetworkConnection server;
+  final Asset asset;
+  final double width;
+  final double height;
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      padding: EdgeInsets.all(0),
+      onPressed: () {
+        showDialog(
+          context: context,
+          builder: (context) => ListenableBuilder(
+            listenable: data,
+            builder: (context, child) {
+              return AssetDialog(
+                asset: assetID,
+                data: data,
+                server: server,
+                closeDialog: () {
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
+                },
+              );
+            },
+          ),
+        );
+      },
+      icon: ISDIcon(
+        icon: asset.assetClass.icon,
+        width: width,
+        height: height,
+        opacity: opacity,
+      ),
     );
   }
 }
@@ -765,15 +979,7 @@ Widget describeFeature(
       if (!isColonyShip) continue nothing;
       return Text('This is the colony ship.');
     case GridFeature():
-      return SizedBox(
-        width: 300,
-        height: 300,
-        child: GridWidget(
-            gridFeature: feature,
-            data: data,
-            server: server,
-            gridAssetID: asset),
-      );
+      continue nothing;
     case PopulationFeature(
         disabledReasoning: DisabledReasoning disabledReasoning,
         population: int population,

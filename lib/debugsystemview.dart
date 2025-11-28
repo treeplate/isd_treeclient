@@ -308,24 +308,22 @@ class GridFeatureWidget extends StatelessWidget {
         Text(
           'Square grid ${feature.dimension} cells wide each with diameter ${feature.cellSize}m',
         ),
-        ...feature.cells
+        ...feature.buildings
             .map(
-              (e) => e == null
-                  ? null
-                  : Indent(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AssetWidget(
-                                  asset: e.asset,
-                                  data: data,
-                                  collapseOrbits: false,
-                                ),
-                          Text('size ${e.size}x${e.size}')
-                        ],
-                      ),
+              (e) => Indent(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AssetWidget(
+                      asset: e.asset,
+                      data: data,
+                      collapseOrbits: false,
                     ),
+                    Text('(${e.x}, ${e.y}), size ${e.size}x${e.size}')
+                  ],
+                ),
+              ),
             )
             .whereType<Widget>(),
         Text('You can build:'),
@@ -638,7 +636,8 @@ class StructureFeatureWidget extends StatelessWidget {
           ),
         ),
         Text(
-            'Builder: ${feature.builder == null ? '<no builder>' : 'A${feature.builder!.id.toRadixString(16).padLeft(6, '0')}'}'),
+          'Builder: ${feature.builder == null ? '<no builder>' : feature.builder!.displayName}',
+        ),
       ],
     );
   }
@@ -1193,7 +1192,7 @@ class AssetWidget extends StatelessWidget {
                           style: TextTheme.of(context).headlineSmall,
                         ),
                         SelectableText(
-                          'Asset ID: A${this.asset.id.toRadixString(16).padLeft(6, '0')}',
+                          'Asset ID: ${this.asset.displayName}',
                         ),
                         if (asset.name != null)
                           Text(

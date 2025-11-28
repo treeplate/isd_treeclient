@@ -20,8 +20,7 @@ extension type Score._(({Uint64 time, double score}) _value) {
       Score._((time: time, score: score));
 }
 
-extension type ScoreEntry._(
-    ({int index, List<Score> scores}) _value) {
+extension type ScoreEntry._(({int index, List<Score> scores}) _value) {
   int get index => _value.index;
   List<Score> get scores => _value.scores;
   factory ScoreEntry(int index, List<Score> scores) =>
@@ -106,7 +105,8 @@ class DataStructure with ChangeNotifier {
       List<Score> dynastyScores = scores[dynastyID]!.scores;
       while (subindex < index + (dataLength * 16)) {
         Uint64 timestamp = Uint64.littleEndian(
-            rawScores.getUint32(subindex, Endian.little), rawScores.getUint32(subindex + 4, Endian.little));
+            rawScores.getUint32(subindex, Endian.little),
+            rawScores.getUint32(subindex + 4, Endian.little));
         double score = rawScores.getFloat64(subindex + 8, Endian.little);
         Score timedScore = Score(timestamp, score);
         if (!dynastyScores.contains(timedScore)) {
@@ -221,8 +221,7 @@ class DataStructure with ChangeNotifier {
         default:
       }
     }
-    return asset.name ??
-        'A${id.id.toRadixString(16).padLeft(6, '0')} (${asset.assetClass.name})';
+    return asset.name ?? '${id.displayName} (${asset.assetClass.name})';
   }
 
   Material getMaterial(MaterialID id, StarIdentifier system) {
@@ -279,8 +278,8 @@ class DataStructure with ChangeNotifier {
           result.addAll(orbitingChildren.map((e) => e.child));
         case SurfaceFeature(regions: Map<(double, double), AssetID> regions):
           result.addAll(regions.values);
-        case GridFeature(cells: List<Building?> cells):
-          result.addAll(cells.where((e) => e != null).map((e) => e!.asset!));
+        case GridFeature(buildings: List<Building> cells):
+          result.addAll(cells.map((e) => e.asset!));
         case MessageBoardFeature(messages: List<AssetID> messages):
           result.addAll(messages);
         case ProxyFeature(child: AssetID child):
@@ -344,11 +343,9 @@ class DataStructure with ChangeNotifier {
           for (AssetID region in regions.values) {
             _findFeature<T>(region, result);
           }
-        case GridFeature(cells: List<Building?> cells):
-          for (Building? cell in cells) {
-            if (cell != null) {
-              _findFeature<T>(cell.asset, result);
-            }
+        case GridFeature(buildings: List<Building> cells):
+          for (Building cell in cells) {
+            _findFeature<T>(cell.asset, result);
           }
         case MessageBoardFeature(messages: List<AssetID> messages):
           for (AssetID message in messages) {

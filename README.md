@@ -9,10 +9,10 @@ This app is a client for [ISD](https://interstellar-dynasties.space).
     - brightness (change between light/dark mode - dark mode is recommended)
 - Ignore "debug system view" (it's a debugging tool not intended for end users)
 - After the spaceship crashes, you can go to "planet view" and see the planet.
-- You can click on the crater and the spaceship. When you click on the spaceship, you can click on the button next to "Researching:" to pick a research. The tech tree may have you waiting for 20 minutes for some things. Do not press the "disable" or "dismantle" button on the spaceship, or "dismantle" on the crater under the spaceship, as that basically softlocks the game.
-- Clicking on an empty cell lists all the things you can currently build (based on what messages you've gotten so far). You can click on one of them to build it, and then click on the resulting building to look at it. Ignore the "NxN" label under the empty cell, that currently doesn't mean anything.
-- Leave an empty slot for later, to put a city in, as otherwise you're softlocked because you can't build anything. Cities by researching "city development" or "how to put small things in big things".
-- You can dismantle things via the "Dismantle" button, but note that currently that only some things have dismantle buttons, and if you don't have enough room for the materials it will just turn into a rubble pile.
+- You can click on the crater and the spaceship. When you click on the spaceship, you can click on the button next to "Researching:" to pick a research. Note that the current tech tree may have you waiting for like 20 minutes for some things. Do not press the "disable" or "dismantle" button on the spaceship, or "dismantle" on the crater under the spaceship, as that basically softlocks the game.
+- You can drag a building from the right side of the screen onto the grid to place it, and then click it again to interact with it. 
+- You can zoom and pan around the planet.
+- You can build on top of cities, though cities in general right now are kinda pointless. You cannot build half-in a city and half-not in a city.
 ## Server-Client Protocol
 See [the official protocol](https://software.hixie.ch/fun/isd/test-2024/servers/src/README.md), as well as the official [system](https://software.hixie.ch/fun/isd/test-2024/servers/src/systems-server/README.md), [dynasty](https://software.hixie.ch/fun/isd/test-2024/servers/src/dynasties-server/README.md), and [login](https://software.hixie.ch/fun/isd/test-2024/servers/src/login-server/README.md) sub-protocols.
 ## Cookie Storage

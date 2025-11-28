@@ -171,9 +171,8 @@ void mainLoop(DataStructure data, NetworkConnection systemServer) {
       if (church == null) {
         GridFeature gridFeature =
             data.assets[grid]!.features.whereType<GridFeature>().single;
-        int position = gridFeature.cells.indexOf(null);
-        int x = position % gridFeature.dimension;
-        int y = position ~/ gridFeature.dimension;
+        int x = throw UnimplementedError();
+        int y = throw UnimplementedError();
         print('Got churches, building one...');
         build(systemServer, grid, x, y, 1);
         return;
@@ -193,9 +192,8 @@ void mainLoop(DataStructure data, NetworkConnection systemServer) {
         if (church2 == null) {
           GridFeature gridFeature =
               data.assets[grid]!.features.whereType<GridFeature>().single;
-          int position = gridFeature.cells.indexOf(null);
-          int x = position % gridFeature.dimension;
-          int y = position ~/ gridFeature.dimension;
+        int x = throw UnimplementedError();
+        int y = throw UnimplementedError();
           print('Building second church...');
           build(systemServer, grid, x, y, 1);
           return;
@@ -210,9 +208,8 @@ void mainLoop(DataStructure data, NetworkConnection systemServer) {
         if (church3 == null) {
           GridFeature gridFeature =
               data.assets[grid]!.features.whereType<GridFeature>().single;
-          int position = gridFeature.cells.indexOf(null);
-          int x = position % gridFeature.dimension;
-          int y = position ~/ gridFeature.dimension;
+        int x = throw UnimplementedError();
+        int y = throw UnimplementedError();
           print('Building third church...');
           build(systemServer, grid, x, y, 1);
           return;
@@ -230,9 +227,8 @@ void mainLoop(DataStructure data, NetworkConnection systemServer) {
       if (hole == null) {
         GridFeature gridFeature =
             data.assets[grid]!.features.whereType<GridFeature>().single;
-        int position = gridFeature.cells.indexOf(null);
-        int x = position % gridFeature.dimension;
-        int y = position ~/ gridFeature.dimension;
+        int x = throw UnimplementedError();
+        int y = throw UnimplementedError();
         print('Got archeological holes, building one...');
         build(systemServer, grid, x, y, 5);
         return;

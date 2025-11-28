@@ -340,11 +340,13 @@ class ISDIcon extends StatefulWidget {
     required this.icon,
     required this.width,
     required this.height,
+    this.opacity = 1,
   });
 
   final String icon;
   final double width;
   final double height;
+  final double opacity;
 
   @override
   State<ISDIcon> createState() => _ISDIconState();
@@ -377,6 +379,7 @@ class _ISDIconState extends State<ISDIcon> {
             'https://interstellar-dynasties.space/icons/${widget.icon}.png',
             width: widget.width,
             height: widget.height,
+            opacity: AlwaysStoppedAnimation(widget.opacity),
             fit: BoxFit.fill,
             errorBuilder: (context, error, stackTrace) {
               print(

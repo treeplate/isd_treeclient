@@ -258,6 +258,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
   }
 
   void connectToSystemServer(String server) {
+    // TODO: debug connected > expected errors
     connect(server).then((socket) async {
       Map<int, String> stringTable = {};
       Map<int, AssetClass> assetClassTable = {};

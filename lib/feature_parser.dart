@@ -133,15 +133,15 @@ Feature parseFeature(
     case 0xa:
       double cellSize = reader.readFloat64();
       int dimension = reader.readUint32();
-      List<Building?> cells = List.filled(dimension * dimension, null);
+      List<Building> cells = [];
       while (true) {
         int id = reader.readUint32();
         if (id == 0) break;
         int x = reader.readUint32();
         int y = reader.readUint32();
         int size = reader.readUint8();
-        cells[x + y * dimension] = (asset: AssetID(systemID, id), size: size);
-        notReferenced.remove(cells[x + y * dimension]!.asset);
+        cells.add((asset: AssetID(systemID, id), x: x, y: y, size: size));
+        notReferenced.remove(cells.last.asset);
       }
       List<Buildable> buildables = [];
       while (true) {

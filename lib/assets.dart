@@ -19,6 +19,8 @@ extension type AssetID._((StarIdentifier system, int id) value) {
   StarIdentifier get system => value.$1;
   int get id => value.$2;
 
+  String get displayName => 'A${id.toRadixString(16).padLeft(6, '0')}';
+
   factory AssetID(StarIdentifier system, int id) {
     assert(id > 0);
     return AssetID._((system, id));
@@ -226,12 +228,12 @@ class SurfaceFeature extends Feature {
 
 /// size: uint8 (how big is the asset compared to the grid cells)
 typedef Buildable = ({AssetClass assetClass, int size});
-typedef Building = ({AssetID asset, int size});
+typedef Building = ({AssetID asset, int x, int y, int size});
 
 class GridFeature extends Feature {
-  GridFeature(this.cells, this.dimension, this.cellSize, this.buildables);
+  GridFeature(this.buildings, this.dimension, this.cellSize, this.buildables);
 
-  final List<Building?> cells;
+  final List<Building> buildings;
   final int dimension;
 
   /// in meters
