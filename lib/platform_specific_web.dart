@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:js_interop';
 import 'dart:typed_data';
-import 'package:isd_treeclient/platform_specific_stub.dart';
 import 'package:web/web.dart';
 
 class WebSocketWrapper {
@@ -82,6 +81,8 @@ Future<WebSocketWrapper> connect(String serverUrl) async {
   await webSocket.onOpen.first;
   return WebSocketWrapper(webSocket);
 }
+
+Map<String, String> cookieCache = {};
 
 Future<String?> getCookie(String name) async {
   String? item = window.localStorage.getItem(name);
