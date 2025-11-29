@@ -513,5 +513,7 @@ class AssetClass {
   final String name;
   final String description;
 
+  String toString() => 'AssetClass#$id(icon: $icon, name: $name, description, $description)';
+
   AssetClass(this.id, this.icon, this.name, this.description);
 }

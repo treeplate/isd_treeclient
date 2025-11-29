@@ -23,8 +23,38 @@ void setTopic(
   }
 }
 
-void build(NetworkConnection server, AssetID grid, int x, int y,
-    int assetClass) async {
+void build(
+  NetworkConnection server,
+  AssetID grid,
+  GridFeature feature,
+  String name,
+) async {
+  int x = 0;
+  int y = 0;
+  Buildable buildable =
+      feature.buildables.singleWhere((e) => e.assetClass.name == name);
+  outer:
+  do {
+    print('top $x $y');
+    for (Building building in feature.buildings) {
+      if (building.x < (x + buildable.size) &&
+          building.x + building.size > x &&
+          building.y < (y + buildable.size) &&
+          building.y + building.size > y) {
+      print('($x, $y) vs (${building.x}, ${building.y})');
+        print('collision');
+        x++;
+        if (x + building.size >= feature.dimension) {
+          x = 0;
+          y++;
+          assert(y < feature.dimension);
+        }
+        continue outer;
+      }
+    }
+    print('bottom $x $y');
+    break;
+  } while (true);
   List<String> result = await server.send([
     'play',
     grid.system.value.toString(),
@@ -32,7 +62,7 @@ void build(NetworkConnection server, AssetID grid, int x, int y,
     'build',
     x.toString(),
     y.toString(),
-    assetClass.toString(),
+    buildable.assetClass.id.toString(),
   ]);
   if (result.first != 'T') {
     throw Exception('\'build\' error: $result');
@@ -40,7 +70,6 @@ void build(NetworkConnection server, AssetID grid, int x, int y,
 }
 
 void main() async {
-  // TODO: update this
   DateTime startTime = DateTime.timestamp();
   NetworkConnection loginServer = await NetworkConnection.fromURL(
     loginServerURL,
@@ -115,10 +144,11 @@ void main() async {
         print('system server unrequested message: $message');
       },
       binaryMessageHandler: (ByteBuffer message) {
-        BinaryReader reader = BinaryReader(message, stringTable, assetClassTable, Endian.little);
+        BinaryReader reader =
+            BinaryReader(message, stringTable, assetClassTable, Endian.little);
         data.galaxyDiameter = 1;
         parseSystemServerBinaryMessage(reader, data);
-        mainLoop(data, systemServer);
+        mainLoop(data, systemServer, assetClassTable);
       },
       onError: (Object error, StackTrace stackTrace) {
         print('system server error: $error');
@@ -143,104 +173,126 @@ void main() async {
   }
 }
 
-void mainLoop(DataStructure data, NetworkConnection systemServer) {
+AssetID? findAsset(DataStructure data, AssetClassID assetClassID, int skip) {
+  return data.assets.entries
+      .where((e) => e.value.assetClass.id == assetClassID)
+      .skip(skip)
+      .firstOrNull
+      ?.key;
+}
+
+// region: -201
+// ship: -3
+//
+// church: 1 (for researching religon)
+// archeo hole: 5 (main research tool)
+// iron table: 6 (for church)
+// iron pile: 7 (to store iron before church)
+// silicon table: 9 (for church)
+// silicon pile: 10 (to store silicon before church)
+// rally point: 11 (to build silicon table)
+// mining hole w/ more help: 5001 (mining)
+
+void mainLoop(DataStructure data, NetworkConnection systemServer,
+    Map<int, AssetClass> assetClassTable) {
   AssetID rootAsset = data.rootAssets.values.single;
   Set<AssetID> messageIDs = data.findFeature<MessageFeature>(rootAsset);
   Set<MessageFeature> messages = messageIDs.map((e) {
     return data.assets[e]!.features.whereType<MessageFeature>().first;
   }).toSet();
-  if (messages.any((e) =>
-      e.from == 'Director of Research' && e.subject == 'Congratulations')) {
-    AssetID spaceship =
-        data.assets.entries.singleWhere((e) => e.value.assetClass.id == -3).key;
-    AssetID? grid = data.assets.entries
-        .where((e) => e.value.assetClass.id == -201)
-        .singleOrNull
-        ?.key;
-    if (grid == null) {
-      grid = data.assets.entries
-          .where((e) => e.value.features.any((e) => e is GridFeature))
-          .single
-          .key;
-    }
+  if (messages.any((e) => e.from == 'Passengers')) {
+    AssetID spaceship = findAsset(data, -3, 0)!;
+    AssetID grid = findAsset(data, -201, 0)!;
+    GridFeature gridFeature =
+        data.assets[grid]!.features.whereType<GridFeature>().single;
     if (messages.any((e) => e.subject == 'Communicating with our creator')) {
-      AssetID? church = data.assets.entries
-          .where((e) => e.value.assetClass.id == 1)
-          .firstOrNull
-          ?.key;
-      if (church == null) {
-        GridFeature gridFeature =
-            data.assets[grid]!.features.whereType<GridFeature>().single;
-        int x = throw UnimplementedError();
-        int y = throw UnimplementedError();
-        print('Got churches, building one...');
-        build(systemServer, grid, x, y, 1);
-        return;
-      } else {
-        print('Built church, researching Religion...');
-        setTopic(systemServer, church, 'Religion');
-        if (messages.any((e) => e.subject == '"Powerful Being" nonsense')) {
-          print('Researching The Impact of Religion on Society...');
-          setTopic(
-              systemServer, spaceship, 'The Impact of Religion on Society');
-        }
-        AssetID? church2 = data.assets.entries
-            .where((e) => e.value.assetClass.id == 1)
-            .skip(1)
-            .firstOrNull
-            ?.key;
-        if (church2 == null) {
-          GridFeature gridFeature =
-              data.assets[grid]!.features.whereType<GridFeature>().single;
-        int x = throw UnimplementedError();
-        int y = throw UnimplementedError();
-          print('Building second church...');
-          build(systemServer, grid, x, y, 1);
-          return;
-        } else {
-          print('Built second church, researching City Development...');
-          setTopic(systemServer, church2, 'City Development');
-          AssetID? church3 = data.assets.entries
-            .where((e) => e.value.assetClass.id == 1)
-            .skip(2)
-            .firstOrNull
-            ?.key;
-        if (church3 == null) {
-          GridFeature gridFeature =
-              data.assets[grid]!.features.whereType<GridFeature>().single;
-        int x = throw UnimplementedError();
-        int y = throw UnimplementedError();
-          print('Building third church...');
-          build(systemServer, grid, x, y, 1);
-          return;
-        } else {
-          print('Built third church, researching Mining...');
-          setTopic(systemServer, church3, 'Mining');
-        }
-        }
-      }
-    } else if (messages.any((e) => e.subject == 'Stuff in holes')) {
-      AssetID? hole = data.assets.entries
-          .where((e) => e.value.assetClass.id == 5)
-          .firstOrNull
-          ?.key;
-      if (hole == null) {
-        GridFeature gridFeature =
-            data.assets[grid]!.features.whereType<GridFeature>().single;
-        int x = throw UnimplementedError();
-        int y = throw UnimplementedError();
-        print('Got archeological holes, building one...');
-        build(systemServer, grid, x, y, 5);
-        return;
-      } else {
-        print('Built archeological hole, researching City Developement...');
-        setTopic(systemServer, hole, 'City Development');
-      }
-    } else {
-      print('Researching Philosophy...');
+      setTopic(systemServer, spaceship, 'Mining');
+    } else if (messages.any((e) =>
+        e.subject == 'Congratulations' && e.from == 'Director of Research')) {
       setTopic(systemServer, spaceship, 'Philosophy');
     }
+    AssetID? church = findAsset(data, 1, 0);
+    if (church == null &&
+        messages.any((e) => e.subject == 'Communicating with our creator')) {
+      print('building church');
+      build(systemServer, grid, gridFeature, 'Church');
+    } else if (church != null) {
+      setTopic(systemServer, church, 'Religion');
+    }
+    AssetID? hole = findAsset(data, 5001, 0);
+    if (hole == null &&
+        messages.any((e) => e.subject == 'Apologies please don\'t evict us')) {
+      print('building hole');
+      build(systemServer, grid, gridFeature, 'Mining hole with more help');
+      return;
+    }
+    AssetID? ironTable = findAsset(data, 6, 0);
+    if (ironTable == null && messages.any((e) => e.subject == 'Iron team')) {
+      print('building iron table');
+      build(systemServer, grid, gridFeature, 'Iron team table');
+      return;
+    }
+    AssetID? siliconTable = findAsset(data, 9, 0);
+    if (siliconTable == null && messages.any((e) => e.subject == 'Silicon')) {
+      print('building silicon table');
+      build(systemServer, grid, gridFeature, 'Silicon Table');
+      return;
+    }
+    AssetID? ironPile = findAsset(data, 7, 0);
+    if (ironPile == null && messages.any((e) => e.subject == 'Iron team')) {
+      print('building iron pile');
+      build(systemServer, grid, gridFeature, 'Iron pile');
+      return;
+    }
+    AssetID? siliconPile = findAsset(data, 10, 0);
+    if (siliconPile == null && messages.any((e) => e.subject == 'Silicon')) {
+      print('building silicon pile');
+      build(systemServer, grid, gridFeature, 'Silicon pile');
+      return;
+    }
+    AssetID? rally = findAsset(data, 11, 0);
+    if (rally == null && messages.any((e) => e.subject == 'Silicon')) {
+      print('building rally point');
+      build(systemServer, grid, gridFeature, 'Builder rally point');
+      return;
+    }
+    if (!messages.any((e) => e.subject == 'Stuff in holes')) {
+      print('waiting for archeological holes...');
+      return;
+    }
+    AssetID? archeoHole1 = findAsset(data, 5, 0);
+    if (archeoHole1 == null) {
+      print('building archeological hole1');
+      build(systemServer, grid, gridFeature, 'Archeological hole');
+      return;
+    }
+    setTopic(systemServer, archeoHole1!, 'Philosophy');
+    AssetID? archeoHole2 = findAsset(data, 5, 1);
+    if (archeoHole2 == null) {
+      print('building archeological hole2');
+      build(systemServer, grid, gridFeature, 'Archeological hole');
+      return;
+    }
+    setTopic(systemServer, archeoHole2!, 'Astronomy');
+    AssetID? archeoHole3 = findAsset(data, 5, 2);
+    if (archeoHole3 == null) {
+      print('building archeological hole3');
+      build(systemServer, grid, gridFeature, 'Archeological hole');
+      return;
+    }
+    setTopic(
+        systemServer, archeoHole3!, 'How to put small things in big things');
+    AssetID? archeoHole4 = findAsset(data, 5, 3);
+    if (archeoHole4 == null) {
+      print('building archeological hole4');
+      build(systemServer, grid, gridFeature, 'Archeological hole');
+      return;
+    }
+    if (messages.any((e) => e.subject == '"Powerful Being" nonsense')) {
+      print('researching the impact of religion on society');
+      setTopic(systemServer, archeoHole4!, 'The Impact of Religion on Society');
+    }
   } else {
-    print('Waiting for topics...');
+    print('Waiting for crash...');
   }
 }
