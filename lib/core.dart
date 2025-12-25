@@ -85,6 +85,10 @@ extension type Uint64((int, int) _value) {
     }
     return result ~/ 10;
   }
+
+  bool operator <(Uint64 other) {
+    return msh < other.msh || msh == other.msh && lsh < other.lsh;
+  }
 }
 const Uint64 zero64 = Uint64.bigEndian(0, 0);
 

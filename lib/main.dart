@@ -339,12 +339,11 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         await connectToLoginServer();
         currentSystemServerConnectedCount--;
         if (data.username != null && data.password != null) {
-          await login();
+          return login();
         } else {
           systemServer.close();
           return;
         }
-        onSystemServerReset(systemServer, serverName);
       } else {
         openErrorDialog(
             'Error: failed system server $serverName login ($message)',

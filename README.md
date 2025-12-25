@@ -5,7 +5,7 @@ This app is a client for [ISD](https://interstellar-dynasties.space).
 - At the top right, you'll see four buttons. In order from left to right:
     - debugging tool, do not use
     - inbox (where you see messages)
-    - profile (change username, password, log out, or use the serverside icons with "use network icons")
+    - profile (change username, password, log out, or use the icons provided by the server with "use network icons")
     - brightness (change between light/dark mode - dark mode is recommended)
 - Ignore "debug system view" (it's a debugging tool not intended for end users)
 - After the spaceship crashes, you can go to "planet view" and see the planet.

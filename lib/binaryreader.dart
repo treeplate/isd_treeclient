@@ -53,6 +53,7 @@ class BinaryReader {
 
   String readString() {
     int code = readUint32();
+    if (code == 0) return '';
     String? result = stringTable[code];
     if (result != null) {
       return result;

@@ -241,15 +241,49 @@ class GridFeature extends Feature {
   final List<Buildable> buildables;
 }
 
+class Gossip {
+  final String message;
+  // origin of gossip
+  final AssetID? source;
+  // time at which [impact] was accurate
+  final Uint64 impactAnchor;
+  // how happy this makes each person
+  final double impact;
+  // how long this gossip lasts
+  final Uint64 duration;
+  // time at which [people] was accurate
+  final Uint64 peopleAnchor;
+  // how many people were affected
+  final int people;
+  // factor to multiply people by each millisecond (i.e. how many people each person tells each millisecond - 1)
+  final double spreadrate;
+  // the feature's [population] field
+  final int population;
+
+  Gossip(this.message, this.source, this.impactAnchor, this.impact, this.duration, this.peopleAnchor, this.people, this.spreadrate, this.population);
+
+  static double decay(double x) {
+    return 1 - x * x * (3 - 2 * x);
+  }
+
+  double getHappinessContribution(Uint64 time) {
+    Uint64 age = time - impactAnchor;
+    double actualImpact = impact * decay(age / duration.toDouble());
+    Uint64 spreadtime = time - peopleAnchor;
+    double actualPeople = min<double>(people.toDouble() * pow(spreadrate, spreadtime.toDouble()), population.toDouble());
+    return actualImpact * actualPeople;
+  }
+}
+
 class PopulationFeature extends Feature {
   final DisabledReasoning disabledReasoning;
   final int population;
   final int maxPopulation;
   final int jobs;
-  final double averageHappiness;
+  final List<Gossip> gossip;
 
   PopulationFeature(this.disabledReasoning, this.population, this.maxPopulation,
-      this.jobs, this.averageHappiness);
+      this.jobs, this.gossip);
 }
 
 class MessageBoardFeature extends Feature {

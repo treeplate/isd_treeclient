@@ -159,9 +159,34 @@ Feature parseFeature(
       int population = reader.readUint32();
       int maxPopulation = reader.readUint32();
       int jobs = reader.readUint32();
-      double averageHappiness = reader.readFloat64();
+      List<Gossip> gossip = [];
+      while (true) {
+        String message = reader.readString();
+        if (message == '') {
+          break;
+        }
+        int rawSource = reader.readUint32();
+        gossip.add(
+          Gossip(
+            message,
+            rawSource == 0 ? null : AssetID(systemID, rawSource),
+            reader.readUint64(),
+            reader.readFloat64(),
+            reader.readUint64(),
+            reader.readUint64(),
+            reader.readUint32(),
+            reader.readFloat64(),
+            population,
+          ),
+        );
+      }
       return PopulationFeature(
-          disabledReasoning, population, maxPopulation, jobs, averageHappiness);
+        disabledReasoning,
+        population,
+        maxPopulation,
+        jobs,
+        gossip,
+      );
     case 0xc:
       List<AssetID> messages = [];
       while (true) {

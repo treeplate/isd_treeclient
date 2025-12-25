@@ -821,7 +821,13 @@ class PopulationFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-            '${feature.population} people (${feature.jobs} with jobs, disabledReasoning: ${feature.disabledReasoning}) out of ${feature.maxPopulation} max with an average of ${feature.averageHappiness} happiness (${feature.population.toDouble() * feature.averageHappiness} total happiness)'),
+            '${feature.population} people (${feature.jobs} with jobs, disabledReasoning: ${feature.disabledReasoning}) out of ${feature.maxPopulation} max)'),
+        Text('Gossip:'),
+        ...feature.gossip.map(
+          (e) => Text(
+            '${e.message}: source ${e.source?.displayName ?? 'unknown'}, impactAnchor ${calendar.dateName(e.impactAnchor)} ${calendar.timeName(e.impactAnchor)} (${e.impactAnchor.displayName}), impact ${e.impact}, duration ${calendar.durationName(e.duration)}, peopleAnchor ${calendar.dateName(e.peopleAnchor)} ${calendar.timeName(e.peopleAnchor)} (${e.peopleAnchor.displayName}), people ${e.people}, spreadrate ${e.spreadrate}',
+          ),
+        )
       ],
     );
   }

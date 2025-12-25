@@ -985,17 +985,30 @@ Widget describeFeature(
         population: int population,
         maxPopulation: int maxPopulation,
         jobs: int jobs,
-        averageHappiness: double averageHappiness
+        gossip: List<Gossip> gossip,
       ):
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'There are $population people here ($jobs with jobs) with an average of $averageHappiness happiness (${population.toDouble() * averageHappiness} total happiness).',
-          ),
-          Text(
-              'This houses $maxPopulation people, and is currently ${disabledReasoning == 0 ? 'in working condition' : disabledReasoning.asString}.')
-        ],
+      return ContinuousBuilder(
+        builder: (context) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'This houses $maxPopulation people, and is currently ${disabledReasoning == 0 ? 'in working condition' : disabledReasoning.asString}.',
+              ),
+              Text(
+                'There are $population people here ($jobs with jobs).',
+              ),
+              Text(
+                'Gossip:',
+              ),
+              ...gossip.where((e) => data.getTime(system, DateTime.timestamp()) < e.impactAnchor + e.duration).map(
+                (e) => Text(
+                  '${e.message}: ${e.getHappinessContribution(data.getTime(system, DateTime.timestamp())).toStringAsFixed(0)} happiness points',
+                ),
+              )
+            ],
+          );
+        }
       );
     case MessageBoardFeature():
       continue nothing;
