@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart' hide Material;
-import 'package:isd_treeclient/core.dart';
+import 'core.dart';
 import 'knowledge.dart';
 import 'ui-core.dart';
 import 'assets.dart';

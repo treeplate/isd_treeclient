@@ -461,15 +461,13 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
           await connectToLoginServer();
         } catch (error) {
           openErrorDialog(error.toString(), context);
-          onDynastyServerReset(dynastyServer);
         }
         if (data.username != null && data.password != null) {
-          await login();
+          return login();
         } else {
           dynastyServer.close();
           return;
         }
-        onDynastyServerReset(dynastyServer);
       } else {
         openErrorDialog(
             'response from dynasty server login: ${message[1]}', context);

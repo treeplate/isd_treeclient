@@ -1,10 +1,10 @@
 import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:isd_treeclient/assets.dart';
-import 'package:isd_treeclient/data-structure.dart';
-import 'package:isd_treeclient/network_handler.dart';
-import 'package:isd_treeclient/ui-core.dart';
+import 'assets.dart';
+import 'data-structure.dart';
+import 'network_handler.dart';
+import 'ui-core.dart';
 
 class GalaxyView extends StatefulWidget {
   const GalaxyView(

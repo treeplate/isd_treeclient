@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:isd_treeclient/ui-core.dart';
+import 'ui-core.dart';
 import 'data-structure.dart';
 import 'assets.dart';
 import 'core.dart';
