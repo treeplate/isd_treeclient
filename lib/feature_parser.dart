@@ -91,7 +91,7 @@ Feature parseFeature(
         quantityFlowRate,
         hp,
         hpFlowRate,
-        minHP == 0 ? null : minHP,
+        minHP,
         data.getTime(systemID, DateTime.timestamp()),
       );
     case 5:

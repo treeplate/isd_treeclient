@@ -165,9 +165,9 @@ class StructureFeature extends Feature {
     );
   }
 
-  final int? minHP;
+  final int minHP;
 
-  bool get mustKnowAssetClass => minHP != null || maxHP > quantity0;
+  bool get mustKnowAssetClass => minHP != 0 || maxHP > quantity0;
   StructureFeature(
     this.materials,
     this.builder,
