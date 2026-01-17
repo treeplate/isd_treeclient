@@ -717,6 +717,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
+                            OutlinedButton(child: Text('Refresh'), onPressed: () {getHighScores([data.dynastyID!]);},),
                             Text('LEADERBOARD'),
                             ...(data.scores.entries.toList()
                                   ..sort((a, b) => -a.value.scores.last.score

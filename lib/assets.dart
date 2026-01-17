@@ -29,6 +29,8 @@ extension type AssetID._((StarIdentifier system, int id) value) {
 
 sealed class Feature {
   const Feature();
+
+  bool get mustKnowAssetClass => false;
 }
 
 class Asset {
@@ -164,6 +166,8 @@ class StructureFeature extends Feature {
   }
 
   final int? minHP;
+
+  bool get mustKnowAssetClass => minHP != null || maxHP > quantity0;
   StructureFeature(
     this.materials,
     this.builder,
@@ -239,6 +243,8 @@ class GridFeature extends Feature {
   /// in meters
   final double cellSize;
   final List<Buildable> buildables;
+
+  bool get mustKnowAssetClass => buildables.isNotEmpty;
 }
 
 class Gossip {
@@ -260,7 +266,16 @@ class Gossip {
   // the feature's [population] field
   final int population;
 
-  Gossip(this.message, this.source, this.impactAnchor, this.impact, this.duration, this.peopleAnchor, this.people, this.spreadrate, this.population);
+  Gossip(
+      this.message,
+      this.source,
+      this.impactAnchor,
+      this.impact,
+      this.duration,
+      this.peopleAnchor,
+      this.people,
+      this.spreadrate,
+      this.population);
 
   static double decay(double x) {
     return 1 - x * x * (3 - 2 * x);
@@ -270,7 +285,10 @@ class Gossip {
     Uint64 age = time - impactAnchor;
     double actualImpact = impact * decay(age / duration.toDouble());
     Uint64 spreadtime = time - peopleAnchor;
-    double actualPeople = min<double>(people.toDouble() * pow(spreadrate, spreadtime.toDouble()), population.toDouble());
+    double actualPeople = min<double>(
+      people.toDouble() * pow(spreadrate, spreadtime.toDouble()),
+      population.toDouble(),
+    );
     return actualImpact * actualPeople;
   }
 }
@@ -289,6 +307,8 @@ class PopulationFeature extends Feature {
 class MessageBoardFeature extends Feature {
   final List<AssetID> messages;
 
+  bool get mustKnowAssetClass => true;
+
   MessageBoardFeature(this.messages);
 }
 
@@ -299,6 +319,8 @@ class MessageFeature extends Feature {
   final String subject;
   final String from;
   final String text;
+
+  bool get mustKnowAssetClass => true;
 
   MessageFeature(
     this.source,
@@ -335,21 +357,19 @@ class ResearchFeature extends Feature {
   final DisabledReasoning disabledReasoning;
   final String topic;
 
+  bool get mustKnowAssetClass => true;
+
   ResearchFeature(this.disabledReasoning, this.topic);
 }
 
 class MiningFeature extends Feature {
   final double maxRate; // kg/ms
   final DisabledReasoning disabledReasoning;
-  final bool rateLimitedBySource;
-  final bool rateLimitedByTarget;
   final double currentRate; // kg/ms
 
   MiningFeature(
     this.maxRate,
     this.disabledReasoning,
-    this.rateLimitedBySource,
-    this.rateLimitedByTarget,
     this.currentRate,
   );
 }
@@ -381,19 +401,17 @@ class RegionFeature extends Feature {
 }
 
 class RefiningFeature extends Feature {
-  final MaterialID? ore;
+  final MaterialID ore;
   final double maxRate; // kg/ms
   final DisabledReasoning disabledReasoning;
-  final bool rateLimitedBySource;
-  final bool rateLimitedByTarget;
   final double currentRate;
+
+  bool get mustKnowAssetClass => true;
 
   RefiningFeature(
     this.ore,
     this.maxRate,
     this.disabledReasoning,
-    this.rateLimitedBySource,
-    this.rateLimitedByTarget,
     this.currentRate,
   );
 }
@@ -487,6 +505,8 @@ class InternalSensorStatusFeature extends Feature {
 class OnOffFeature extends Feature {
   final bool enabled;
 
+  bool get mustKnowAssetClass => true;
+
   OnOffFeature(this.enabled);
 }
 
@@ -501,6 +521,21 @@ class AssetPileFeature extends Feature {
   final List<AssetID> assets;
 
   AssetPileFeature(this.assets);
+}
+
+typedef MaterialManifestItem = ({MaterialID material, int quantity});
+
+class FactoryFeature extends Feature {
+  final List<MaterialManifestItem> inputs;
+  final List<MaterialManifestItem> outputs;
+  final double maxRate; // iterations per millisecond
+  final double configuredRate; // iterations per millisecond
+  final double currentRate; // iterations per millisecond
+  final DisabledReasoning disabledReasoning;
+
+  bool get mustKnowAssetClass => true;
+
+  FactoryFeature(this.inputs, this.outputs, this.maxRate, this.configuredRate, this.currentRate, this.disabledReasoning);
 }
 
 typedef AssetClassID = int; // 32-bit signed, but can't be 0
@@ -518,24 +553,30 @@ String joinCommaAnd(List<String> args) {
 extension type DisabledReasoning(int flags) {
   String get asString {
     assert(flags >= 0);
-    if (flags >= 0x20) {
+    if (flags >= 0x80) {
       return 'invalid flags $flags';
     }
     List<String> problems = [];
     if (flags & 1 == 1) {
-      problems.add('manually disabled');
+      problems.add('in the wrong place');
     }
     if (flags & 2 == 2) {
       problems.add('not yet built');
     }
     if (flags & 4 == 4) {
-      problems.add('in the wrong place');
+      problems.add('manually disabled');
     }
     if (flags & 8 == 8) {
       problems.add('not fully staffed');
     }
     if (flags & 0x10 == 0x10) {
       problems.add('not owned');
+    }
+    if (flags & 0x20 == 0x20) {
+      problems.add('source limited');
+    }
+    if (flags & 0x40 == 0x40) {
+      problems.add('target limited');
     }
     return joinCommaAnd(problems);
   }
@@ -547,7 +588,8 @@ class AssetClass {
   final String name;
   final String description;
 
-  String toString() => 'AssetClass#$id(icon: $icon, name: $name, description, $description)';
+  String toString() =>
+      'AssetClass#$id(icon: $icon, name: $name, description, $description)';
 
   AssetClass(this.id, this.icon, this.name, this.description);
 }

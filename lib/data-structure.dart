@@ -310,6 +310,7 @@ class DataStructure with ChangeNotifier {
         case InternalSensorStatusFeature():
         case OnOffFeature():
         case StaffingFeature():
+        case FactoryFeature():
       }
     }
   }
@@ -381,6 +382,7 @@ class DataStructure with ChangeNotifier {
         case InternalSensorStatusFeature():
         case OnOffFeature():
         case StaffingFeature():
+        case FactoryFeature():
           break;
       }
     }

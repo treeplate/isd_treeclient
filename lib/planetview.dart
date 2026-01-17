@@ -195,13 +195,14 @@ class _PlanetViewState extends State<PlanetView> {
               ),
             ),
             Expanded(
-                child: ListView(
-              children: [
-                ...region.buildables.map((Buildable buildable) => Center(
-                    child: BuildableWidget(
-                        buildable, regionSize / region.dimension)))
-              ],
-            )),
+              child: ListView(
+                children: [
+                  ...region.buildables.map((Buildable buildable) => Center(
+                      child: BuildableWidget(
+                          buildable, regionSize / region.dimension)))
+                ],
+              ),
+            ),
           ],
         );
       });
@@ -781,7 +782,7 @@ Widget describeFeature(
     Feature feature,
     DataStructure data,
     StarIdentifier system,
-    AssetID asset,
+    AssetID assetID,
     NetworkConnection server,
     BuildContext context) {
   switch (feature) {
@@ -819,6 +820,7 @@ Widget describeFeature(
           maxHP;
       final double totalHeight = minLineItemHeight / minLineItemFraction;
       final ThemeData theme = Theme.of(context);
+      Asset asset = data.assets[assetID]!;
       return ContinuousBuilder(builder: (context) {
         return Column(
           children: [
@@ -904,66 +906,68 @@ Widget describeFeature(
                   ),
               ],
             ),
-            OutlinedButton(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => Dialog(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                              'Are you sure you want to dismantle this structure?'),
-                          SizedBox(
-                            height: 10,
-                          ),
-                          OutlinedButton(
-                            onPressed: () {
-                              server.send(
-                                [
-                                  'play',
-                                  asset.system.value.toString(),
-                                  asset.id.toString(),
-                                  'dismantle',
-                                ],
-                              ).then((List<String> result) {
-                                Navigator.pop(context);
-                                if (result.first != 'T') {
-                                  assert(result.first == 'F');
-                                  assert(result.length == 2);
-                                  if (result.last == 'no destructors') {
-                                    openErrorDialog(
-                                        'No people were found to dismantle this structure.',
-                                        context);
-                                  } else {
-                                    openErrorDialog(
-                                      'dismantle response: $result',
-                                      context,
-                                    );
+            if (asset.assetClass.id != null &&
+                (asset.owner == null || asset.owner == data.dynastyID))
+              OutlinedButton(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => Dialog(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                                'Are you sure you want to dismantle this structure?'),
+                            SizedBox(
+                              height: 10,
+                            ),
+                            OutlinedButton(
+                              onPressed: () {
+                                server.send(
+                                  [
+                                    'play',
+                                    assetID.system.value.toString(),
+                                    assetID.id.toString(),
+                                    'dismantle',
+                                  ],
+                                ).then((List<String> result) {
+                                  Navigator.pop(context);
+                                  if (result.first != 'T') {
+                                    assert(result.first == 'F');
+                                    assert(result.length == 2);
+                                    if (result.last == 'no destructors') {
+                                      openErrorDialog(
+                                          'No people were found to dismantle this structure.',
+                                          context);
+                                    } else {
+                                      openErrorDialog(
+                                        'dismantle response: $result',
+                                        context,
+                                      );
+                                    }
+                                    return;
                                   }
-                                  return;
-                                }
-                                assert(result.length == 1);
-                              });
-                            },
-                            child: Text('Dismantle'),
-                          ),
-                          OutlinedButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            child: Text('Cancel'),
-                          ),
-                        ],
+                                  assert(result.length == 1);
+                                });
+                              },
+                              child: Text('Dismantle'),
+                            ),
+                            OutlinedButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              child: Text('Cancel'),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
-              child: Text('Dismantle'),
-            ),
+                  );
+                },
+                child: Text('Dismantle'),
+              ),
             if (builder != null) Text('Currently being built.'),
           ],
         );
@@ -987,29 +991,31 @@ Widget describeFeature(
         jobs: int jobs,
         gossip: List<Gossip> gossip,
       ):
-      return ContinuousBuilder(
-        builder: (context) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'This houses $maxPopulation people, and is currently ${disabledReasoning == 0 ? 'in working condition' : disabledReasoning.asString}.',
-              ),
-              Text(
-                'There are $population people here ($jobs with jobs).',
-              ),
-              Text(
-                'Gossip:',
-              ),
-              ...gossip.where((e) => data.getTime(system, DateTime.timestamp()) < e.impactAnchor + e.duration).map(
-                (e) => Text(
-                  '${e.message}: ${e.getHappinessContribution(data.getTime(system, DateTime.timestamp())).toStringAsFixed(0)} happiness points',
-                ),
-              )
-            ],
-          );
-        }
-      );
+      return ContinuousBuilder(builder: (context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'This houses $maxPopulation people, and is currently ${disabledReasoning == 0 ? 'in working condition' : disabledReasoning.asString}.',
+            ),
+            Text(
+              'There are $population people here ($jobs with jobs).',
+            ),
+            Text(
+              'Gossip:',
+            ),
+            ...gossip
+                .where((e) =>
+                    data.getTime(system, DateTime.timestamp()) <
+                    e.impactAnchor + e.duration)
+                .map(
+                  (e) => Text(
+                    '${e.message}: ${e.getHappinessContribution(data.getTime(system, DateTime.timestamp())).toStringAsFixed(0)} happiness points',
+                  ),
+                )
+          ],
+        );
+      });
     case MessageBoardFeature():
       continue nothing;
     case MessageFeature():
@@ -1018,6 +1024,7 @@ Widget describeFeature(
         remainingUnitCount: Uint64 remainingUnitCount,
         materials: Map<int, Uint64> materials
       ):
+      Asset asset = data.assets[assetID]!;
       return Column(
         children: [
           Text('There is a pile of rubble with:'),
@@ -1033,30 +1040,32 @@ Widget describeFeature(
           ),
           if (!remainingUnitCount.isZero)
             Text('Unknown: ${remainingUnitCount.displayName} units'),
-          OutlinedButton(
-            onPressed: () {
-              server.send(
-                [
-                  'play',
-                  asset.system.value.toString(),
-                  asset.id.toString(),
-                  'dismantle',
-                ],
-              ).then((List<String> result) {
-                if (result.first != 'T') {
-                  assert(result.first == 'F');
-                  assert(result.length == 2);
-                  openErrorDialog(
-                    'dismantle response: $result',
-                    context,
-                  );
-                  return;
-                }
-                assert(result.length == 1);
-              });
-            },
-            child: Text('Dismantle'),
-          ),
+          if (asset.assetClass.id != null &&
+              (asset.owner == null || asset.owner == data.dynastyID))
+            OutlinedButton(
+              onPressed: () {
+                server.send(
+                  [
+                    'play',
+                    assetID.system.value.toString(),
+                    assetID.id.toString(),
+                    'dismantle',
+                  ],
+                ).then((List<String> result) {
+                  if (result.first != 'T') {
+                    assert(result.first == 'F');
+                    assert(result.length == 2);
+                    openErrorDialog(
+                      'dismantle response: $result',
+                      context,
+                    );
+                    return;
+                  }
+                  assert(result.length == 1);
+                });
+              },
+              child: Text('Dismantle'),
+            ),
         ],
       );
     nothing:
@@ -1100,7 +1109,7 @@ Widget describeFeature(
                 [
                   'play',
                   system.value.toString(),
-                  asset.id.toString(),
+                  assetID.id.toString(),
                   'get-topics',
                 ],
               );
@@ -1131,7 +1140,7 @@ Widget describeFeature(
                                 [
                                   'play',
                                   system.value.toString(),
-                                  asset.id.toString(),
+                                  assetID.id.toString(),
                                   'set-topic',
                                   e.$1,
                                 ],
@@ -1162,23 +1171,12 @@ Widget describeFeature(
     case MiningFeature(
         currentRate: double currentRate,
         disabledReasoning: DisabledReasoning disabledReasoning,
-        rateLimitedBySource: bool rateLimitedBySource,
-        rateLimitedByTarget: bool rateLimitedByTarget,
         maxRate: double maxRate,
       ):
-      String rateLimitString = 'max speed';
-      if (rateLimitedBySource) {
-        rateLimitString = 'rate limited by source';
-        if (rateLimitedByTarget) {
-          rateLimitString = 'rate limited by source and target';
-        }
-      } else if (rateLimitedByTarget) {
-        rateLimitString = 'rate limited by target';
-      }
       return Column(
         children: [
           Text(
-            'Mining ${currentRate % .001 == 0 ? (currentRate * 1000).toInt() : currentRate * 1000} kilogram${currentRate == .001 ? '' : 's'} per second (${disabledReasoning == 0 ? rateLimitString : disabledReasoning.asString}).',
+            'Mining ${currentRate % .001 == 0 ? (currentRate * 1000).toInt() : currentRate * 1000} kilogram${currentRate == .001 ? '' : 's'} per second (${disabledReasoning == 0 ? 'max speed' : disabledReasoning.asString}).',
           ),
           Text(
               'Can mine ${maxRate % .001 == 0 ? (maxRate * 1000).toInt() : maxRate * 1000} kilogram${maxRate == .001 ? '' : 's'} per second.'),
@@ -1189,6 +1187,8 @@ Widget describeFeature(
         materials: Set<MaterialID> materials,
         capacity: double capacity
       ):
+      Asset asset = data.assets[assetID]!;
+
       return ContinuousBuilder(builder: (context) {
         return Column(
           children: [
@@ -1197,63 +1197,65 @@ Widget describeFeature(
             if (materials.isNotEmpty) Text('You can see:'),
             ...materials.map(
                 (e) => MaterialWidget(material: data.getMaterial(e, system))),
-            OutlinedButton(
-              onPressed: () async {
-                List<String> result = await server.send(
-                  [
-                    'play',
-                    system.value.toString(),
-                    asset.id.toString(),
-                    'analyze',
-                  ],
-                );
-                if (result.first != 'T') {
-                  if (context.mounted)
-                    openErrorDialog(
-                      'analyze response: $result',
-                      context,
-                    );
-                  return;
-                }
-                Uint64 time = Uint64.parse(result[1]);
-                double totalQuantity = double.parse(result[2]);
-                List<(MaterialID, Uint64)> materials = [];
-                int i = 3;
-                while (i < result.length) {
-                  materials
-                      .add((int.parse(result[i]), Uint64.parse(result[i + 1])));
-                  i += 2;
-                }
-                showDialog(
-                  context: context,
-                  builder: (context) {
-                    return Dialog(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '(${calendar.dateName(time)} ${calendar.timeName(time)})',
-                          ),
-                          Text('Total units of material: $totalQuantity'),
-                          ...materials.map(
-                            (e) => Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text('${e.$2.displayName} units of'),
-                                MaterialWidget(
-                                  material: data.getMaterial(e.$1, system),
-                                )
-                              ],
+            if (asset.assetClass.id != null &&
+                (asset.owner == null || asset.owner == data.dynastyID))
+              OutlinedButton(
+                onPressed: () async {
+                  List<String> result = await server.send(
+                    [
+                      'play',
+                      system.value.toString(),
+                      assetID.id.toString(),
+                      'analyze',
+                    ],
+                  );
+                  if (result.first != 'T') {
+                    if (context.mounted)
+                      openErrorDialog(
+                        'analyze response: $result',
+                        context,
+                      );
+                    return;
+                  }
+                  Uint64 time = Uint64.parse(result[1]);
+                  double totalQuantity = double.parse(result[2]);
+                  List<(MaterialID, Uint64)> materials = [];
+                  int i = 3;
+                  while (i < result.length) {
+                    materials.add(
+                        (int.parse(result[i]), Uint64.parse(result[i + 1])));
+                    i += 2;
+                  }
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return Dialog(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '(${calendar.dateName(time)} ${calendar.timeName(time)})',
                             ),
-                          )
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
-              child: Text('Analyze'),
-            ),
+                            Text('Total units of material: $totalQuantity'),
+                            ...materials.map(
+                              (e) => Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('${e.$2.displayName} units of'),
+                                  MaterialWidget(
+                                    material: data.getMaterial(e.$1, system),
+                                  )
+                                ],
+                              ),
+                            )
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+                child: Text('Analyze'),
+              ),
           ],
         );
       });
@@ -1261,29 +1263,17 @@ Widget describeFeature(
         ore: MaterialID? ore,
         currentRate: double currentRate,
         disabledReasoning: DisabledReasoning disabledReasoning,
-        rateLimitedBySource: bool rateLimitedBySource,
-        rateLimitedByTarget: bool rateLimitedByTarget,
         maxRate: double maxRate,
       ):
-      String rateLimitString = 'max speed';
-      if (rateLimitedBySource) {
-        rateLimitString = 'rate limited by source';
-        if (rateLimitedByTarget) {
-          rateLimitString = 'rate limited by source and target';
-        }
-      } else if (rateLimitedByTarget) {
-        rateLimitString = 'rate limited by target';
-      }
       return Column(
         children: [
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('Refining'),
-              if (ore != null)
-                MaterialWidget(material: data.getMaterial(ore, system)),
+              MaterialWidget(material: data.getMaterial(ore, system)),
               Text(
-                ' at a rate of ${currentRate % .001 == 0 ? (currentRate * 1000).toInt() : currentRate * 1000} kilogram${currentRate == .001 ? '' : 's'} per second (${disabledReasoning == 0 ? rateLimitString : disabledReasoning.asString}).',
+                ' at a rate of ${currentRate % .001 == 0 ? (currentRate * 1000).toInt() : currentRate * 1000} kilogram${currentRate == .001 ? '' : 's'} per second (${disabledReasoning == 0 ? 'max speed' : disabledReasoning.asString}).',
               ),
             ],
           ),
@@ -1356,7 +1346,7 @@ Widget describeFeature(
             [
               'play',
               system.value.toString(),
-              asset.id.toString(),
+              assetID.id.toString(),
               enabled ? 'disable' : 'enable',
             ],
           );
@@ -1395,6 +1385,47 @@ Widget describeFeature(
               server: server,
             ),
           ),
+        ],
+      );
+    case FactoryFeature(
+        inputs: List<MaterialManifestItem> inputs,
+        outputs: List<MaterialManifestItem> outputs,
+        maxRate: double maxRate,
+        configuredRate: double configuredRate,
+        currentRate: double currentRate,
+        disabledReasoning: DisabledReasoning disabledReasoning
+      ):
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('This is a factory.'),
+          Text('Inputs:'),
+          ...inputs.map(
+            (e) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('${e.quantity}x'),
+                MaterialWidget(material: data.getMaterial(e.material, system))
+              ],
+            ),
+          ),
+          Text('Outputs:'),
+          ...outputs.map(
+            (e) => Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('${e.quantity}x'),
+                MaterialWidget(material: data.getMaterial(e.material, system))
+              ],
+            ),
+          ),
+          Text(
+              'Working at a rate of ${currentRate / 1000} iterations per second' +
+                  (disabledReasoning.flags == 0
+                      ? '.'
+                      : ' (${disabledReasoning.asString})')),
+          Text(
+              'The goal rate is ${configuredRate / 1000} iterations per second, and the max rate is ${maxRate / 1000} iterations per second.'),
         ],
       );
   }

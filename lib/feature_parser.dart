@@ -275,14 +275,10 @@ Feature parseFeature(
       double maxRate = reader.readFloat64();
       DisabledReasoning disabledReasoning =
           DisabledReasoning(reader.readUint32());
-      int flags = reader.readUint8();
       double currentRate = reader.readFloat64();
-      // TODO: check constraints for these flags
       return MiningFeature(
         maxRate,
         disabledReasoning,
-        flags & 0x1 == 1,
-        flags & 0x2 == 2,
         currentRate,
       );
     case 0x13:
@@ -308,20 +304,20 @@ Feature parseFeature(
         throw UnimplementedError('unsupported fcRegion flags: $flags');
       return RegionFeature(flags == 1);
     case 0x15:
-      MaterialID? ore = reader.readInt32();
-      if (ore == 0) ore = null;
+      MaterialID ore = reader.readInt32();
+      assert(ore != 0);
       double maxRate = reader.readFloat64();
       DisabledReasoning disabledReasoning =
           DisabledReasoning(reader.readUint32());
-      int flags = reader.readUint8();
       double currentRate = reader.readFloat64();
-      // TODO: check constraints for these flags
+      assert(
+        currentRate == maxRate || disabledReasoning.flags != 0,
+        'server invariant failed: refiner not going at full speed despite having 0 disabledReasoning',
+      );
       return RefiningFeature(
         ore,
         maxRate,
         disabledReasoning,
-        flags & 0x1 == 1,
-        flags & 0x2 == 2,
         currentRate,
       );
     case 0x16:
@@ -395,9 +391,38 @@ Feature parseFeature(
         notReferenced.remove(assets.last);
       }
       return AssetPileFeature(assets);
+    case 0x20:
+      List<MaterialManifestItem> inputs = [];
+      while (true) {
+        MaterialID material = reader.readInt32();
+        if (material == 0) {
+          break;
+        }
+        int quantity = reader.readUint32();
+        assert(quantity != 0);
+        inputs.add((material: material, quantity: quantity));
+      }
+      List<MaterialManifestItem> outputs = [];
+      while (true) {
+        MaterialID material = reader.readInt32();
+        if (material == 0) {
+          break;
+        }
+        int quantity = reader.readUint32();
+        assert(quantity != 0);
+        outputs.add((material: material, quantity: quantity));
+      }
+      // TODO: look up masses and make sure the inputs and outputs have the same mass
+      double maxRate = reader.readFloat64();
+      double configuredRate = reader.readFloat64();
+      assert(configuredRate <= maxRate);
+      double currentRate = reader.readFloat64();
+      assert(currentRate <= configuredRate); // TODO: do these asserts for other rate-based features
+      DisabledReasoning disabledReasoning = DisabledReasoning(reader.readUint32());
+      return FactoryFeature(inputs, outputs, maxRate, configuredRate, currentRate, disabledReasoning);
     default:
       throw UnimplementedError('Unknown featureID $featureCode');
   }
 }
 
-const kClientVersion = 0x1F;
+const kClientVersion = 0x20;

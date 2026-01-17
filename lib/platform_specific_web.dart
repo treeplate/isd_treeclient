@@ -22,7 +22,7 @@ class WebSocketWrapper {
     return socket.onMessage.map((MessageEvent message) => message.data).listen(
           (message) {
             if (message.isA<JSString>())
-              onData(message);
+              onData((message as JSString).toDart);
             else {
               JSPromise<JSArrayBuffer> promise =
                   (message as Blob).arrayBuffer();

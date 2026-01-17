@@ -49,6 +49,7 @@ Set<StarIdentifier> parseSystemServerBinaryMessage(
               notReferenced,
               data,
             );
+            assert(assetClass.id != null || !feature.mustKnowAssetClass, 'server invariant failed: $feature for asset with unknown class ($name/${assetClass.name})');
             features.add(feature);
           } catch (e) {
             throw Exception('$e');

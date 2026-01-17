@@ -207,6 +207,11 @@ Widget renderFeature(Feature feature, DataStructure data, StarIdentifier system,
         feature: feature,
         data: data,
       );
+    case FactoryFeature():
+      return FactoryFeatureWidget(
+        feature: feature,
+        data: data,
+      );
   }
 }
 
@@ -848,7 +853,7 @@ class MiningFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Mining at a rate of ${feature.currentRate} kg/ms (out of ${feature.maxRate} max) (disabledReasoning: ${feature.disabledReasoning}, rateLimitedBySource: ${feature.rateLimitedBySource}, rateLimitedByTarget: ${feature.rateLimitedByTarget})',
+          'Mining at a rate of ${feature.currentRate} kg/ms (out of ${feature.maxRate} max) (disabledReasoning: ${feature.disabledReasoning})',
         ),
       ],
     );
@@ -920,7 +925,7 @@ class RefiningFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Refining ${feature.ore == null ? 'unknown material' : 'M${feature.ore!.toRadixString(16).padLeft(8, '0')}'} at a rate of ${feature.currentRate} kg/ms (out of ${feature.maxRate} max) (disabledReasoning: ${feature.disabledReasoning}, rateLimitedBySource: ${feature.rateLimitedBySource}, rateLimitedByTarget: ${feature.rateLimitedByTarget})',
+          'Refining M${feature.ore.toRadixString(16).padLeft(8, '0')} at a rate of ${feature.currentRate} kg/ms (out of ${feature.maxRate} max) (disabledReasoning: ${feature.disabledReasoning})',
         ),
       ],
     );
@@ -1125,6 +1130,28 @@ class AssetPileFeatureWidget extends StatelessWidget {
             data: data,
             collapseOrbits: false,
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class FactoryFeatureWidget extends StatelessWidget {
+  const FactoryFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+  final FactoryFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Producing [${feature.outputs.map((e) => '${e.quantity}x M${e.material.toRadixString(16).padLeft(8, '0')}').join(', ')}] out of [${feature.inputs.map((e) => '${e.quantity}x M${e.material.toRadixString(16).padLeft(8, '0')}').join(', ')}] at a rate of ${feature.currentRate} iterations/ms (out of ${feature.maxRate} max, and ${feature.configuredRate} configured) (disabledReasoning: ${feature.disabledReasoning})',
         ),
       ],
     );
