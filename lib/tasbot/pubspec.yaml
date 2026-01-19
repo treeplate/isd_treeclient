@@ -9,8 +9,6 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
-  path_provider:
-    path: ./pathprovider
   flutter:
     path: ./flutter
 
