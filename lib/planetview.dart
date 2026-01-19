@@ -895,7 +895,7 @@ Widget describeFeature(
                       ) /
                       maxHP,
                 ),
-                if (minHP != null)
+                if (asset.assetClass.id != null)
                   Positioned(
                     top: totalHeight * minHP / maxHP,
                     child: Container(

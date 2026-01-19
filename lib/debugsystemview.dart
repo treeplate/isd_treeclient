@@ -4,9 +4,7 @@ import 'calendar.dart';
 import 'data-structure.dart';
 import 'assets.dart';
 import 'core.dart';
-import 'platform_specific_stub.dart'
-    if (dart.library.io) 'platform_specific_io.dart'
-    if (dart.library.js_interop) 'platform_specific_web.dart';
+import 'platform_specific.dart';
 
 class SystemSelector extends StatefulWidget {
   const SystemSelector({super.key, required this.data});
@@ -632,9 +630,9 @@ class StructureFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-            'Health (total at ${calendar.dateName(feature.time0)} ${calendar.timeName(feature.time0)}: ${feature.hp0}/${feature.minHP ?? '???'}/${feature.maxHP}, increasing by ${feature.hpFlowRate}/ms)'),
+            'Health (total at ${calendar.dateName(feature.time0)} ${calendar.timeName(feature.time0)}: ${feature.hp0}/${feature.minHP}/${feature.maxHP}, increasing by ${feature.hpFlowRate}/ms)'),
         Text(
-            'Materials (total at ${calendar.dateName(feature.time0)} ${calendar.timeName(feature.time0)}: ${feature.quantity0}/${feature.minHP ?? '???'}/${feature.maxHP}, increasing by ${feature.quantityFlowRate}/ms)'),
+            'Materials (total at ${calendar.dateName(feature.time0)} ${calendar.timeName(feature.time0)}: ${feature.quantity0}/${feature.minHP}/${feature.maxHP}, increasing by ${feature.quantityFlowRate}/ms)'),
         ...feature.materials.map(
           (e) => Text(
             '  ${e.materialID == null ? 'unknown material' : 'M${e.materialID!.toRadixString(16).padLeft(8, '0')}'} (${e.materialDescription}) - ${e.componentName == null ? '' : '${e.componentName} '}(max ${e.requiredQuantity})',
