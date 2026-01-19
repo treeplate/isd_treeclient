@@ -2,9 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/widgets.dart' show ChangeNotifier, Offset;
 import 'core.dart';
 import 'assets.dart';
-import 'platform_specific_stub.dart'
-    if (dart.library.io) 'platform_specific_io.dart'
-    if (dart.library.js_interop) 'platform_specific_web.dart';
+import 'platform_specific.dart';
 
 const String kUsernameCookieName = 'username';
 const String kPasswordCookieName = 'password';

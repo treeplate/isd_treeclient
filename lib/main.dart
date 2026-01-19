@@ -17,9 +17,7 @@ import 'assets.dart';
 import 'data-structure.dart';
 import 'ui-core.dart';
 import 'parseSystemServerBinaryMessage.dart';
-import 'platform_specific_stub.dart'
-    if (dart.library.io) 'platform_specific_io.dart'
-    if (dart.library.js_interop) 'platform_specific_web.dart';
+import 'platform_specific.dart';
 
 void main() async {
   runApp(

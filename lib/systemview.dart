@@ -7,9 +7,7 @@ import 'data-structure.dart';
 import 'assets.dart';
 import 'core.dart';
 import 'dart:ui' as ui;
-import 'platform_specific_stub.dart'
-    if (dart.library.io) 'platform_specific_io.dart'
-    if (dart.library.js_interop) 'platform_specific_web.dart';
+import 'platform_specific.dart';
 
 class SystemSelector extends StatefulWidget {
   const SystemSelector({super.key, required this.data});

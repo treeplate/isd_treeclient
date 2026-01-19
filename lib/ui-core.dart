@@ -5,9 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import 'core.dart';
-import 'platform_specific_stub.dart'
-    if (dart.library.io) 'platform_specific_io.dart'
-    if (dart.library.js_interop) 'platform_specific_web.dart';
+import 'platform_specific.dart';
 
 void openErrorDialog(String message, BuildContext context) {
   showDialog(

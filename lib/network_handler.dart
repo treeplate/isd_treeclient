@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
-import 'platform_specific_stub.dart'
-    if (dart.library.io) 'platform_specific_io.dart'
-    if (dart.library.js_interop) 'platform_specific_web.dart';
+import 'platform_specific.dart';
 
 const String loginServerURL = "wss://interstellar-dynasties.space:10024/";
 
