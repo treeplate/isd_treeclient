@@ -261,6 +261,7 @@ class DataStructure with ChangeNotifier {
     });
   }
 
+  // TODO: maybe move this into asset/feature
   void getChildren(AssetID assetID, Set<AssetID> result) {
     if (assets[assetID] == null) return;
     Asset asset = assets[assetID]!;
@@ -284,6 +285,8 @@ class DataStructure with ChangeNotifier {
           result.add(child);
         case AssetPileFeature(assets: List<AssetID> assets):
           result.addAll(assets);
+        case AssetSampleFeature(sample: AssetID sample):
+          result.add(sample);
         case MessageFeature():
         case StructureFeature():
         case StarFeature():
@@ -309,6 +312,8 @@ class DataStructure with ChangeNotifier {
         case OnOffFeature():
         case StaffingFeature():
         case FactoryFeature():
+        case EmptySampleFeature():
+        case MaterialSampleFeature():
       }
     }
   }
@@ -321,6 +326,7 @@ class DataStructure with ChangeNotifier {
     return result;
   }
 
+  // TODO: maybe make this use getChildren
   void _findFeature<T extends Feature>(AssetID root, Set<AssetID> result) {
     Asset rootAsset = assets[root]!;
     for (Feature feature in rootAsset.features) {
@@ -356,6 +362,8 @@ class DataStructure with ChangeNotifier {
           for (AssetID message in assets) {
             _findFeature<T>(message, result);
           }
+        case AssetSampleFeature(sample: AssetID sample):
+          _findFeature(sample, result);
         case MessageFeature():
         case StructureFeature():
         case StarFeature():
@@ -381,6 +389,8 @@ class DataStructure with ChangeNotifier {
         case OnOffFeature():
         case StaffingFeature():
         case FactoryFeature():
+        case EmptySampleFeature():
+        case MaterialSampleFeature():
           break;
       }
     }

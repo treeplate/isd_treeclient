@@ -72,7 +72,7 @@ Set<StarIdentifier> parseSystemServerBinaryMessage(
       for (AssetID asset in notReferenced) {
         data.removeAsset(asset);
       }
-
+      // TODO: there might be a possible race condition? sometimes this triggers for some reason
       assert(data.assets[rootAssetID] != null);
     } else {
       switch (id) {

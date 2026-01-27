@@ -47,7 +47,7 @@ class _SystemSelectorState extends State<SystemSelector> {
                       selectedSystem = system;
                     }),
                     child: Text(system.displayName),
-                  )
+                  ),
             ],
           )
         : PlanetSelector(
@@ -59,11 +59,12 @@ class _SystemSelectorState extends State<SystemSelector> {
 }
 
 class PlanetSelector extends StatefulWidget {
-  const PlanetSelector(
-      {super.key,
-      required this.data,
-      required this.system,
-      required this.server});
+  const PlanetSelector({
+    super.key,
+    required this.data,
+    required this.system,
+    required this.server,
+  });
   final DataStructure data;
   final StarIdentifier system;
   final NetworkConnection server;
@@ -80,15 +81,16 @@ class _PlanetSelectorState extends State<PlanetSelector> {
     Asset rootAsset =
         widget.data.assets[widget.data.rootAssets[widget.system]]!;
     List<AssetID> frontier = [
-      ...(rootAsset.features.single as SolarSystemFeature)
-          .children
-          .map((e) => e.child)
+      ...(rootAsset.features.single as SolarSystemFeature).children.map(
+        (e) => e.child,
+      ),
     ];
     List<AssetID> result = [];
     while (frontier.isNotEmpty) {
       Asset asset = widget.data.assets[frontier.first]!;
-      if (asset.features
-          .any((e) => e is SurfaceFeature && e.regions.isNotEmpty)) {
+      if (asset.features.any(
+        (e) => e is SurfaceFeature && e.regions.isNotEmpty,
+      )) {
         result.add(frontier.first);
       } else if (asset.features.any((e) => e is OrbitFeature)) {
         OrbitFeature feature = asset.features.single as OrbitFeature;
@@ -118,7 +120,7 @@ class _PlanetSelectorState extends State<PlanetSelector> {
                       selectedPlanet = planet;
                     }),
                     child: Text(widget.data.getAssetIdentifyingName(planet)),
-                  )
+                  ),
             ],
           )
         : PlanetView(
@@ -130,11 +132,12 @@ class _PlanetSelectorState extends State<PlanetSelector> {
 }
 
 class PlanetView extends StatefulWidget {
-  const PlanetView(
-      {super.key,
-      required this.data,
-      required this.planet,
-      required this.server});
+  const PlanetView({
+    super.key,
+    required this.data,
+    required this.planet,
+    required this.server,
+  });
   final DataStructure data;
   final AssetID planet;
   final NetworkConnection server;
@@ -149,7 +152,9 @@ class _PlanetViewState extends State<PlanetView> {
     if (widget.data.assets.isEmpty)
       return Text('Error: failed to parse system');
     Map<(double, double), AssetID> regions = widget
-        .data.assets[widget.planet]!.features
+        .data
+        .assets[widget.planet]!
+        .features
         .whereType<SurfaceFeature>()
         .single
         .regions;
@@ -159,53 +164,64 @@ class _PlanetViewState extends State<PlanetView> {
           .whereType<GridFeature>()
           .single;
 
-      return LayoutBuilder(builder: (context, constraints) {
-        double regionSize =
-            min(constraints.biggest.height, constraints.biggest.width / 2);
-        return Row(
-          children: [
-            Expanded(
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          double regionSize = min(
+            constraints.biggest.height,
+            constraints.biggest.width / 2,
+          );
+          return Row(
+            children: [
+              Expanded(
                 child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SelectableText(
-                    'System ID: ${widget.planet.system.displayName}'),
-                SelectableText('Planet ID: ${widget.planet.displayName}'),
-                SelectableText('Dynasty ID: ${widget.data.dynastyID}'),
-              ],
-            )),
-            Expanded(
-              flex: 2,
-              child: Center(
-                child: Container(
-                  width: regionSize,
-                  height: regionSize,
-                  color: Colors.green,
-                  child: InteractiveViewer(
-                    minScale: 1,
-                    maxScale: double.infinity,
-                    child: GridWidget(
-                      gridFeature: region,
-                      data: widget.data,
-                      server: widget.server,
-                      gridAssetID: regionID,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SelectableText(
+                      'System ID: ${widget.planet.system.displayName}',
+                    ),
+                    SelectableText('Planet ID: ${widget.planet.displayName}'),
+                    SelectableText('Dynasty ID: ${widget.data.dynastyID}'),
+                  ],
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Center(
+                  child: Container(
+                    width: regionSize,
+                    height: regionSize,
+                    color: Colors.green,
+                    child: InteractiveViewer(
+                      minScale: 1,
+                      maxScale: double.infinity,
+                      child: GridWidget(
+                        gridFeature: region,
+                        data: widget.data,
+                        server: widget.server,
+                        gridAssetID: regionID,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            Expanded(
-              child: ListView(
-                children: [
-                  ...region.buildables.map((Buildable buildable) => Center(
-                      child: BuildableWidget(
-                          buildable, regionSize / region.dimension)))
-                ],
+              Expanded(
+                child: ListView(
+                  children: [
+                    ...region.buildables.map(
+                      (Buildable buildable) => Center(
+                        child: BuildableWidget(
+                          buildable,
+                          regionSize / region.dimension,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        );
-      });
+            ],
+          );
+        },
+      );
     } else {
       return Text('Unimplemented: multiple regions');
     }
@@ -230,9 +246,10 @@ class _BuildableWidgetState extends State<BuildableWidget> {
       children: [
         Draggable<Buildable>(
           child: ISDIcon(
-              icon: widget.buildable.assetClass.icon,
-              width: widget.buildable.size * widget.cellSize,
-              height: widget.buildable.size * widget.cellSize),
+            icon: widget.buildable.assetClass.icon,
+            width: widget.buildable.size * widget.cellSize,
+            height: widget.buildable.size * widget.cellSize,
+          ),
           feedback: ISDIcon(
             icon: widget.buildable.assetClass.icon,
             width: widget.buildable.size * widget.cellSize,
@@ -272,127 +289,155 @@ class _GridWidgetState extends State<GridWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      return SizedBox.expand(
-        child: DragTarget<Buildable>(
-          onWillAcceptWithDetails: (DragTargetDetails<Buildable> details) {
-            return true;
-          },
-          onMove: (DragTargetDetails<Buildable> details) {
-            Offset localPosition = (context.findRenderObject() as RenderBox)
-                .globalToLocal(details.offset);
-            Offset scaledPosition = localPosition.scale(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SizedBox.expand(
+          child: DragTarget<Buildable>(
+            onWillAcceptWithDetails: (DragTargetDetails<Buildable> details) {
+              return true;
+            },
+            onMove: (DragTargetDetails<Buildable> details) {
+              Offset localPosition = (context.findRenderObject() as RenderBox)
+                  .globalToLocal(details.offset);
+              Offset scaledPosition = localPosition.scale(
                 widget.gridFeature.dimension / constraints.maxWidth,
-                widget.gridFeature.dimension / constraints.maxHeight);
-            int gridX = scaledPosition.dx.floor();
-            int gridY = scaledPosition.dy.floor();
-            setState(() {
-              draggedBuildable = Offset(gridX.toDouble(), gridY.toDouble()) &
-                  Size.square(details.data.size.toDouble());
-            });
-          },
-          onLeave: (Buildable? data) {
-            draggedBuildable = null;
-          },
-          onAcceptWithDetails: (details) {
-            draggedBuildable = null;
-            Offset localPosition = (context.findRenderObject() as RenderBox)
-                .globalToLocal(details.offset);
-            Offset scaledPosition = localPosition.scale(
+                widget.gridFeature.dimension / constraints.maxHeight,
+              );
+              int gridX = scaledPosition.dx.floor();
+              int gridY = scaledPosition.dy.floor();
+              setState(() {
+                draggedBuildable =
+                    Offset(gridX.toDouble(), gridY.toDouble()) &
+                    Size.square(details.data.size.toDouble());
+              });
+            },
+            onLeave: (Buildable? data) {
+              draggedBuildable = null;
+            },
+            onAcceptWithDetails: (details) {
+              draggedBuildable = null;
+              Offset localPosition = (context.findRenderObject() as RenderBox)
+                  .globalToLocal(details.offset);
+              Offset scaledPosition = localPosition.scale(
                 widget.gridFeature.dimension / constraints.maxWidth,
-                widget.gridFeature.dimension / constraints.maxHeight);
-            int gridX = scaledPosition.dx.floor();
-            int gridY = scaledPosition.dy.floor();
-            buildAt(
-              widget.gridFeature,
-              widget.gridAssetID,
-              gridX,
-              gridY,
-              details.data,
-            );
-          },
-          builder: (BuildContext context, List<Buildable?> candidateData,
-              List<dynamic> rejectedData) {
-            return Stack(
-              children: [
-                for (Building building in widget.gridFeature.buildings)
-                  Positioned(
-                    left: building.x *
-                        constraints.maxWidth /
-                        widget.gridFeature.dimension,
-                    top: building.y *
-                        constraints.maxHeight /
-                        widget.gridFeature.dimension,
-                    child: Container(
-                      width: constraints.maxWidth *
-                          building.size /
-                          widget.gridFeature.dimension,
-                      height: constraints.maxHeight *
-                          building.size /
-                          widget.gridFeature.dimension,
-                      child: AssetWidget(
-                        width: constraints.maxWidth *
-                            building.size /
-                            widget.gridFeature.dimension,
-                        height: constraints.maxHeight *
-                            building.size /
-                            widget.gridFeature.dimension,
-                        asset: building.asset,
-                        data: widget.data,
-                        server: widget.server,
-                      ),
-                    ),
-                  ),
-                if (draggedBuildable != null) ...[
-                  Positioned(
-                    top: constraints.maxWidth *
-                        draggedBuildable!.top /
-                        widget.gridFeature.dimension,
-                    left: constraints.maxHeight *
-                        draggedBuildable!.left /
-                        widget.gridFeature.dimension,
-                    child: Container(
-                      decoration: BoxDecoration(border: BoxBorder.all()),
-                      width: constraints.maxWidth *
-                          draggedBuildable!.width /
-                          widget.gridFeature.dimension,
-                      height: constraints.maxHeight *
-                          draggedBuildable!.height /
-                          widget.gridFeature.dimension,
-                    ),
-                  ),
-                  ...getCollisions(widget.gridFeature, widget.gridAssetID,
-                          draggedBuildable!)
-                      .map(
-                    (Rect rect) => Positioned(
-                      top: constraints.maxWidth *
-                          rect.top /
-                          widget.gridFeature.dimension,
-                      left: constraints.maxHeight *
-                          rect.left /
-                          widget.gridFeature.dimension,
-                      child: Container(
-                        color: Colors.red.withAlpha(128),
-                        width: constraints.maxWidth *
-                            rect.width /
-                            widget.gridFeature.dimension,
-                        height: constraints.maxHeight *
-                            rect.height /
-                            widget.gridFeature.dimension,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            );
-          },
-        ),
-      );
-    });
+                widget.gridFeature.dimension / constraints.maxHeight,
+              );
+              int gridX = scaledPosition.dx.floor();
+              int gridY = scaledPosition.dy.floor();
+              buildAt(
+                widget.gridFeature,
+                widget.gridAssetID,
+                gridX,
+                gridY,
+                details.data,
+              );
+            },
+            builder:
+                (
+                  BuildContext context,
+                  List<Buildable?> candidateData,
+                  List<dynamic> rejectedData,
+                ) {
+                  return Stack(
+                    children: [
+                      for (Building building in widget.gridFeature.buildings)
+                        Positioned(
+                          left:
+                              building.x *
+                              constraints.maxWidth /
+                              widget.gridFeature.dimension,
+                          top:
+                              building.y *
+                              constraints.maxHeight /
+                              widget.gridFeature.dimension,
+                          child: Container(
+                            width:
+                                constraints.maxWidth *
+                                building.size /
+                                widget.gridFeature.dimension,
+                            height:
+                                constraints.maxHeight *
+                                building.size /
+                                widget.gridFeature.dimension,
+                            child: AssetWidget(
+                              width:
+                                  constraints.maxWidth *
+                                  building.size /
+                                  widget.gridFeature.dimension,
+                              height:
+                                  constraints.maxHeight *
+                                  building.size /
+                                  widget.gridFeature.dimension,
+                              asset: building.asset,
+                              data: widget.data,
+                              server: widget.server,
+                            ),
+                          ),
+                        ),
+                      if (draggedBuildable != null) ...[
+                        Positioned(
+                          top:
+                              constraints.maxWidth *
+                              draggedBuildable!.top /
+                              widget.gridFeature.dimension,
+                          left:
+                              constraints.maxHeight *
+                              draggedBuildable!.left /
+                              widget.gridFeature.dimension,
+                          child: Container(
+                            decoration: BoxDecoration(border: BoxBorder.all()),
+                            width:
+                                constraints.maxWidth *
+                                draggedBuildable!.width /
+                                widget.gridFeature.dimension,
+                            height:
+                                constraints.maxHeight *
+                                draggedBuildable!.height /
+                                widget.gridFeature.dimension,
+                          ),
+                        ),
+                        ...getCollisions(
+                          widget.gridFeature,
+                          widget.gridAssetID,
+                          draggedBuildable!,
+                        ).map(
+                          (Rect rect) => Positioned(
+                            top:
+                                constraints.maxWidth *
+                                rect.top /
+                                widget.gridFeature.dimension,
+                            left:
+                                constraints.maxHeight *
+                                rect.left /
+                                widget.gridFeature.dimension,
+                            child: Container(
+                              color: Colors.red.withAlpha(128),
+                              width:
+                                  constraints.maxWidth *
+                                  rect.width /
+                                  widget.gridFeature.dimension,
+                              height:
+                                  constraints.maxHeight *
+                                  rect.height /
+                                  widget.gridFeature.dimension,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  );
+                },
+          ),
+        );
+      },
+    );
   }
 
   List<Rect> getCollisions(
-      GridFeature grid, AssetID gridAssetID, Rect draggedBuildable) {
+    GridFeature grid,
+    AssetID gridAssetID,
+    Rect draggedBuildable,
+  ) {
     List<Rect> result = [];
     if (draggedBuildable.right > grid.dimension) {
       result.add(
@@ -457,18 +502,11 @@ class _GridWidgetState extends State<GridWidget> {
               newGridAsset.features.whereType<GridFeature>().single,
               building.asset,
               draggedBuildable.shift(
-                -Offset(
-                  building.x.toDouble(),
-                  building.y.toDouble(),
-                ),
+                -Offset(building.x.toDouble(), building.y.toDouble()),
               ),
             ).map(
-              (e) => e.shift(
-                Offset(
-                  building.x.toDouble(),
-                  building.y.toDouble(),
-                ),
-              ),
+              (e) =>
+                  e.shift(Offset(building.x.toDouble(), building.y.toDouble())),
             ),
           );
         }
@@ -477,8 +515,13 @@ class _GridWidgetState extends State<GridWidget> {
     return result;
   }
 
-  void buildAt(GridFeature grid, AssetID gridAssetID, int gridX, int gridY,
-      Buildable buildable) {
+  void buildAt(
+    GridFeature grid,
+    AssetID gridAssetID,
+    int gridX,
+    int gridY,
+    Buildable buildable,
+  ) {
     if (gridX + buildable.size > grid.dimension ||
         gridY + buildable.size > grid.dimension ||
         gridX < 0 ||
@@ -494,28 +537,35 @@ class _GridWidgetState extends State<GridWidget> {
         if (newGridAsset.features.whereType<GridFeature>().isEmpty) {
           return;
         }
-        return buildAt(newGridAsset.features.whereType<GridFeature>().single,
-            building.asset, gridX - building.x, gridY - building.y, buildable);
+        return buildAt(
+          newGridAsset.features.whereType<GridFeature>().single,
+          building.asset,
+          gridX - building.x,
+          gridY - building.y,
+          buildable,
+        );
       }
     }
-    widget.server.send([
-      'play',
-      gridAssetID.system.value.toString(),
-      gridAssetID.id.toString(),
-      'build',
-      gridX.toString(),
-      gridY.toString(),
-      buildable.assetClass.id!.toString(),
-    ]).then((List<String> response) {
-      if (response[0] == 'T') {
-        assert(response.length == 1);
-      } else {
-        assert(response[0] == 'F');
-        if (context.mounted) {
-          openErrorDialog('tried to build, response: $response', context);
-        }
-      }
-    });
+    widget.server
+        .send([
+          'play',
+          gridAssetID.system.value.toString(),
+          gridAssetID.id.toString(),
+          'build',
+          gridX.toString(),
+          gridY.toString(),
+          buildable.assetClass.id!.toString(),
+        ])
+        .then((List<String> response) {
+          if (response[0] == 'T') {
+            assert(response.length == 1);
+          } else {
+            assert(response[0] == 'F');
+            if (context.mounted) {
+              openErrorDialog('tried to build, response: $response', context);
+            }
+          }
+        });
     return;
   }
 }
@@ -586,7 +636,7 @@ class AssetWidget extends StatelessWidget {
                       ),
                     ),
                   ),
-                )
+                ),
               ],
             ),
           );
@@ -612,7 +662,7 @@ class AssetWidget extends StatelessWidget {
                     gridAssetID: this.asset,
                     server: server,
                   ),
-                )
+                ),
               ],
             ),
           );
@@ -744,14 +794,16 @@ class _AssetDialogState extends State<AssetDialog> {
                     style: TextStyle(fontSize: 20),
                   ),
                   Text(asset.assetClass.description),
-                  ...asset.features.map((e) => describeFeature(
-                        e,
-                        widget.data,
-                        widget.asset.system,
-                        widget.asset,
-                        widget.server,
-                        context,
-                      ))
+                  ...asset.features.map(
+                    (e) => describeFeature(
+                      e,
+                      widget.data,
+                      widget.asset.system,
+                      widget.asset,
+                      widget.server,
+                      context,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -779,12 +831,13 @@ class _AssetDialogState extends State<AssetDialog> {
 }
 
 Widget describeFeature(
-    Feature feature,
-    DataStructure data,
-    StarIdentifier system,
-    AssetID assetID,
-    NetworkConnection server,
-    BuildContext context) {
+  Feature feature,
+  DataStructure data,
+  StarIdentifier system,
+  AssetID assetID,
+  NetworkConnection server,
+  BuildContext context,
+) {
   switch (feature) {
     case OrbitFeature():
       throw StateError('orbit on planet');
@@ -799,39 +852,40 @@ Widget describeFeature(
     case RegionFeature():
       throw StateError('surface on planet');
     case StructureFeature(
-        materials: List<MaterialLineItem> materials,
-        maxHP: int maxHP,
-        minHP: int? minHP,
-        builder: AssetID? builder,
-      ):
+      materials: List<MaterialLineItem> materials,
+      maxHP: int maxHP,
+      minHP: int? minHP,
+      builder: AssetID? builder,
+    ):
       if (maxHP == 0) {
-        return ContinuousBuilder(builder: (context) {
-          return Text('This has ${feature.getQuantity(
-                data.getTime(system, DateTime.timestamp()),
-              ).toStringAsFixed(2)} units of material and ${feature.getHP(
-                data.getTime(system, DateTime.timestamp()),
-              ).toStringAsFixed(2)} units built.');
-        });
+        return ContinuousBuilder(
+          builder: (context) {
+            return Text(
+              'This has ${feature.getQuantity(data.getTime(system, DateTime.timestamp())).toStringAsFixed(2)} units of material and ${feature.getHP(data.getTime(system, DateTime.timestamp())).toStringAsFixed(2)} units built.',
+            );
+          },
+        );
       }
       const int minLineItemHeight = 35;
-      final double minLineItemFraction = materials
+      final double minLineItemFraction =
+          materials
               .reduce((a, b) => a.requiredQuantity < b.requiredQuantity ? a : b)
               .requiredQuantity /
           maxHP;
       final double totalHeight = minLineItemHeight / minLineItemFraction;
       final ThemeData theme = Theme.of(context);
       Asset asset = data.assets[assetID]!;
-      return ContinuousBuilder(builder: (context) {
-        return Column(
-          children: [
-            Stack(
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ...materials.map(
-                      (e) {
+      return ContinuousBuilder(
+        builder: (context) {
+          return Column(
+            children: [
+              Stack(
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ...materials.map((e) {
                         return Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -859,124 +913,127 @@ Widget describeFeature(
                                 ),
                               ),
                             ),
-                            SizedBox(
-                              width: 5,
-                            ),
+                            SizedBox(width: 5),
                             if (e.componentName != null)
                               Text('${e.componentName} - '),
                             Text('${e.requiredQuantity} x '),
                             e.materialID == null
                                 ? Text('${e.materialDescription}')
                                 : MaterialWidget(
-                                    material:
-                                        data.getMaterial(e.materialID!, system),
+                                    material: data.getMaterial(
+                                      e.materialID!,
+                                      system,
+                                    ),
                                   ),
                           ],
                         );
-                      },
-                    ),
-                  ],
-                ),
-                Container(
-                  color: const Color.fromARGB(255, 174, 230, 176),
-                  width: 10,
-                  height: totalHeight *
-                      feature.getQuantity(
-                        data.getTime(system, DateTime.timestamp()),
-                      ) /
-                      maxHP,
-                ),
-                Container(
-                  color: Colors.green,
-                  width: 10,
-                  height: totalHeight *
-                      feature.getHP(
-                        data.getTime(system, DateTime.timestamp()),
-                      ) /
-                      maxHP,
-                ),
-                if (asset.assetClass.id != null)
-                  Positioned(
-                    top: totalHeight * minHP / maxHP,
-                    child: Container(
-                      color: Colors.pink,
-                      width: 10,
-                      height: 1,
-                    ),
+                      }),
+                    ],
                   ),
-              ],
-            ),
-            if (asset.assetClass.id != null &&
-                (asset.owner == null || asset.owner == data.dynastyID))
-              OutlinedButton(
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => Dialog(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                                'Are you sure you want to dismantle this structure?'),
-                            SizedBox(
-                              height: 10,
-                            ),
-                            OutlinedButton(
-                              onPressed: () {
-                                server.send(
-                                  [
-                                    'play',
-                                    assetID.system.value.toString(),
-                                    assetID.id.toString(),
-                                    'dismantle',
-                                  ],
-                                ).then((List<String> result) {
-                                  Navigator.pop(context);
-                                  if (result.first != 'T') {
-                                    assert(result.first == 'F');
-                                    assert(result.length == 2);
-                                    if (result.last == 'no destructors') {
-                                      openErrorDialog(
-                                          'No people were found to dismantle this structure.',
-                                          context);
-                                    } else {
-                                      openErrorDialog(
-                                        'dismantle response: $result',
-                                        context,
-                                      );
-                                    }
-                                    return;
-                                  }
-                                  assert(result.length == 1);
-                                });
-                              },
-                              child: Text('Dismantle'),
-                            ),
-                            OutlinedButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                              },
-                              child: Text('Cancel'),
-                            ),
-                          ],
-                        ),
+                  Container(
+                    color: const Color.fromARGB(255, 174, 230, 176),
+                    width: 10,
+                    height:
+                        totalHeight *
+                        feature.getQuantity(
+                          data.getTime(system, DateTime.timestamp()),
+                        ) /
+                        maxHP,
+                  ),
+                  Container(
+                    color: Colors.green,
+                    width: 10,
+                    height:
+                        totalHeight *
+                        feature.getHP(
+                          data.getTime(system, DateTime.timestamp()),
+                        ) /
+                        maxHP,
+                  ),
+                  if (asset.assetClass.id != null)
+                    Positioned(
+                      top: totalHeight * minHP / maxHP,
+                      child: Container(
+                        color: Colors.pink,
+                        width: 10,
+                        height: 1,
                       ),
                     ),
-                  );
-                },
-                child: Text('Dismantle'),
+                ],
               ),
-            if (builder != null) Text('Currently being built.'),
-          ],
-        );
-      });
+              if (asset.assetClass.id != null &&
+                  (asset.owner == null || asset.owner == data.dynastyID))
+                OutlinedButton(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => Dialog(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Are you sure you want to dismantle this structure?',
+                              ),
+                              SizedBox(height: 10),
+                              OutlinedButton(
+                                onPressed: () {
+                                  server
+                                      .send([
+                                        'play',
+                                        assetID.system.value.toString(),
+                                        assetID.id.toString(),
+                                        'dismantle',
+                                      ])
+                                      .then((List<String> result) {
+                                        Navigator.pop(context);
+                                        if (result.first != 'T') {
+                                          assert(result.first == 'F');
+                                          assert(result.length == 2);
+                                          if (result.last == 'no destructors') {
+                                            openErrorDialog(
+                                              'No people were found to dismantle this structure.',
+                                              context,
+                                            );
+                                          } else {
+                                            openErrorDialog(
+                                              'dismantle response: $result',
+                                              context,
+                                            );
+                                          }
+                                          return;
+                                        }
+                                        assert(result.length == 1);
+                                      });
+                                },
+                                child: Text('Dismantle'),
+                              ),
+                              OutlinedButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                child: Text('Cancel'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  child: Text('Dismantle'),
+                ),
+              if (builder != null) Text('Currently being built.'),
+            ],
+          );
+        },
+      );
     case SpaceSensorFeature(
-        disabledReasoning: DisabledReasoning disabledReasoning
-      ):
+      disabledReasoning: DisabledReasoning disabledReasoning,
+    ):
       return Text(
-          'This is a space sensor (${disabledReasoning == 0 ? 'enabled' : disabledReasoning.asString}).');
+        'This is a space sensor (${disabledReasoning == 0 ? 'enabled' : disabledReasoning.asString}).',
+      );
     case SpaceSensorStatusFeature():
       continue nothing;
     case PlotControlFeature(isColonyShip: bool isColonyShip):
@@ -985,45 +1042,45 @@ Widget describeFeature(
     case GridFeature():
       continue nothing;
     case PopulationFeature(
-        disabledReasoning: DisabledReasoning disabledReasoning,
-        population: int population,
-        maxPopulation: int maxPopulation,
-        jobs: int jobs,
-        gossip: List<Gossip> gossip,
-      ):
-      return ContinuousBuilder(builder: (context) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'This houses $maxPopulation people, and is currently ${disabledReasoning == 0 ? 'in working condition' : disabledReasoning.asString}.',
-            ),
-            Text(
-              'There are $population people here ($jobs with jobs).',
-            ),
-            Text(
-              'Gossip:',
-            ),
-            ...gossip
-                .where((e) =>
-                    data.getTime(system, DateTime.timestamp()) <
-                    e.impactAnchor + e.duration)
-                .map(
-                  (e) => Text(
-                    '${e.message}: ${e.getHappinessContribution(data.getTime(system, DateTime.timestamp())).toStringAsFixed(0)} happiness points',
+      disabledReasoning: DisabledReasoning disabledReasoning,
+      population: int population,
+      maxPopulation: int maxPopulation,
+      jobs: int jobs,
+      gossip: List<Gossip> gossip,
+    ):
+      return ContinuousBuilder(
+        builder: (context) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'This houses $maxPopulation people, and is currently ${disabledReasoning == 0 ? 'in working condition' : disabledReasoning.asString}.',
+              ),
+              Text('There are $population people here ($jobs with jobs).'),
+              Text('Gossip:'),
+              ...gossip
+                  .where(
+                    (e) =>
+                        data.getTime(system, DateTime.timestamp()) <
+                        e.impactAnchor + e.duration,
+                  )
+                  .map(
+                    (e) => Text(
+                      '${e.message}: ${e.getHappinessContribution(data.getTime(system, DateTime.timestamp())).toStringAsFixed(0)} happiness points',
+                    ),
                   ),
-                )
-          ],
-        );
-      });
+            ],
+          );
+        },
+      );
     case MessageBoardFeature():
       continue nothing;
     case MessageFeature():
       throw StateError('message outside messageboard');
     case RubblePileFeature(
-        remainingUnitCount: Uint64 remainingUnitCount,
-        materials: Map<int, Uint64> materials
-      ):
+      remainingUnitCount: Uint64 remainingUnitCount,
+      materials: Map<int, Uint64> materials,
+    ):
       Asset asset = data.assets[assetID]!;
       return Column(
         children: [
@@ -1034,7 +1091,8 @@ Widget describeFeature(
               children: [
                 MaterialWidget(material: data.getMaterial(e.key, system)),
                 Text(
-                    '${e.value.displayName} unit${e.value.lsh == 1 ? '' : 's'}')
+                  '${e.value.displayName} unit${e.value.lsh == 1 ? '' : 's'}',
+                ),
               ],
             ),
           ),
@@ -1044,25 +1102,22 @@ Widget describeFeature(
               (asset.owner == null || asset.owner == data.dynastyID))
             OutlinedButton(
               onPressed: () {
-                server.send(
-                  [
-                    'play',
-                    assetID.system.value.toString(),
-                    assetID.id.toString(),
-                    'dismantle',
-                  ],
-                ).then((List<String> result) {
-                  if (result.first != 'T') {
-                    assert(result.first == 'F');
-                    assert(result.length == 2);
-                    openErrorDialog(
-                      'dismantle response: $result',
-                      context,
-                    );
-                    return;
-                  }
-                  assert(result.length == 1);
-                });
+                server
+                    .send([
+                      'play',
+                      assetID.system.value.toString(),
+                      assetID.id.toString(),
+                      'dismantle',
+                    ])
+                    .then((List<String> result) {
+                      if (result.first != 'T') {
+                        assert(result.first == 'F');
+                        assert(result.length == 2);
+                        openErrorDialog('dismantle response: $result', context);
+                        return;
+                      }
+                      assert(result.length == 1);
+                    });
               },
               child: Text('Dismantle'),
             ),
@@ -1070,21 +1125,21 @@ Widget describeFeature(
       );
     nothing:
     case ProxyFeature():
-      return Container(
-        width: 0,
-      );
+      return Container(width: 0);
     case KnowledgeFeature(
-        classes: List<AssetClass> classes,
-        materials: Map<MaterialID, Material> materials
-      ):
+      classes: List<AssetClass> classes,
+      materials: Map<MaterialID, Material> materials,
+    ):
       return Column(
         children: [
           Text('This has information about:'),
           ...classes
-              .map((e) => Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: AssetClassWidget(assetClass: e),
-                  ))
+              .map(
+                (e) => Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: AssetClassWidget(assetClass: e),
+                ),
+              )
               .followedBy(
                 materials.values.map(
                   (e) => Padding(
@@ -1096,134 +1151,35 @@ Widget describeFeature(
         ],
       );
     case ResearchFeature(
-        disabledReasoning: DisabledReasoning disabledReasoning,
-        topic: String topic
-      ):
-      return Row(
+      disabledReasoning: DisabledReasoning disabledReasoning,
+      topic: String topic,
+      progress: ResearchProgress progress,
+    ):
+      return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('${disabledReasoning == 0 ? 'Researching' : 'Will research'}: '),
-          TextButton(
-            onPressed: () async {
-              List<String> result = await server.send(
-                [
-                  'play',
-                  system.value.toString(),
-                  assetID.id.toString(),
-                  'get-topics',
-                ],
-              );
-              if (result.first != 'T') {
-                openErrorDialog(
-                  'get-topics response: $result',
-                  context,
-                );
-                return;
-              }
-              List<(String, bool)> topics = [];
-              int i = 1;
-              while (i < result.length) {
-                topics.add((result[i], result[i + 1] == 'T'));
-                i += 2;
-              }
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return Dialog(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('Pick new topic'),
-                        ...topics.map((e) => OutlinedButton(
-                            onPressed: () async {
-                              List<String> result = await server.send(
-                                [
-                                  'play',
-                                  system.value.toString(),
-                                  assetID.id.toString(),
-                                  'set-topic',
-                                  e.$1,
-                                ],
-                              );
-                              if (result.length == 1 && result.single == 'T') {
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                }
-                              } else {
-                                openErrorDialog(
-                                  'set-topic response: $result',
-                                  context,
-                                );
-                              }
-                            },
-                            child: Text('${e.$1}${e.$2 ? '' : '(obsolete)'}')))
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
-            child: Text('$topic'),
-          ),
-          if (disabledReasoning != 0) Text('(${disabledReasoning.asString})')
-        ],
-      );
-    case MiningFeature(
-        currentRate: double currentRate,
-        disabledReasoning: DisabledReasoning disabledReasoning,
-        maxRate: double maxRate,
-      ):
-      return Column(
-        children: [
-          Text(
-            'Mining ${currentRate % .001 == 0 ? (currentRate * 1000).toInt() : currentRate * 1000} kilogram${currentRate == .001 ? '' : 's'} per second (${disabledReasoning == 0 ? 'max speed' : disabledReasoning.asString}).',
-          ),
-          Text(
-              'Can mine ${maxRate % .001 == 0 ? (maxRate * 1000).toInt() : maxRate * 1000} kilogram${maxRate == .001 ? '' : 's'} per second.'),
-        ],
-      );
-    case OrePileFeature(
-        getMass: double Function(Uint64) getMass,
-        materials: Set<MaterialID> materials,
-        capacity: double capacity
-      ):
-      Asset asset = data.assets[assetID]!;
-
-      return ContinuousBuilder(builder: (context) {
-        return Column(
-          children: [
-            Text(
-                'Contents: ${getMass(data.getTime(system, DateTime.now())).toInt()} kg of ore / $capacity kg possible'),
-            if (materials.isNotEmpty) Text('You can see:'),
-            ...materials.map(
-                (e) => MaterialWidget(material: data.getMaterial(e, system))),
-            if (asset.assetClass.id != null &&
-                (asset.owner == null || asset.owner == data.dynastyID))
-              OutlinedButton(
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${disabledReasoning == 0 ? 'Researching' : 'Will research'}: ',
+              ),
+              TextButton(
                 onPressed: () async {
-                  List<String> result = await server.send(
-                    [
-                      'play',
-                      system.value.toString(),
-                      assetID.id.toString(),
-                      'analyze',
-                    ],
-                  );
+                  List<String> result = await server.send([
+                    'play',
+                    system.value.toString(),
+                    assetID.id.toString(),
+                    'get-topics',
+                  ]);
                   if (result.first != 'T') {
-                    if (context.mounted)
-                      openErrorDialog(
-                        'analyze response: $result',
-                        context,
-                      );
+                    openErrorDialog('get-topics response: $result', context);
                     return;
                   }
-                  Uint64 time = Uint64.parse(result[1]);
-                  double totalQuantity = double.parse(result[2]);
-                  List<(MaterialID, Uint64)> materials = [];
-                  int i = 3;
+                  List<(String, bool)> topics = [];
+                  int i = 1;
                   while (i < result.length) {
-                    materials.add(
-                        (int.parse(result[i]), Uint64.parse(result[i + 1])));
+                    topics.add((result[i], result[i + 1] == 'T'));
                     i += 2;
                   }
                   showDialog(
@@ -1233,38 +1189,169 @@ Widget describeFeature(
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              '(${calendar.dateName(time)} ${calendar.timeName(time)})',
-                            ),
-                            Text('Total units of material: $totalQuantity'),
-                            ...materials.map(
-                              (e) => Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text('${e.$2.displayName} units of'),
-                                  MaterialWidget(
-                                    material: data.getMaterial(e.$1, system),
-                                  )
-                                ],
+                            Text('Pick new topic'),
+                            ...topics.map(
+                              (e) => OutlinedButton(
+                                onPressed: () async {
+                                  List<String> result = await server.send([
+                                    'play',
+                                    system.value.toString(),
+                                    assetID.id.toString(),
+                                    'set-topic',
+                                    e.$1,
+                                  ]);
+                                  if (result.length == 1 &&
+                                      result.single == 'T') {
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                    }
+                                  } else {
+                                    openErrorDialog(
+                                      'set-topic response: $result',
+                                      context,
+                                    );
+                                  }
+                                },
+                                child: Text(
+                                  '${e.$1}${e.$2 ? '' : '(obsolete)'}',
+                                ),
                               ),
-                            )
+                            ),
                           ],
                         ),
                       );
                     },
                   );
                 },
-                child: Text('Analyze'),
+                child: Text('$topic'),
               ),
-          ],
-        );
-      });
+              if (disabledReasoning != 0)
+                Text('(${disabledReasoning.asString})'),
+            ],
+          ),
+          if (progress != .active)
+            Text(
+              progress == .slow
+                  ? 'This research is going very slowly.'
+                  : 'This research is not progressing. Try researching something else.',
+            ),
+        ],
+      );
+    case MiningFeature(
+      currentRate: double currentRate,
+      disabledReasoning: DisabledReasoning disabledReasoning,
+      maxRate: double maxRate,
+    ):
+      return Column(
+        children: [
+          Text(
+            'Mining ${currentRate % .001 == 0 ? (currentRate * 1000).toInt() : currentRate * 1000} kilogram${currentRate == .001 ? '' : 's'} per second (${disabledReasoning == 0 ? 'max speed' : disabledReasoning.asString}).',
+          ),
+          Text(
+            'Can mine ${maxRate % .001 == 0 ? (maxRate * 1000).toInt() : maxRate * 1000} kilogram${maxRate == .001 ? '' : 's'} per second.',
+          ),
+        ],
+      );
+    case OrePileFeature(
+      getMass: double Function(Uint64) getMass,
+      materials: Set<MaterialID> materials,
+      capacity: double capacity,
+    ):
+      Asset asset = data.assets[assetID]!;
+
+      return ContinuousBuilder(
+        builder: (context) {
+          return Column(
+            children: [
+              Text(
+                'Contents: ${getMass(data.getTime(system, DateTime.now())).toInt()} kg of ore / $capacity kg possible',
+              ),
+              if (materials.isNotEmpty) Text('You can see:'),
+              ...materials.map(
+                (e) => MaterialWidget(material: data.getMaterial(e, system)),
+              ),
+              if (asset.assetClass.id != null &&
+                  (asset.owner == null || asset.owner == data.dynastyID))
+                OutlinedButton(
+                  onPressed: () async {
+                    List<String> result = await server.send([
+                      'play',
+                      system.value.toString(),
+                      assetID.id.toString(),
+                      'analyze',
+                    ]);
+                    if (result.first != 'T') {
+                      if (context.mounted)
+                        openErrorDialog('analyze response: $result', context);
+                      return;
+                    }
+                    Uint64 time = Uint64.parse(result[1]);
+                    double totalQuantity = double.parse(result[2]);
+                    String analysisString = result[3];
+                    List<(MaterialID, Uint64)> materials = [];
+                    int i = 4;
+                    while (i < result.length) {
+                      materials.add((
+                        int.parse(result[i]),
+                        Uint64.parse(result[i + 1]),
+                      ));
+                      i += 2;
+                    }
+                    showDialog(
+                      context: context,
+                      builder: (context) {
+                        return Dialog(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '(${calendar.dateName(time)} ${calendar.timeName(time)})',
+                              ),
+                              Text('Total units of material: $totalQuantity'),
+                              ...materials.map(
+                                (e) => Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text('${e.$2.displayName} units of'),
+                                    MaterialWidget(
+                                      material: data.getMaterial(e.$1, system),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                '${(Uint64.fromDouble(totalQuantity) - materials.fold<Uint64>(Uint64.fromInt(0), (a, b) => a + b.$2)).displayName} unknown units',
+                              ),
+                              if (analysisString != '')
+                                switch (analysisString) {
+                                  'pile empty' => Text(
+                                    'This is because the pile is empty.',
+                                  ),
+                                  'not enough materials' => Text(
+                                    'This is not very accurate, as the pile is too empty to make a proper analysis.',
+                                  ),
+                                  String() => throw UnimplementedError(
+                                    analysisString,
+                                  ),
+                                },
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  child: Text('Analyze'),
+                ),
+            ],
+          );
+        },
+      );
     case RefiningFeature(
-        ore: MaterialID? ore,
-        currentRate: double currentRate,
-        disabledReasoning: DisabledReasoning disabledReasoning,
-        maxRate: double maxRate,
-      ):
+      ore: MaterialID? ore,
+      currentRate: double currentRate,
+      disabledReasoning: DisabledReasoning disabledReasoning,
+      maxRate: double maxRate,
+    ):
       return Column(
         children: [
           Row(
@@ -1278,86 +1365,103 @@ Widget describeFeature(
             ],
           ),
           Text(
-              'Can refine ${maxRate % .001 == 0 ? (maxRate * 1000).toInt() : maxRate * 1000} kilogram${maxRate == .001 ? '' : 's'} per second.'),
+            'Can refine ${maxRate % .001 == 0 ? (maxRate * 1000).toInt() : maxRate * 1000} kilogram${maxRate == .001 ? '' : 's'} per second.',
+          ),
         ],
       );
     case MaterialPileFeature(
-        getMass: double Function(Uint64) getMass,
-        materialName: String name,
-        material: MaterialID? material,
-        capacity: double capacity,
-      ):
-      return ContinuousBuilder(builder: (context) {
-        return Row(
-          children: [
-            Text(
-                'Contents: ${getMass(data.getTime(system, DateTime.now())).toInt()} kg of '),
-            material == null
-                ? Text(name)
-                : MaterialWidget(material: data.getMaterial(material, system)),
-            Text(' / $capacity kg possible'),
-          ],
-          mainAxisSize: MainAxisSize.min,
-        );
-      });
+      getMass: double Function(Uint64) getMass,
+      materialName: String name,
+      material: MaterialID? material,
+      capacity: double capacity,
+    ):
+      return ContinuousBuilder(
+        builder: (context) {
+          return Row(
+            children: [
+              Text(
+                'Contents: ${getMass(data.getTime(system, DateTime.now())).toInt()} kg of ',
+              ),
+              material == null
+                  ? Text(name)
+                  : MaterialWidget(
+                      material: data.getMaterial(material, system),
+                    ),
+              Text(' / $capacity kg possible'),
+            ],
+            mainAxisSize: MainAxisSize.min,
+          );
+        },
+      );
     case MaterialStackFeature(
-        getQuantity: Uint64 Function(Uint64) getQuantity,
-        materialName: String name,
-        material: MaterialID? material,
-        capacity: Uint64 capacity,
-      ):
-      return ContinuousBuilder(builder: (context) {
-        return Row(children: [
-          Text(
-              'Contents: ${getQuantity(data.getTime(system, DateTime.now())).toInt()} '),
-          material == null
-              ? Text(name)
-              : MaterialWidget(material: data.getMaterial(material, system)),
-          Text('s / $capacity possible'),
-        ]);
-      });
+      getQuantity: Uint64 Function(Uint64) getQuantity,
+      materialName: String name,
+      material: MaterialID? material,
+      capacity: Uint64 capacity,
+    ):
+      return ContinuousBuilder(
+        builder: (context) {
+          return Row(
+            children: [
+              Text(
+                'Contents: ${getQuantity(data.getTime(system, DateTime.now())).toInt()} ',
+              ),
+              material == null
+                  ? Text(name)
+                  : MaterialWidget(
+                      material: data.getMaterial(material, system),
+                    ),
+              Text('s / $capacity possible'),
+            ],
+          );
+        },
+      );
     case GridSensorFeature(
-        disabledReasoning: DisabledReasoning disabledReasoning,
-      ):
+      disabledReasoning: DisabledReasoning disabledReasoning,
+    ):
       return Text(
-          'This is a grid sensor (${disabledReasoning == 0 ? 'enabled' : disabledReasoning.asString}).');
+        'This is a grid sensor (${disabledReasoning == 0 ? 'enabled' : disabledReasoning.asString}).',
+      );
     case GridSensorStatusFeature():
       continue nothing;
     case BuilderFeature(
-        capacity: int capacity,
-        rate: double rate,
-        disabledReasoning: DisabledReasoning disabledReasoning,
-        structures: Set<AssetID> structures
-      ):
+      capacity: int capacity,
+      rate: double rate,
+      disabledReasoning: DisabledReasoning disabledReasoning,
+      structures: Set<AssetID> structures,
+    ):
       return Text(
         'This is a builder that can build $capacity structures at a rate of ${rate * 1000} units per second. (${disabledReasoning == 0 ? 'currently building ${structures.length} structure${structures.length == 1 ? '' : 's'}.' : disabledReasoning.asString})',
       );
     case InternalSensorFeature(
-        disabledReasoning: DisabledReasoning disabledReasoning,
-      ):
+      disabledReasoning: DisabledReasoning disabledReasoning,
+    ):
       return Text(
-          'This is an internal sensor (${disabledReasoning == 0 ? 'enabled' : disabledReasoning.asString}).');
+        'This is an internal sensor (${disabledReasoning == 0 ? 'enabled' : disabledReasoning.asString}).',
+      );
     case InternalSensorStatusFeature():
       continue nothing;
     case OnOffFeature(enabled: bool enabled):
       return OutlinedButton(
         onPressed: () async {
-          List<String> result = await server.send(
-            [
-              'play',
-              system.value.toString(),
-              assetID.id.toString(),
-              enabled ? 'disable' : 'enable',
-            ],
-          );
+          List<String> result = await server.send([
+            'play',
+            system.value.toString(),
+            assetID.id.toString(),
+            enabled ? 'disable' : 'enable',
+          ]);
           if (result.first == 'T') {
             if (result.length != 2) {
               openErrorDialog(
-                  'unexpected response to enable/disable: $result', context);
+                'unexpected response to enable/disable: $result',
+                context,
+              );
             } else {
               if (result.first != 'T') {
                 openErrorDialog(
-                    'server thinks miner already enabled/disabled', context);
+                  'server thinks miner already enabled/disabled',
+                  context,
+                );
               }
             }
           } else {
@@ -1366,10 +1470,7 @@ Widget describeFeature(
         },
         child: Text(enabled ? 'Disable' : 'Enable'),
       );
-    case StaffingFeature(
-        jobs: int jobs,
-        staff: int staff,
-      ):
+    case StaffingFeature(jobs: int jobs, staff: int staff):
       return Text(
         'There are $staff people working here out of $jobs required.',
       );
@@ -1388,13 +1489,13 @@ Widget describeFeature(
         ],
       );
     case FactoryFeature(
-        inputs: List<MaterialManifestItem> inputs,
-        outputs: List<MaterialManifestItem> outputs,
-        maxRate: double maxRate,
-        configuredRate: double configuredRate,
-        currentRate: double currentRate,
-        disabledReasoning: DisabledReasoning disabledReasoning
-      ):
+      inputs: List<MaterialManifestItem> inputs,
+      outputs: List<MaterialManifestItem> outputs,
+      maxRate: double maxRate,
+      configuredRate: double configuredRate,
+      currentRate: double currentRate,
+      disabledReasoning: DisabledReasoning disabledReasoning,
+    ):
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1405,7 +1506,7 @@ Widget describeFeature(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('${e.quantity}x'),
-                MaterialWidget(material: data.getMaterial(e.material, system))
+                MaterialWidget(material: data.getMaterial(e.material, system)),
               ],
             ),
           ),
@@ -1415,19 +1516,114 @@ Widget describeFeature(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text('${e.quantity}x'),
-                MaterialWidget(material: data.getMaterial(e.material, system))
+                MaterialWidget(material: data.getMaterial(e.material, system)),
               ],
             ),
           ),
           Text(
-              'Working at a rate of ${currentRate / 1000} iterations per second' +
-                  (disabledReasoning.flags == 0
-                      ? '.'
-                      : ' (${disabledReasoning.asString})')),
+            'Working at a rate of ${currentRate / 1000} iterations per second' +
+                (disabledReasoning.flags == 0
+                    ? '.'
+                    : ' (${disabledReasoning.asString})'),
+          ),
           Text(
-              'The goal rate is ${configuredRate / 1000} iterations per second, and the max rate is ${maxRate / 1000} iterations per second.'),
+            'The goal rate is ${configuredRate / 1000} iterations per second, and the max rate is ${maxRate / 1000} iterations per second.',
+          ),
         ],
       );
+    case EmptySampleFeature(size: double size):
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'This is an empty research sample container with diameter $size meters.',
+          ),
+          OutlinedButton(
+            onPressed: () async {
+              List<String> result = await server.send([
+                'play',
+                system.value.toString(),
+                assetID.id.toString(),
+                'sample-ore',
+              ]);
+              if (result.first == 'T') {
+                if (result.length != 2) {
+                  openErrorDialog(
+                    'unexpected response to sample-ore: $result',
+                    context,
+                  );
+                } else {
+                  if (result.first != 'T') {
+                    assert(result.first == 'F');
+                  }
+                }
+              } else {
+                openErrorDialog('sample-ore failed: $result', context);
+              }
+            },
+            child: Text('Sample ore'),
+          ),
+        ],
+      );
+    case MaterialSampleFeature(
+      isOre: bool isOre,
+      size: double size,
+      mass: double mass,
+      sample: MaterialID? sample,
+    ):
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'This is an research sample container with diameter $size meters.',
+          ),
+          if (sample == null)
+            Text(
+              'It contains an unknown ${isOre ? 'ore' : 'material'} with mass $mass.',
+            )
+          else
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('It contains'),
+                MaterialWidget(material: data.getMaterial(sample, system)),
+                Text('(${isOre ? 'ore' : 'material'}) with mass $mass'),
+              ],
+            ),
+          OutlinedButton(
+            onPressed: () async {
+              List<String> result = await server.send([
+                'play',
+                system.value.toString(),
+                assetID.id.toString(),
+                'clear-sample',
+              ]);
+              if (result.first == 'T') {
+                if (result.length != 2) {
+                  openErrorDialog(
+                    'unexpected response to clear-sample: $result',
+                    context,
+                  );
+                } else {
+                  if (result.first != 'T') {
+                    assert(result.first == 'F');
+                  }
+                }
+              } else {
+                openErrorDialog('clear-sample failed: $result', context);
+              }
+            },
+            child: Text('Clear sample'),
+          ),
+        ],
+      );
+    case AssetSampleFeature(
+      size: double size,
+      mass: double mass,
+      massFlowRate: double massFlowRate,
+      sample: AssetID sample,
+    ):
+      return Placeholder(child: Text('$size $mass $massFlowRate $sample'));
   }
 }
 
@@ -1450,7 +1646,7 @@ class MaterialWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           ISDIcon(icon: material.icon, width: 32, height: 32),
-          Text(material.name)
+          Text(material.name),
         ],
       ),
     );
@@ -1476,7 +1672,7 @@ class AssetClassWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           ISDIcon(icon: assetClass.icon, width: 32, height: 32),
-          Text(assetClass.name)
+          Text(assetClass.name),
         ],
       ),
     );

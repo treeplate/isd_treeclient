@@ -270,7 +270,8 @@ Feature parseFeature(
       DisabledReasoning disabledReasoning =
           DisabledReasoning(reader.readUint32());
       String topic = reader.readString();
-      return ResearchFeature(disabledReasoning, topic);
+      int progress = reader.readUint8();
+      return ResearchFeature(disabledReasoning, topic, ResearchProgress.values[progress]);
     case 0x12:
       double maxRate = reader.readFloat64();
       DisabledReasoning disabledReasoning =
@@ -417,12 +418,48 @@ Feature parseFeature(
       double configuredRate = reader.readFloat64();
       assert(configuredRate <= maxRate);
       double currentRate = reader.readFloat64();
-      assert(currentRate <= configuredRate); // TODO: do these asserts for other rate-based features
-      DisabledReasoning disabledReasoning = DisabledReasoning(reader.readUint32());
-      return FactoryFeature(inputs, outputs, maxRate, configuredRate, currentRate, disabledReasoning);
+      assert(currentRate <=
+          configuredRate); // TODO: do these asserts for other rate-based features
+      DisabledReasoning disabledReasoning =
+          DisabledReasoning(reader.readUint32());
+      return FactoryFeature(inputs, outputs, maxRate, configuredRate,
+          currentRate, disabledReasoning);
+    case 0x21:
+      int mode = reader.readUint8();
+      double size = reader.readFloat64();
+      double mass = reader.readFloat64();
+      double massFlowRate = reader.readFloat64();
+      int sample = reader.readInt32();
+      switch (mode) {
+        case 0:
+          assert(mass == 0);
+          assert(massFlowRate == 0);
+          assert(sample == 0);
+          return EmptySampleFeature(size);
+        case 1:
+        case 2:
+          assert(mass != 0);
+          assert(massFlowRate == 0);
+          return MaterialSampleFeature(
+            mode == 1,
+            size,
+            mass,
+            sample == 0 ? null : sample,
+          );
+        case 3:
+          assert(sample != 0);
+          return AssetSampleFeature(
+            size,
+            mass,
+            massFlowRate,
+            AssetID(systemID, sample),
+          );
+        default:
+          throw UnimplementedError('fcSample mode $mode');
+      }
     default:
       throw UnimplementedError('Unknown featureID $featureCode');
   }
 }
 
-const kClientVersion = 0x20;
+const kClientVersion = 0x21;

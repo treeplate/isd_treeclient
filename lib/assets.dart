@@ -353,13 +353,16 @@ class KnowledgeFeature extends Feature {
   KnowledgeFeature(this.classes, this.materials);
 }
 
+enum ResearchProgress {none, slow, active}
+
 class ResearchFeature extends Feature {
   final DisabledReasoning disabledReasoning;
   final String topic;
+  final ResearchProgress progress;
 
   bool get mustKnowAssetClass => true;
 
-  ResearchFeature(this.disabledReasoning, this.topic);
+  ResearchFeature(this.disabledReasoning, this.topic, this.progress);
 }
 
 class MiningFeature extends Feature {
@@ -522,6 +525,35 @@ class AssetPileFeature extends Feature {
 
   AssetPileFeature(this.assets);
 }
+
+enum SampleMode { nothing, ore, material, asset}
+
+sealed class SampleFeature extends Feature {
+  final double size; // diameter (in meters)
+
+  SampleFeature(this.size);
+}
+
+class EmptySampleFeature extends SampleFeature {
+  EmptySampleFeature(super.size);
+}
+
+class MaterialSampleFeature extends SampleFeature {
+  final bool isOre; // true: clearing it will send it to an ore pile; false: clearing it will send it to a material pile
+  final double mass; // in kg
+  final MaterialID? sample;
+
+  MaterialSampleFeature(this.isOre, super.size, this.mass, this.sample);
+}
+
+class AssetSampleFeature extends SampleFeature {
+  final double mass; // in kg
+  final double massFlowRate; // in kg/ms
+  final AssetID sample;
+
+  AssetSampleFeature(super.size, this.mass, this.massFlowRate, this.sample);
+}
+
 
 typedef MaterialManifestItem = ({MaterialID material, int quantity});
 

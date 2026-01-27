@@ -210,6 +210,21 @@ Widget renderFeature(Feature feature, DataStructure data, StarIdentifier system,
         feature: feature,
         data: data,
       );
+    case EmptySampleFeature():
+      return EmptySampleFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case MaterialSampleFeature():
+      return MaterialSampleFeatureWidget(
+        feature: feature,
+        data: data,
+      );
+    case AssetSampleFeature():
+      return AssetSampleFeatureWidget(
+        feature: feature,
+        data: data,
+      );
   }
 }
 
@@ -482,7 +497,7 @@ class ResearchFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Researching "${feature.topic}" (disabledReasoning: ${feature.disabledReasoning})',
+          'Researching "${feature.topic}" (disabledReasoning: ${feature.disabledReasoning}, progress: ${feature.progress})',
         ),
       ],
     );
@@ -1151,6 +1166,66 @@ class FactoryFeatureWidget extends StatelessWidget {
         Text(
           'Producing [${feature.outputs.map((e) => '${e.quantity}x M${e.material.toRadixString(16).padLeft(8, '0')}').join(', ')}] out of [${feature.inputs.map((e) => '${e.quantity}x M${e.material.toRadixString(16).padLeft(8, '0')}').join(', ')}] at a rate of ${feature.currentRate} iterations/ms (out of ${feature.maxRate} max, and ${feature.configuredRate} configured) (disabledReasoning: ${feature.disabledReasoning})',
         ),
+      ],
+    );
+  }
+}
+
+class EmptySampleFeatureWidget extends StatelessWidget {
+  const EmptySampleFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+  final EmptySampleFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('This is an empty research sample container with diameter ${feature.size} meters'),
+      ],
+    );
+  }
+}
+
+class MaterialSampleFeatureWidget extends StatelessWidget {
+  const MaterialSampleFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+  final MaterialSampleFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('This is a research sample container with diameter ${feature.size} meters, holding ${feature.isOre ? 'ore' : 'refined material'} ${feature.sample == null ? 'an unknown material' : 'M${feature.sample!.toRadixString(16).padLeft(8,'0')}'} with mass ${feature.mass}'),
+      ],
+    );
+  }
+}
+
+class AssetSampleFeatureWidget extends StatelessWidget {
+  const AssetSampleFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+  final AssetSampleFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('This is a research sample container with diameter ${feature.size} meters, holding ${feature.sample.displayName} with mass ${feature.mass} (increasing by ${feature.massFlowRate})'),
       ],
     );
   }
