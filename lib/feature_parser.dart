@@ -70,20 +70,22 @@ Feature parseFeature(
         String materialDescription = reader.readString();
         int id = reader.readUint32();
         int? materialID = id == 0 ? null : id;
-        materials.add(MaterialLineItem(
-          componentName == '' ? null : componentName,
-          materialID,
-          max,
-          materialDescription,
-        ));
+        materials.add(
+          MaterialLineItem(
+            componentName == '' ? null : componentName,
+            materialID,
+            max,
+            materialDescription,
+          ),
+        );
         max = reader.readUint32();
       }
       int builder = reader.readUint32();
-      int quantity = reader.readUint32();
+      Uint64 quantity = reader.readUint64();
       double quantityFlowRate = reader.readFloat64();
-      int hp = reader.readUint32();
+      Uint64 hp = reader.readUint64();
       double hpFlowRate = reader.readFloat64();
-      int minHP = reader.readUint32();
+      Uint64 minHP = reader.readUint64();
       return StructureFeature(
         materials,
         builder == 0 ? null : AssetID(systemID, builder),
@@ -115,9 +117,7 @@ Feature parseFeature(
     case 8:
       int isColonyShip = reader.readUint32();
       assert(isColonyShip < 2);
-      return PlotControlFeature(
-        isColonyShip == 1,
-      );
+      return PlotControlFeature(isColonyShip == 1);
     case 9:
       Map<(double, double), AssetID> regions = {};
       while (true) {
@@ -154,8 +154,9 @@ Feature parseFeature(
       }
       return GridFeature(cells, dimension, cellSize, buildables);
     case 0xb:
-      DisabledReasoning disabledReasoning =
-          DisabledReasoning(reader.readUint32());
+      DisabledReasoning disabledReasoning = DisabledReasoning(
+        reader.readUint32(),
+      );
       int population = reader.readUint32();
       int maxPopulation = reader.readUint32();
       int jobs = reader.readUint32();
@@ -196,6 +197,7 @@ Feature parseFeature(
         notReferenced.remove(message);
         messages.add(message);
       }
+      // TODO: check all messages have only message and knowledge features, and that they have exactly one message feature
       return MessageBoardFeature(messages);
     case 0xd:
       StarIdentifier source = StarIdentifier.parse(reader.readUint32());
@@ -211,14 +213,19 @@ Feature parseFeature(
         throw UnimplementedError('no newline in message body: $body');
       }
       String subject = body.substring(0, body.indexOf('\n'));
-      String from = body.split('\n')[1];
-      String text = body.substring(subject.length + from.length + 2);
+      String text = body.substring(subject.length + 1);
+      String? sender;
+      if (text.startsWith('From: ')) {
+        String from = body.split('\n')[1];
+        sender = from.substring(6);
+        text = body.substring(subject.length + from.length + 2);
+      }
       return MessageFeature(
         source,
         timestamp,
         flags == 0x1,
         subject,
-        from.substring('From: '.length),
+        sender,
         text,
       );
     case 0xe:
@@ -228,7 +235,7 @@ Feature parseFeature(
         materials[id] = reader.readUint64();
         id = reader.readInt32();
       }
-      return RubblePileFeature(materials, reader.readUint64());
+      return RubblePileFeature(materials, reader.readFloat64());
     case 0xf:
       int id = reader.readUint32();
       assert(id != 0);
@@ -258,8 +265,16 @@ Feature parseFeature(
             }
             double massPerUnit = reader.readFloat64();
             double massPerCubicMeter = reader.readFloat64();
-            materials[id] = Material(icon, name, description, isFluid,
-                isComponent, isPressurized, massPerUnit, massPerCubicMeter);
+            materials[id] = Material(
+              icon,
+              name,
+              description,
+              isFluid,
+              isComponent,
+              isPressurized,
+              massPerUnit,
+              massPerCubicMeter,
+            );
           default:
             throw UnimplementedError('knowledge type $type');
         }
@@ -267,21 +282,33 @@ Feature parseFeature(
       }
       return KnowledgeFeature(classes, materials);
     case 0x11:
-      DisabledReasoning disabledReasoning =
-          DisabledReasoning(reader.readUint32());
+      DisabledReasoning disabledReasoning = DisabledReasoning(
+        reader.readUint32(),
+      );
+      List<String> topics = [];
+      while (true) {
+        String? topic = reader.readString();
+        if (topic.isEmpty) {
+          break;
+        }
+        topics.add(topic);
+      }
+      // TODO: check topics is empty if you don't own the asset (spec invariant)
       String topic = reader.readString();
       int progress = reader.readUint8();
-      return ResearchFeature(disabledReasoning, topic, ResearchProgress.values[progress]);
+      return ResearchFeature(
+        disabledReasoning,
+        topics,
+        topic,
+        ResearchProgress.values[progress],
+      );
     case 0x12:
       double maxRate = reader.readFloat64();
-      DisabledReasoning disabledReasoning =
-          DisabledReasoning(reader.readUint32());
-      double currentRate = reader.readFloat64();
-      return MiningFeature(
-        maxRate,
-        disabledReasoning,
-        currentRate,
+      DisabledReasoning disabledReasoning = DisabledReasoning(
+        reader.readUint32(),
       );
+      double currentRate = reader.readFloat64();
+      return MiningFeature(maxRate, disabledReasoning, currentRate);
     case 0x13:
       double pileMass = reader.readFloat64();
       double pileMassFlowRate = reader.readFloat64();
@@ -308,19 +335,15 @@ Feature parseFeature(
       MaterialID ore = reader.readInt32();
       assert(ore != 0);
       double maxRate = reader.readFloat64();
-      DisabledReasoning disabledReasoning =
-          DisabledReasoning(reader.readUint32());
+      DisabledReasoning disabledReasoning = DisabledReasoning(
+        reader.readUint32(),
+      );
       double currentRate = reader.readFloat64();
       assert(
         currentRate == maxRate || disabledReasoning.flags != 0,
         'server invariant failed: refiner not going at full speed despite having 0 disabledReasoning',
       );
-      return RefiningFeature(
-        ore,
-        maxRate,
-        disabledReasoning,
-        currentRate,
-      );
+      return RefiningFeature(ore, maxRate, disabledReasoning, currentRate);
     case 0x16:
       double pileMass = reader.readFloat64();
       double pileMassFlowRate = reader.readFloat64();
@@ -362,8 +385,9 @@ Feature parseFeature(
     case 0x1A:
       int capacity = reader.readUint32();
       double rate = reader.readFloat64();
-      DisabledReasoning disabledReasoning =
-          DisabledReasoning(reader.readUint32());
+      DisabledReasoning disabledReasoning = DisabledReasoning(
+        reader.readUint32(),
+      );
       Set<AssetID> structures = {};
       int rawStructureID = reader.readUint32();
       while (rawStructureID != 0) {
@@ -418,12 +442,20 @@ Feature parseFeature(
       double configuredRate = reader.readFloat64();
       assert(configuredRate <= maxRate);
       double currentRate = reader.readFloat64();
-      assert(currentRate <=
-          configuredRate); // TODO: do these asserts for other rate-based features
-      DisabledReasoning disabledReasoning =
-          DisabledReasoning(reader.readUint32());
-      return FactoryFeature(inputs, outputs, maxRate, configuredRate,
-          currentRate, disabledReasoning);
+      assert(
+        currentRate <= configuredRate,
+      ); // TODO: do these asserts for other rate-based features
+      DisabledReasoning disabledReasoning = DisabledReasoning(
+        reader.readUint32(),
+      );
+      return FactoryFeature(
+        inputs,
+        outputs,
+        maxRate,
+        configuredRate,
+        currentRate,
+        disabledReasoning,
+      );
     case 0x21:
       int mode = reader.readUint8();
       double size = reader.readFloat64();

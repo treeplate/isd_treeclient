@@ -25,9 +25,10 @@ extension type Uint64((int, int) _value) {
 
   Uint64 operator *(int multiplier) {
     return Uint64.bigEndian(
-        ((msh * multiplier) + ((lsh * multiplier) ~/ integerLimit32)) &
-            (integerLimit32 - 1),
-        (lsh * multiplier) & (integerLimit32 - 1));
+      ((msh * multiplier) + ((lsh * multiplier) ~/ integerLimit32)) &
+          (integerLimit32 - 1),
+      (lsh * multiplier) & (integerLimit32 - 1),
+    );
   }
 
   Uint64 operator ~/(double divisor) {
@@ -49,9 +50,9 @@ extension type Uint64((int, int) _value) {
   Uint64 operator +(Uint64 addend) {
     int lshResult = lsh + addend.lsh;
     return Uint64.bigEndian(
-        (msh + addend.msh + (lshResult ~/ integerLimit32)) &
-            (integerLimit32 - 1),
-        lshResult & (integerLimit32 - 1));
+      (msh + addend.msh + (lshResult ~/ integerLimit32)) & (integerLimit32 - 1),
+      lshResult & (integerLimit32 - 1),
+    );
   }
 
   Uint64 operator -(Uint64 addend) {
@@ -64,11 +65,25 @@ extension type Uint64((int, int) _value) {
     return Uint64.bigEndian(newMsh % integerLimit32, newLsh);
   }
 
+  bool operator >(Uint64 other) {
+    return msh > other.msh || msh == other.msh && lsh < other.lsh;
+  }
+
+  bool operator <(Uint64 other) {
+    return msh < other.msh || msh == other.msh && lsh < other.lsh;
+  }
+
+  static min(Uint64 a, Uint64 b) {
+    return a < b ? a : b;
+  }
+
   const Uint64.littleEndian(int lsh, int msh) : _value = (msh, lsh);
   const Uint64.bigEndian(int msh, int lsh) : _value = (msh, lsh);
   factory Uint64.fromInt(int value) {
     return Uint64.bigEndian(
-        (value ~/ integerLimit32) % integerLimit32, value % integerLimit32);
+      (value ~/ integerLimit32) % integerLimit32,
+      value % integerLimit32,
+    );
   }
   factory Uint64.fromDouble(double value) {
     return Uint64.bigEndian(
@@ -78,16 +93,13 @@ extension type Uint64((int, int) _value) {
   }
 
   factory Uint64.parse(String str) {
+    // TODO: actually check to make sure all these digits are actually digits
     Uint64 result = zero64;
     for (int digit in str.codeUnits) {
       result += Uint64.fromInt(digit - 0x30);
       result *= 10;
     }
     return result ~/ 10;
-  }
-
-  bool operator <(Uint64 other) {
-    return msh < other.msh || msh == other.msh && lsh < other.lsh;
   }
 }
 const Uint64 zero64 = Uint64.bigEndian(0, 0);

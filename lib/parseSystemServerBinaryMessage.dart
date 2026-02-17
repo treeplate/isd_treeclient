@@ -35,6 +35,7 @@ Set<StarIdentifier> parseSystemServerBinaryMessage(
         double mass = message.readFloat64();
         double massFlowRate = message.readFloat64();
         double size = message.readFloat64();
+        assert(size != 0 || mass == 0 && massFlowRate == 0, 'server invariant failed: virtual asset with non-zero mass or mass flowrate (mass $mass, massflowrate $massFlowRate)');
         String name = message.readString();
         AssetClass assetClass = message.readAssetClass(false)!;
         List<Feature> features = [];
@@ -68,12 +69,15 @@ Set<StarIdentifier> parseSystemServerBinaryMessage(
             time0.$2,
           ),
         );
+        // TODO: if virtual, check all children are virtual; if physical, check all children other than through messageboard are physical
       }
       for (AssetID asset in notReferenced) {
         data.removeAsset(asset);
       }
-      // TODO: there might be a possible race condition? sometimes this triggers for some reason
+      // TODO: sometimes this triggers for some reason
       assert(data.assets[rootAssetID] != null);
+      
+      assert(data.assets[rootAssetID]!.features.any((e) => e is SolarSystemFeature));
     } else {
       switch (id) {
         default:

@@ -82,10 +82,7 @@ class OrbitFeature extends Feature {
   final List<OrbitChild> orbitingChildren;
   final AssetID primaryChild;
 
-  OrbitFeature(
-    this.orbitingChildren,
-    this.primaryChild,
-  );
+  OrbitFeature(this.orbitingChildren, this.primaryChild);
 }
 
 class SolarSystemChild {
@@ -99,9 +96,7 @@ class SolarSystemChild {
 class SolarSystemFeature extends Feature {
   final List<SolarSystemChild> children;
 
-  SolarSystemFeature(
-    this.children,
-  );
+  SolarSystemFeature(this.children);
 }
 
 class Material {
@@ -132,40 +127,40 @@ class MaterialLineItem {
   final int requiredQuantity;
   final int? materialID;
 
-  MaterialLineItem(this.componentName, this.materialID, this.requiredQuantity,
-      this.materialDescription);
+  MaterialLineItem(
+    this.componentName,
+    this.materialID,
+    this.requiredQuantity,
+    this.materialDescription,
+  );
 }
 
 class StructureFeature extends Feature {
   final List<MaterialLineItem> materials;
 
-  int get maxHP {
-    double result = materials.fold(
-      0,
-      (a, b) => a + b.requiredQuantity,
-    );
-    return result.toInt();
+  Uint64 get maxHP {
+    return materials.fold(Uint64.fromInt(0), (a, b) => a + Uint64.fromInt(b.requiredQuantity));
   }
 
   final AssetID? builder;
 
-  final int quantity0;
+  final Uint64 quantity0;
   final double quantityFlowRate; // units/ms
-  double getQuantity(Uint64 time) {
-    return quantity0 + quantityFlowRate * ((time - time0).toDouble());
+  Uint64 getQuantity(Uint64 time) {
+    return quantity0 + Uint64.fromDouble(quantityFlowRate * ((time - time0).toDouble()));
   }
 
   final Uint64 time0;
-  final int hp0;
+  final Uint64 hp0;
   final double hpFlowRate; // units/ms
-  double getHP(Uint64 time) {
-    return min(
+  Uint64 getHP(Uint64 time) {
+    return Uint64.min(
       getQuantity(time),
-      hp0 + hpFlowRate * ((time - time0).toDouble()),
+      hp0 + Uint64.fromDouble(hpFlowRate * ((time - time0).toDouble())),
     );
   }
 
-  final int minHP;
+  final Uint64 minHP;
 
   bool get mustKnowAssetClass => minHP != 0 || maxHP > quantity0;
   StructureFeature(
@@ -201,7 +196,12 @@ class SpaceSensorFeature extends Feature {
   /// The minimum size of assets that these sensors can detect (in meters).
   final double resolution;
   SpaceSensorFeature(
-      this.disabledReasoning, this.reach, this.up, this.down, this.resolution);
+    this.disabledReasoning,
+    this.reach,
+    this.up,
+    this.down,
+    this.resolution,
+  );
 }
 
 class SpaceSensorStatusFeature extends Feature {
@@ -227,7 +227,7 @@ class SurfaceFeature extends Feature {
   SurfaceFeature(this.regions);
 
   final Map<(double, double), AssetID>
-      regions; //key is (x,y) where coordinates represent distance from center of surface to center of region in meters
+  regions; //key is (x,y) where coordinates represent distance from center of surface to center of region in meters
 }
 
 /// size: uint8 (how big is the asset compared to the grid cells)
@@ -267,15 +267,16 @@ class Gossip {
   final int population;
 
   Gossip(
-      this.message,
-      this.source,
-      this.impactAnchor,
-      this.impact,
-      this.duration,
-      this.peopleAnchor,
-      this.people,
-      this.spreadrate,
-      this.population);
+    this.message,
+    this.source,
+    this.impactAnchor,
+    this.impact,
+    this.duration,
+    this.peopleAnchor,
+    this.people,
+    this.spreadrate,
+    this.population,
+  );
 
   static double decay(double x) {
     return 1 - x * x * (3 - 2 * x);
@@ -300,8 +301,13 @@ class PopulationFeature extends Feature {
   final int jobs;
   final List<Gossip> gossip;
 
-  PopulationFeature(this.disabledReasoning, this.population, this.maxPopulation,
-      this.jobs, this.gossip);
+  PopulationFeature(
+    this.disabledReasoning,
+    this.population,
+    this.maxPopulation,
+    this.jobs,
+    this.gossip,
+  );
 }
 
 class MessageBoardFeature extends Feature {
@@ -317,7 +323,7 @@ class MessageFeature extends Feature {
   final Uint64 timestamp;
   final bool isRead;
   final String subject;
-  final String from;
+  final String? sender;
   final String text;
 
   bool get mustKnowAssetClass => true;
@@ -327,7 +333,7 @@ class MessageFeature extends Feature {
     this.timestamp,
     this.isRead,
     this.subject,
-    this.from,
+    this.sender,
     this.text,
   );
 }
@@ -335,9 +341,9 @@ class MessageFeature extends Feature {
 class RubblePileFeature extends Feature {
   // material id -> units of material
   final Map<MaterialID, Uint64> materials;
-  final Uint64 remainingUnitCount;
+  final double remainingMass; // kg
 
-  RubblePileFeature(this.materials, this.remainingUnitCount);
+  RubblePileFeature(this.materials, this.remainingMass);
 }
 
 class ProxyFeature extends Feature {
@@ -353,16 +359,22 @@ class KnowledgeFeature extends Feature {
   KnowledgeFeature(this.classes, this.materials);
 }
 
-enum ResearchProgress {none, slow, active}
+enum ResearchProgress { none, slow, active }
 
 class ResearchFeature extends Feature {
   final DisabledReasoning disabledReasoning;
+  final List<String> topics;
   final String topic;
   final ResearchProgress progress;
 
   bool get mustKnowAssetClass => true;
 
-  ResearchFeature(this.disabledReasoning, this.topic, this.progress);
+  ResearchFeature(
+    this.disabledReasoning,
+    this.topics,
+    this.topic,
+    this.progress,
+  );
 }
 
 class MiningFeature extends Feature {
@@ -370,11 +382,7 @@ class MiningFeature extends Feature {
   final DisabledReasoning disabledReasoning;
   final double currentRate; // kg/ms
 
-  MiningFeature(
-    this.maxRate,
-    this.disabledReasoning,
-    this.currentRate,
-  );
+  MiningFeature(this.maxRate, this.disabledReasoning, this.currentRate);
 }
 
 class OrePileFeature extends Feature {
@@ -447,9 +455,7 @@ class MaterialStackFeature extends Feature {
   final Uint64 time0;
   Uint64 getQuantity(Uint64 time) {
     return quantity0 +
-        Uint64.fromDouble(
-          quantityFlowRate * ((time - time0).toDouble()),
-        );
+        Uint64.fromDouble(quantityFlowRate * ((time - time0).toDouble()));
   }
 
   final Uint64 capacity;
@@ -526,7 +532,7 @@ class AssetPileFeature extends Feature {
   AssetPileFeature(this.assets);
 }
 
-enum SampleMode { nothing, ore, material, asset}
+enum SampleMode { nothing, ore, material, asset }
 
 sealed class SampleFeature extends Feature {
   final double size; // diameter (in meters)
@@ -539,7 +545,8 @@ class EmptySampleFeature extends SampleFeature {
 }
 
 class MaterialSampleFeature extends SampleFeature {
-  final bool isOre; // true: clearing it will send it to an ore pile; false: clearing it will send it to a material pile
+  final bool
+  isOre; // true: clearing it will send it to an ore pile; false: clearing it will send it to a material pile
   final double mass; // in kg
   final MaterialID? sample;
 
@@ -554,7 +561,6 @@ class AssetSampleFeature extends SampleFeature {
   AssetSampleFeature(super.size, this.mass, this.massFlowRate, this.sample);
 }
 
-
 typedef MaterialManifestItem = ({MaterialID material, int quantity});
 
 class FactoryFeature extends Feature {
@@ -567,7 +573,14 @@ class FactoryFeature extends Feature {
 
   bool get mustKnowAssetClass => true;
 
-  FactoryFeature(this.inputs, this.outputs, this.maxRate, this.configuredRate, this.currentRate, this.disabledReasoning);
+  FactoryFeature(
+    this.inputs,
+    this.outputs,
+    this.maxRate,
+    this.configuredRate,
+    this.currentRate,
+    this.disabledReasoning,
+  );
 }
 
 typedef AssetClassID = int; // 32-bit signed, but can't be 0

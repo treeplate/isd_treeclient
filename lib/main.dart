@@ -20,9 +20,7 @@ import 'parseSystemServerBinaryMessage.dart';
 import 'platform_specific.dart';
 
 void main() async {
-  runApp(
-    MaterialAppWidget(),
-  );
+  runApp(MaterialAppWidget());
 }
 
 class MaterialAppWidget extends StatefulWidget {
@@ -70,8 +68,11 @@ class _MaterialAppWidgetState extends State<MaterialAppWidget> {
 }
 
 class ScaffoldWidget extends StatefulWidget {
-  ScaffoldWidget(
-      {super.key, required this.themeMode, required this.changeThemeMode});
+  ScaffoldWidget({
+    super.key,
+    required this.themeMode,
+    required this.changeThemeMode,
+  });
 
   final ThemeMode themeMode;
   final void Function(ThemeMode) changeThemeMode;
@@ -124,10 +125,13 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
       []; // list of system server URIs that have responded to "login"
   bool get isDarkMode => widget.themeMode == ThemeMode.system
       ? WidgetsBinding.instance.platformDispatcher.platformBrightness ==
-          Brightness.dark
+            Brightness.dark
       : widget.themeMode == ThemeMode.dark;
-  late TabController tabController =
-      TabController(length: 4, vsync: this, initialIndex: 1);
+  late TabController tabController = TabController(
+    length: 4,
+    vsync: this,
+    initialIndex: 1,
+  );
 
   late final Timer ticker;
 
@@ -136,12 +140,14 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     getCookie('previousError').then((e) {
       if (e != null) openErrorDialog('Cookie error: $e', context);
     });
-    connectToLoginServer().then((server) => onLoginServerConnect(),
-        onError: (e, st) {
-      setState(() {
-        loginState = LoginState.loginServerConnectionError;
-      });
-    });
+    connectToLoginServer().then(
+      (server) => onLoginServerConnect(),
+      onError: (e, st) {
+        setState(() {
+          loginState = LoginState.loginServerConnectionError;
+        });
+      },
+    );
     // ticker = Timer.periodic(
     //     Duration(seconds: 1),
     //     ((_) =>
@@ -167,30 +173,34 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     connectToLoginServer()
         .then((e) => e.send(['get-file', fileID.toString()]))
         .then((message) {
-      if (message[0] == 'F') {
-        assert(message.length == 2);
-        openErrorDialog(
-            'Error: failed to get file $fileID - ${message[1]}', context);
-      }
-      assert(message.length == 1);
-      assert(message[0] == 'T');
-    });
+          if (message[0] == 'F') {
+            assert(message.length == 2);
+            openErrorDialog(
+              'Error: failed to get file $fileID - ${message[1]}',
+              context,
+            );
+          }
+          assert(message.length == 1);
+          assert(message[0] == 'T');
+        });
   }
 
   void getHighScores(Iterable<DynastyID> ids) {
     connectToLoginServer()
         .then(
-            (e) => e.send(['get-high-scores', ...ids.map((e) => e.toString())]))
+          (e) => e.send(['get-high-scores', ...ids.map((e) => e.toString())]),
+        )
         .then((message) {
-      if (message[0] == 'F') {
-        assert(message.length == 2);
-        openErrorDialog(
-            'Error: failed to get high scores for dynasties $ids - ${message[1]}',
-            context);
-      }
-      assert(message.length == 1);
-      assert(message[0] == 'T');
-    });
+          if (message[0] == 'F') {
+            assert(message.length == 2);
+            openErrorDialog(
+              'Error: failed to get high scores for dynasties $ids - ${message[1]}',
+              context,
+            );
+          }
+          assert(message.length == 1);
+          assert(message[0] == 'T');
+        });
   }
 
   Future<void> onLoginServerConnect() async {
@@ -202,7 +212,9 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         if (message[0] == 'F') {
           assert(message.length == 2);
           openErrorDialog(
-              'Error: failed to get constants - ${message[1]}', context);
+            'Error: failed to get constants - ${message[1]}',
+            context,
+          );
         }
         assert(message.length == 2);
         assert(message[0] == 'T');
@@ -234,8 +246,11 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     setState(() {
       loginState = LoginState.waitingOnLoginServer;
     });
-    List<String> message =
-        await loginServer!.send(['login', data.username!, data.password!]);
+    List<String> message = await loginServer!.send([
+      'login',
+      data.username!,
+      data.password!,
+    ]);
     if (message[0] == 'F') {
       if (message[1] == 'unrecognized credentials') {
         assert(message.length == 2);
@@ -244,10 +259,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         setState(() {
           loginState = LoginState.loginServerLoginError;
         });
-        openErrorDialog(
-          'Error when logging in: ${message[1]}',
-          context,
-        );
+        openErrorDialog('Error when logging in: ${message[1]}', context);
       }
     } else {
       assert(message[0] == 'T');
@@ -257,69 +269,82 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
 
   void connectToSystemServer(String server) {
     // TODO: debug connected > expected errors
-    connect(server).then((socket) async {
-      Map<int, String> stringTable = {};
-      Map<int, AssetClass> assetClassTable = {};
-      late NetworkConnection systemServer;
-      systemServer = NetworkConnection(
-        socket,
-        unrequestedMessageHandler: (message) {
-          openErrorDialog(
-            'Unexpected message from system server $server: $message',
-            context,
-          );
-        },
-        binaryMessageHandler: (data) {
-          if (mounted)
-            setState(() {
-              try {
-                for (StarIdentifier star in systemServersBySystemID.entries
-                    .toList()
-                    .where((e) => e.value == server)
-                    .map((e) => e.key)) {
-                  systemServersBySystemID.remove(star);
+    connect(server).then(
+      (socket) async {
+        Map<int, String> stringTable = {};
+        Map<int, AssetClass> assetClassTable = {};
+        late NetworkConnection systemServer;
+        systemServer = NetworkConnection(
+          socket,
+          unrequestedMessageHandler: (message) {
+            openErrorDialog(
+              'Unexpected message from system server $server: $message',
+              context,
+            );
+          },
+          binaryMessageHandler: (data) {
+            if (mounted)
+              setState(() {
+                try {
+                  for (StarIdentifier star
+                      in systemServersBySystemID.entries
+                          .toList()
+                          .where((e) => e.value == server)
+                          .map((e) => e.key)) {
+                    systemServersBySystemID.remove(star);
+                  }
+                  BinaryReader reader = BinaryReader(
+                    data,
+                    stringTable,
+                    assetClassTable,
+                    Endian.little,
+                  );
+                  Set<StarIdentifier> systems = parseSystemServerBinaryMessage(
+                    reader,
+                    this.data,
+                  );
+                  systemServersBySystemID.addEntries(
+                    systems.map((e) => MapEntry(e, systemServer)),
+                  );
+                } catch (e) {
+                  this.data.assets.clear();
+                  this.data.rootAssets.clear();
+                  openErrorDialog(e.toString(), context);
                 }
-                BinaryReader reader = BinaryReader(
-                    data, stringTable, assetClassTable, Endian.little);
-                Set<StarIdentifier> systems = parseSystemServerBinaryMessage(
-                  reader,
-                  this.data,
-                );
-                systemServersBySystemID
-                    .addEntries(systems.map((e) => MapEntry(e, systemServer)));
-              } catch (e) {
-                this.data.assets.clear();
-                this.data.rootAssets.clear();
-                openErrorDialog(e.toString(), context);
-              }
+              });
+          },
+          onReset: (NetworkConnection systemServer) {
+            stringTable.clear();
+            assetClassTable.clear();
+            onSystemServerReset(systemServer, server);
+          },
+          onError: (e, st) {
+            setState(() {
+              loginState = LoginState.connectingToSystemServers;
+              currentSystemServerConnectedCount--;
+              systemServersLoggedIn.remove(server);
             });
-        },
-        onReset: (NetworkConnection systemServer) {
-          stringTable.clear();
-          assetClassTable.clear();
-          onSystemServerReset(systemServer, server);
-        },
-        onError: (e, st) {
-          setState(() {
-            loginState = LoginState.connectingToSystemServers;
-            currentSystemServerConnectedCount--;
-            systemServersLoggedIn.remove(server);
-          });
-        },
-      );
-      systemServers[server] = systemServer;
-    }, onError: (e, st) {
-      setState(() {
-        loginState = LoginState.systemServerConnectionError;
-      });
-    });
+          },
+        );
+        systemServers[server] = systemServer;
+      },
+      onError: (e, st) {
+        setState(() {
+          loginState = LoginState.systemServerConnectionError;
+        });
+      },
+    );
   }
 
   Future<void> onSystemServerReset(
-      NetworkConnection systemServer, String serverName) async {
+    NetworkConnection systemServer,
+    String serverName,
+  ) async {
     currentSystemServerConnectedCount++;
-    assert(currentSystemServerConnectedCount <= expectedSystemServerCount,
-        'more servers connected than expected, expected $expectedSystemServerCount connected, got $currentSystemServerConnectedCount');
+    assert(
+      currentSystemServerConnectedCount <= expectedSystemServerCount,
+      'more servers connected than expected, expected $expectedSystemServerCount connected, got $currentSystemServerConnectedCount',
+    );
     if (currentSystemServerConnectedCount == expectedSystemServerCount) {
       setState(() {
         loginState = LoginState.waitingOnSystemServers;
@@ -344,8 +369,9 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         }
       } else {
         openErrorDialog(
-            'Error: failed system server $serverName login ($message)',
-            context);
+          'Error: failed system server $serverName login ($message)',
+          context,
+        );
         loginState = LoginState.systemServerLoginError;
       }
     } else {
@@ -377,33 +403,36 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     setState(() {
       loginState = LoginState.connectingToDynastyServer;
     });
-    connect(message[1]).then((socket) async {
-      if (mounted)
+    connect(message[1]).then(
+      (socket) async {
+        if (mounted)
+          setState(() {
+            dynastyServer?.close();
+            dynastyServer = NetworkConnection(
+              socket,
+              unrequestedMessageHandler: onDynastyServerMessage,
+              binaryMessageHandler: (data) {
+                Uint8List bytes = data.asUint8List();
+                openErrorDialog(
+                  'Unexpected binary message from dynasty server: ${bytes.length <= 10 ? bytes : '[${bytes.sublist(0, 10).join(', ')}, ...${bytes.length - 10} more]'}',
+                  context,
+                );
+              },
+              onReset: onDynastyServerReset,
+              onError: (e, st) {
+                setState(() {
+                  loginState = LoginState.connectingToDynastyServer;
+                });
+              },
+            );
+          });
+      },
+      onError: (e, st) {
         setState(() {
-          dynastyServer?.close();
-          dynastyServer = NetworkConnection(
-            socket,
-            unrequestedMessageHandler: onDynastyServerMessage,
-            binaryMessageHandler: (data) {
-              Uint8List bytes = data.asUint8List();
-              openErrorDialog(
-                'Unexpected binary message from dynasty server: ${bytes.length <= 10 ? bytes : '[${bytes.sublist(0, 10).join(', ')}, ...${bytes.length - 10} more]'}',
-                context,
-              );
-            },
-            onReset: onDynastyServerReset,
-            onError: (e, st) {
-              setState(() {
-                loginState = LoginState.connectingToDynastyServer;
-              });
-            },
-          );
+          loginState = LoginState.dynastyServerConnectionError;
         });
-    }, onError: (e, st) {
-      setState(() {
-        loginState = LoginState.dynastyServerConnectionError;
-      });
-    });
+      },
+    );
   }
 
   void onDynastyServerMessage(message) {
@@ -420,7 +449,9 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
   }
 
   void connectToSystemServers(
-      int systemServerCount, Iterable<String> systemServerURIs) {
+    int systemServerCount,
+    Iterable<String> systemServerURIs,
+  ) {
     for (NetworkConnection connection in systemServers.values) {
       connection.close();
     }
@@ -468,7 +499,9 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
         }
       } else {
         openErrorDialog(
-            'response from dynasty server login: ${message[1]}', context);
+          'response from dynasty server login: ${message[1]}',
+          context,
+        );
         setState(() {
           loginState = LoginState.dynastyServerLoginError;
         });
@@ -504,7 +537,7 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                   Text('Galaxy view'),
                   Text('System view'),
                   Text('System view (debug)'),
-                  Text('Planet view')
+                  Text('Planet view'),
                 ],
                 controller: tabController,
               )
@@ -526,41 +559,50 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
             ),
           if (data.rootAssets.length > 0)
             ListenableBuilder(
-                listenable: data,
-                builder: (context, child) {
-                  int messageCount = data.rootAssets.values.fold(
-                      0,
-                      (a, b) =>
-                          a +
-                          data
-                              .findFeature<MessageFeature>(b)
-                              .where((e) => data.assets[e]!.features
-                                  .any((e) => e is MessageFeature && !e.isRead))
-                              .length);
-                  return Badge.count(
-                    count: messageCount,
-                    isLabelVisible: messageCount > 0,
-                    child: IconButton(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => Dialog(
-                            child: Inbox(
-                              data: data,
-                              servers: systemServersBySystemID,
+              listenable: data,
+              builder: (context, child) {
+                int messageCount = data.rootAssets.values.fold(
+                  0,
+                  (a, b) =>
+                      a +
+                      data
+                          .findFeature<MessageBoardFeature>(b)
+                          .expand(
+                            (e) => data.assets[e]!.features
+                                .whereType<MessageBoardFeature>()
+                                .single
+                                .messages,
+                          )
+                          .where(
+                            (e) => data.assets[e]!.features.any(
+                              (e) => e is MessageFeature && !e.isRead,
                             ),
+                          )
+                          .length,
+                );
+                return Badge.count(
+                  count: messageCount,
+                  isLabelVisible: messageCount > 0,
+                  child: IconButton(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => Dialog(
+                          child: Inbox(
+                            data: data,
+                            servers: systemServersBySystemID,
                           ),
-                        );
-                      },
-                      icon: Icon(Icons.inbox),
-                    ),
-                  );
-                }),
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.inbox),
+                  ),
+                );
+              },
+            ),
           if (data.username != null && data.password != null)
             IconButton(
-              icon: Icon(
-                Icons.person,
-              ),
+              icon: Icon(Icons.person),
               onPressed: () => openAccountDialog(context),
             ),
           IconButton(
@@ -576,190 +618,213 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
                 }
               });
             },
-          )
+          ),
         ],
       ),
       body: loginServer?.reloading ?? false
-          ? Column(
-              children: [
-                Text('reconnecting to login server...'),
-                CircularProgressIndicator(),
-              ],
+          ? Center(
+              child: Column(
+                children: [
+                  Text('reconnecting to login server...'),
+                  CircularProgressIndicator(),
+                ],
+              ),
             )
           : switch (loginState) {
               LoginState.connectingToLoginServer => Center(
-                  child: Column(
-                    children: [
-                      Text('connecting to login server...'),
-                      CircularProgressIndicator(),
-                    ],
-                  ),
+                child: Column(
+                  children: [
+                    Text('connecting to login server...'),
+                    CircularProgressIndicator(),
+                  ],
                 ),
+              ),
               LoginState.waitingOnLoginServer => Center(
-                  child: Column(
-                    children: [
-                      Text(
-                          'waiting for login server to respond to login message...'),
-                      CircularProgressIndicator(),
-                    ],
-                  ),
-                ),
-              LoginState.loginServerConnectionError => Center(
-                  child: Text('Failed to connect to login server.'),
-                ),
-              LoginState.loginServerLoginError => Center(
-                  child: Text('Login server had error when logging in.'),
-                ),
-              LoginState.connectingToDynastyServer => Center(
-                  child: Column(
-                    children: [
-                      Text('connecting to dynasty server...'),
-                      CircularProgressIndicator(),
-                    ],
-                  ),
-                ),
-              LoginState.waitingOnDynastyServer => Center(
-                  child: Column(
-                    children: [
-                      Text(
-                        'waiting for dynasty server to respond to login message...',
-                      ),
-                      CircularProgressIndicator(),
-                    ],
-                  ),
-                ),
-              LoginState.dynastyServerConnectionError => Center(
-                  child: Text('Failed to connect to dynasty server.'),
-                ),
-              LoginState.dynastyServerLoginError => Center(
-                  child: Text('Dynasty server had error when logging in.'),
-                ),
-              LoginState.connectingToSystemServers => Center(
-                  child: Column(
-                    children: [
-                      Text('connecting to system server...'),
-                      CircularProgressIndicator(),
-                    ],
-                  ),
-                ),
-              LoginState.waitingOnSystemServers => Center(
-                  child: Column(
-                    children: [
-                      Text(
-                          'waiting for system server to respond to login message...'),
-                      CircularProgressIndicator(),
-                    ],
-                  ),
-                ),
-              LoginState.systemServerConnectionError => Center(
-                  child: Text('Failed to connect to system server.'),
-                ),
-              LoginState.systemServerLoginError => Center(
-                  child: Text('System server had error when logging in.'),
-                ),
-              LoginState.noSystemServers => Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                          'You have no visibility into anything. You should create another account.'),
-                      Text(
-                          'This sometimes means the system server is not running or broken.'),
-                      OutlinedButton(
-                          onPressed: () => openAccountDialog(context),
-                          child: Text('Change username or password')),
-                      OutlinedButton(onPressed: logout, child: Text('Logout'))
-                    ],
-                  ),
-                ),
-              LoginState.notLoggedIn => loginServer == null
-                  ? Center(
-                      child: Column(
-                        children: [
-                          Text('connecting to login server...'),
-                          CircularProgressIndicator(),
-                        ],
-                      ),
-                    )
-                  : Center(
-                      child: LoginWidget(
-                        loginServer: loginServer!,
-                        data: data,
-                        parseSuccessfulLoginResponse:
-                            parseSuccessfulLoginResponse,
-                      ),
+                child: Column(
+                  children: [
+                    Text(
+                      'waiting for login server to respond to login message...',
                     ),
-              LoginState.ready => ListenableBuilder(
-                  listenable: data,
-                  builder: (context, child) {
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: TabBarView(
-                            controller: tabController,
-                            children: [
-                              GalaxyView(
-                                data: data,
-                                dynastyServer: dynastyServer,
-                              ),
-                              systemview.SystemSelector(data: data),
-                              debugsystemview.SystemSelector(data: data),
-                              planetview.SystemSelector(
-                                data: data,
-                                servers: systemServersBySystemID,
-                              ),
-                            ],
-                          ),
-                        ),
-                        VerticalDivider(),
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                    CircularProgressIndicator(),
+                  ],
+                ),
+              ),
+              LoginState.loginServerConnectionError => Center(
+                child: Text('Failed to connect to login server.'),
+              ),
+              LoginState.loginServerLoginError => Center(
+                child: Text('Login server had error when logging in.'),
+              ),
+              LoginState.connectingToDynastyServer => Center(
+                child: Column(
+                  children: [
+                    Text('connecting to dynasty server...'),
+                    CircularProgressIndicator(),
+                  ],
+                ),
+              ),
+              LoginState.waitingOnDynastyServer => Center(
+                child: Column(
+                  children: [
+                    Text(
+                      'waiting for dynasty server to respond to login message...',
+                    ),
+                    CircularProgressIndicator(),
+                  ],
+                ),
+              ),
+              LoginState.dynastyServerConnectionError => Center(
+                child: Text('Failed to connect to dynasty server.'),
+              ),
+              LoginState.dynastyServerLoginError => Center(
+                child: Text('Dynasty server had error when logging in.'),
+              ),
+              LoginState.connectingToSystemServers => Center(
+                child: Column(
+                  children: [
+                    Text('connecting to system server...'),
+                    CircularProgressIndicator(),
+                  ],
+                ),
+              ),
+              LoginState.waitingOnSystemServers => Center(
+                child: Column(
+                  children: [
+                    Text(
+                      'waiting for system server to respond to login message...',
+                    ),
+                    CircularProgressIndicator(),
+                  ],
+                ),
+              ),
+              LoginState.systemServerConnectionError => Center(
+                child: Text('Failed to connect to system server.'),
+              ),
+              LoginState.systemServerLoginError => Center(
+                child: Text('System server had error when logging in.'),
+              ),
+              LoginState.noSystemServers => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'You have no visibility into anything. You should create another account.',
+                    ),
+                    Text(
+                      'This sometimes means the system server is not running or broken.',
+                    ),
+                    OutlinedButton(
+                      onPressed: () => openAccountDialog(context),
+                      child: Text('Change username or password'),
+                    ),
+                    OutlinedButton(onPressed: logout, child: Text('Logout')),
+                  ],
+                ),
+              ),
+              LoginState.notLoggedIn =>
+                loginServer == null
+                    ? Center(
+                        child: Column(
                           children: [
-                            OutlinedButton(child: Text('Refresh'), onPressed: () {getHighScores([data.dynastyID!]);},),
-                            Text('LEADERBOARD'),
-                            ...(data.scores.entries.toList()
-                                  ..sort((a, b) => -a.value.scores.last.score
-                                      .compareTo(b.value.scores.last.score)))
-                                .map((e) => Text.rich(TextSpan(children: [
+                            Text('connecting to login server...'),
+                            CircularProgressIndicator(),
+                          ],
+                        ),
+                      )
+                    : Center(
+                        child: LoginWidget(
+                          loginServer: loginServer!,
+                          data: data,
+                          parseSuccessfulLoginResponse:
+                              parseSuccessfulLoginResponse,
+                        ),
+                      ),
+              LoginState.ready => ListenableBuilder(
+                listenable: data,
+                builder: (context, child) {
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: TabBarView(
+                          controller: tabController,
+                          children: [
+                            GalaxyView(
+                              data: data,
+                              dynastyServer: dynastyServer,
+                            ),
+                            systemview.SystemSelector(data: data),
+                            debugsystemview.SystemSelector(data: data),
+                            planetview.SystemSelector(
+                              data: data,
+                              servers: systemServersBySystemID,
+                            ),
+                          ],
+                        ),
+                      ),
+                      VerticalDivider(),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          OutlinedButton(
+                            child: Text('Refresh'),
+                            onPressed: () {
+                              getHighScores([data.dynastyID!]);
+                            },
+                          ),
+                          Text('LEADERBOARD'),
+                          ...(data.scores.entries.toList()..sort(
+                                (a, b) => -a.value.scores.last.score.compareTo(
+                                  b.value.scores.last.score,
+                                ),
+                              ))
+                              .map(
+                                (e) => Text.rich(
+                                  TextSpan(
+                                    children: [
                                       TextSpan(
                                         text:
                                             '${e.key == data.dynastyID ? 'You' : 'Dynasty'}',
                                         style: TextStyle(
-                                            color: getColorForDynastyID(e.key)),
+                                          color: getColorForDynastyID(e.key),
+                                        ),
                                       ),
                                       TextSpan(
                                         text:
                                             '${e.value.scores.last.score} points',
                                       ),
-                                    ])))
-                          ],
-                        ),
-                      ],
-                    );
-                  },
-                ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              ),
             },
     );
   }
 
   void openAccountDialog(BuildContext context) {
     connectToLoginServer().then(
-      (server) => showDialog(
-        context: context,
-        builder: (context) => Dialog(
-          child: AccountWidget(
-            data: data,
-            loginServer: server,
-            logout: logout,
-            isDarkMode: isDarkMode,
-          ),
-        ),
-      ).then((value) {
-        if (!cannotCloseLoginServer.contains(loginState)) {
-          loginServer?.close();
-          loginServer = null;
-        }
-      }),
+      (server) =>
+          showDialog(
+            context: context,
+            builder: (context) => Dialog(
+              child: AccountWidget(
+                data: data,
+                loginServer: server,
+                logout: logout,
+                isDarkMode: isDarkMode,
+              ),
+            ),
+          ).then((value) {
+            if (!cannotCloseLoginServer.contains(loginState)) {
+              loginServer?.close();
+              loginServer = null;
+            }
+          }),
       onError: (e, st) {
         openErrorDialog('Could not connect to login server.', context);
       },
@@ -779,15 +844,18 @@ class _ScaffoldWidgetState extends State<ScaffoldWidget>
     systemServers.clear();
     systemServersLoggedIn.clear();
     systemServersBySystemID.clear();
-    connectToLoginServer().then((e) {
-      setState(() {
-        loginState = LoginState.notLoggedIn;
-      });
-    }, onError: (e, st) {
-      setState(() {
-        loginState = LoginState.loginServerConnectionError;
-      });
-    });
+    connectToLoginServer().then(
+      (e) {
+        setState(() {
+          loginState = LoginState.notLoggedIn;
+        });
+      },
+      onError: (e, st) {
+        setState(() {
+          loginState = LoginState.loginServerConnectionError;
+        });
+      },
+    );
   }
 
   Future<NetworkConnection> connectToLoginServer() {
@@ -841,7 +909,9 @@ class _DebugCommandSenderWidgetState extends State<DebugCommandSenderWidget> {
   void sendMessage() {
     if (!assetID.text.startsWith('A')) {
       openErrorDialog(
-          'Failure parsing asset ID: Asset IDs must start with A.', context);
+        'Failure parsing asset ID: Asset IDs must start with A.',
+        context,
+      );
       return;
     }
     int assetIDV;
@@ -855,19 +925,21 @@ class _DebugCommandSenderWidgetState extends State<DebugCommandSenderWidget> {
     List<String> args = semicolonSeparatedArgs.text.isEmpty
         ? []
         : semicolonSeparatedArgs.text.split(';');
-    widget.servers[systemID]!.send([
-      'play',
-      systemID!.value.toString(),
-      assetIDV.toString(),
-      commandV,
-      ...args,
-    ]).then((List<String> response) {
-      showDialog(
-          context: context,
-          builder: (context) => Dialog(
-                child: SelectableText('response: $response'),
-              ));
-    });
+    widget.servers[systemID]!
+        .send([
+          'play',
+          systemID!.value.toString(),
+          assetIDV.toString(),
+          commandV,
+          ...args,
+        ])
+        .then((List<String> response) {
+          showDialog(
+            context: context,
+            builder: (context) =>
+                Dialog(child: SelectableText('response: $response')),
+          );
+        });
   }
 
   @override
@@ -927,10 +999,7 @@ class _DebugCommandSenderWidgetState extends State<DebugCommandSenderWidget> {
             controller: semicolonSeparatedArgs,
           ),
         ),
-        OutlinedButton(
-          onPressed: sendMessage,
-          child: Text('Send'),
-        ),
+        OutlinedButton(onPressed: sendMessage, child: Text('Send')),
       ],
     );
   }

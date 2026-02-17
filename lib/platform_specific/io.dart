@@ -45,7 +45,7 @@ class WebSocketWrapper {
     _doneReloading = Completer();
     reloading = true;
     do {
-      // TODO: make sure this works
+      // TODO: make sure this works, i've seen it take a while sometimes
       try {
         socket = await WebSocket.connect(name);
         socket.pingInterval = pingInterval;

@@ -193,6 +193,8 @@ AssetID? findAsset(DataStructure data, AssetClassID assetClassID, int skip) {
 // rally point: 11 (to build silicon table)
 // mining hole w/ more help: 5001 (mining)
 
+// TODO: update this
+
 void mainLoop(DataStructure data, NetworkConnection systemServer,
     Map<int, AssetClass> assetClassTable) {
   AssetID rootAsset = data.rootAssets.values.single;
@@ -200,7 +202,7 @@ void mainLoop(DataStructure data, NetworkConnection systemServer,
   Set<MessageFeature> messages = messageIDs.map((e) {
     return data.assets[e]!.features.whereType<MessageFeature>().first;
   }).toSet();
-  if (messages.any((e) => e.from == 'Passengers')) {
+  if (messages.any((e) => e.sender == 'Passengers')) {
     AssetID spaceship = findAsset(data, -3, 0)!;
     AssetID grid = findAsset(data, -201, 0)!;
     GridFeature gridFeature =
@@ -208,7 +210,7 @@ void mainLoop(DataStructure data, NetworkConnection systemServer,
     if (messages.any((e) => e.subject == 'Communicating with our creator')) {
       setTopic(systemServer, spaceship, 'Mining');
     } else if (messages.any((e) =>
-        e.subject == 'Congratulations' && e.from == 'Director of Research')) {
+        e.subject == 'Congratulations' && e.sender == 'Director of Research')) {
       setTopic(systemServer, spaceship, 'Philosophy');
     }
     AssetID? church = findAsset(data, 1, 0);

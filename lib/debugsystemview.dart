@@ -38,15 +38,19 @@ class _SystemSelectorState extends State<SystemSelector> {
                       selectedSystem = system;
                     }),
                     child: Text(system.displayName),
-                  )
+                  ),
             ],
           )
         : SystemView(data: widget.data, system: selectedSystem!);
   }
 }
 
-Widget renderFeature(Feature feature, DataStructure data, StarIdentifier system,
-    bool collapseOrbits) {
+Widget renderFeature(
+  Feature feature,
+  DataStructure data,
+  StarIdentifier system,
+  bool collapseOrbits,
+) {
   switch (feature) {
     case OrbitFeature():
       return OrbitFeatureWidget(
@@ -61,179 +65,81 @@ Widget renderFeature(Feature feature, DataStructure data, StarIdentifier system,
         collapseOrbits: collapseOrbits,
       );
     case StructureFeature():
-      return StructureFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return StructureFeatureWidget(feature: feature, data: data);
     case StarFeature():
-      return StarFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return StarFeatureWidget(feature: feature, data: data);
     case SpaceSensorFeature():
-      return SpaceSensorFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return SpaceSensorFeatureWidget(feature: feature, data: data);
     case SpaceSensorStatusFeature():
-      return SpaceSensorStatusFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return SpaceSensorStatusFeatureWidget(feature: feature, data: data);
     case PlanetFeature():
-      return PlanetFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return PlanetFeatureWidget(feature: feature, data: data);
     case PlotControlFeature():
-      return PlotControlFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return PlotControlFeatureWidget(feature: feature, data: data);
     case SurfaceFeature():
-      return SurfaceFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return SurfaceFeatureWidget(feature: feature, data: data);
     case GridFeature():
-      return GridFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return GridFeatureWidget(feature: feature, data: data);
     case PopulationFeature():
-      return PopulationFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return PopulationFeatureWidget(feature: feature, data: data);
     case MessageBoardFeature():
-      return MessageBoardFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return MessageBoardFeatureWidget(feature: feature, data: data);
     case MessageFeature():
-      return MessageFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return MessageFeatureWidget(feature: feature, data: data);
     case RubblePileFeature():
-      return RubblePileFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return RubblePileFeatureWidget(feature: feature, data: data);
     case ProxyFeature():
-      return ProxyFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return ProxyFeatureWidget(feature: feature, data: data);
     case KnowledgeFeature():
-      return KnowledgeFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return KnowledgeFeatureWidget(feature: feature, data: data);
     case ResearchFeature():
-      return ResearchFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return ResearchFeatureWidget(feature: feature, data: data);
     case MiningFeature():
-      return MiningFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return MiningFeatureWidget(feature: feature, data: data);
     case OrePileFeature():
-      return OrePileFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return OrePileFeatureWidget(feature: feature, data: data);
     case RegionFeature():
-      return RegionFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return RegionFeatureWidget(feature: feature, data: data);
     case RefiningFeature():
-      return RefiningFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return RefiningFeatureWidget(feature: feature, data: data);
     case MaterialPileFeature():
-      return MaterialPileFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return MaterialPileFeatureWidget(feature: feature, data: data);
     case MaterialStackFeature():
-      return MaterialStackFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return MaterialStackFeatureWidget(feature: feature, data: data);
     case GridSensorFeature():
-      return GridSensorFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return GridSensorFeatureWidget(feature: feature, data: data);
     case GridSensorStatusFeature():
-      return GridSensorStatusFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return GridSensorStatusFeatureWidget(feature: feature, data: data);
     case BuilderFeature():
-      return BuilderFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return BuilderFeatureWidget(feature: feature, data: data);
     case InternalSensorFeature():
-      return InternalSensorFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return InternalSensorFeatureWidget(feature: feature, data: data);
     case InternalSensorStatusFeature():
-      return InternalSensorStatusFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return InternalSensorStatusFeatureWidget(feature: feature, data: data);
     case OnOffFeature():
-      return OnOffFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return OnOffFeatureWidget(feature: feature, data: data);
     case StaffingFeature():
-      return StaffingFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return StaffingFeatureWidget(feature: feature, data: data);
     case AssetPileFeature():
-      return AssetPileFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return AssetPileFeatureWidget(feature: feature, data: data);
     case FactoryFeature():
-      return FactoryFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return FactoryFeatureWidget(feature: feature, data: data);
     case EmptySampleFeature():
-      return EmptySampleFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return EmptySampleFeatureWidget(feature: feature, data: data);
     case MaterialSampleFeature():
-      return MaterialSampleFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return MaterialSampleFeatureWidget(feature: feature, data: data);
     case AssetSampleFeature():
-      return AssetSampleFeatureWidget(
-        feature: feature,
-        data: data,
-      );
+      return AssetSampleFeatureWidget(feature: feature, data: data);
   }
 }
 
 class SolarSystemFeatureWidget extends StatelessWidget {
-  const SolarSystemFeatureWidget(
-      {super.key,
-      required this.feature,
-      required this.data,
-      required this.collapseOrbits});
+  const SolarSystemFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+    required this.collapseOrbits,
+  });
   final SolarSystemFeature feature;
   final DataStructure data;
   final bool collapseOrbits;
@@ -259,19 +165,13 @@ class SolarSystemFeatureWidget extends StatelessWidget {
 }
 
 class Indent extends StatelessWidget {
-  const Indent({
-    super.key,
-    required this.child,
-  });
+  const Indent({super.key, required this.child});
 
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(left: 16),
-      child: child,
-    );
+    return Padding(padding: EdgeInsets.only(left: 16), child: child);
   }
 }
 
@@ -295,11 +195,7 @@ class SurfaceFeatureWidget extends StatelessWidget {
             child: Column(
               children: [
                 Text('At ${e.key}:'),
-                AssetWidget(
-                  asset: e.value,
-                  data: data,
-                  collapseOrbits: false,
-                ),
+                AssetWidget(asset: e.value, data: data, collapseOrbits: false),
               ],
             ),
           ),
@@ -338,7 +234,7 @@ class GridFeatureWidget extends StatelessWidget {
                       data: data,
                       collapseOrbits: false,
                     ),
-                    Text('(${e.x}, ${e.y}), size ${e.size}x${e.size}')
+                    Text('(${e.x}, ${e.y}), size ${e.size}x${e.size}'),
                   ],
                 ),
               ),
@@ -351,14 +247,12 @@ class GridFeatureWidget extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AssetClassWidget(
-                  assetClass: e.assetClass,
-                ),
-                Text('id: ${e.assetClass.id}, size in cells: ${e.size}')
+                AssetClassWidget(assetClass: e.assetClass),
+                Text('id: ${e.assetClass.id}, size in cells: ${e.size}'),
               ],
             ),
           ),
-        )
+        ),
       ],
     );
   }
@@ -381,11 +275,7 @@ class MessageBoardFeatureWidget extends StatelessWidget {
         Text('Messages'),
         ...feature.messages.map(
           (e) => Indent(
-            child: AssetWidget(
-              asset: e,
-              data: data,
-              collapseOrbits: false,
-            ),
+            child: AssetWidget(asset: e, data: data, collapseOrbits: false),
           ),
         ),
       ],
@@ -408,10 +298,9 @@ class MessageFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-            '${feature.timestamp.displayName}: Message from ${feature.from} in ${feature.source.displayName} (${feature.isRead ? 'read' : 'unread'}): ${feature.subject}'),
-        Indent(
-          child: Text(feature.text),
+          '${feature.timestamp.displayName}: Message from ${feature.sender ?? '<anonymous>'} in ${feature.source.displayName} (${feature.isRead ? 'read' : 'unread'}): ${feature.subject}',
         ),
+        Indent(child: Text(feature.text)),
       ],
     );
   }
@@ -473,9 +362,10 @@ class RubblePileFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Pile of rubble'),
-        Text('- ${feature.remainingUnitCount.displayName} unknown units'),
-        ...feature.materials.entries
-            .map((e) => Text('- ${e.value.displayName} units of ${e.key}'))
+        Text('- ${feature.remainingMass} unknown units'),
+        ...feature.materials.entries.map(
+          (e) => Text('- ${e.value.displayName} units of ${e.key}'),
+        ),
       ],
     );
   }
@@ -499,6 +389,8 @@ class ResearchFeatureWidget extends StatelessWidget {
         Text(
           'Researching "${feature.topic}" (disabledReasoning: ${feature.disabledReasoning}, progress: ${feature.progress})',
         ),
+        Text('Possible topics:'),
+        ...feature.topics.map((e) => Indent(child: Text(e))),
       ],
     );
   }
@@ -542,25 +434,21 @@ class KnowledgeFeatureWidget extends StatelessWidget {
               ],
             ),
           ),
-          Indent(
-            child: Text('${material.value.description}'),
-          ),
-          Indent(
-            child: Text('${material.value.isFluid ? 'fluid' : 'solid'}'),
-          ),
+          Indent(child: Text('${material.value.description}')),
+          Indent(child: Text('${material.value.isFluid ? 'fluid' : 'solid'}')),
           Indent(
             child: Text('${material.value.isComponent ? 'component' : 'bulk'}'),
           ),
           Indent(
             child: Text(
-                '${material.value.isPressurized ? 'pressurized' : 'not pressurized'}'),
+              '${material.value.isPressurized ? 'pressurized' : 'not pressurized'}',
+            ),
           ),
-          Indent(
-            child: Text('mass per unit: ${material.value.massPerUnit}kg'),
-          ),
+          Indent(child: Text('mass per unit: ${material.value.massPerUnit}kg')),
           Indent(
             child: Text(
-                'mass per cubic meter: ${material.value.massPerCubicMeter}kg'),
+              'mass per cubic meter: ${material.value.massPerCubicMeter}kg',
+            ),
           ),
         ],
       ],
@@ -569,10 +457,7 @@ class KnowledgeFeatureWidget extends StatelessWidget {
 }
 
 class AssetClassWidget extends StatelessWidget {
-  const AssetClassWidget({
-    super.key,
-    required this.assetClass,
-  });
+  const AssetClassWidget({super.key, required this.assetClass});
 
   final AssetClass assetClass;
 
@@ -586,16 +471,12 @@ class AssetClassWidget extends StatelessWidget {
           children: [
             Container(
               color: Colors.grey,
-              child: ISDIcon(
-                width: 32,
-                height: 32,
-                icon: assetClass.icon,
-              ),
+              child: ISDIcon(width: 32, height: 32, icon: assetClass.icon),
             ),
             Text('${assetClass.name}'),
           ],
         ),
-        Text('${assetClass.description}')
+        Text('${assetClass.description}'),
       ],
     );
   }
@@ -645,9 +526,11 @@ class StructureFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-            'Health (total at ${calendar.dateName(feature.time0)} ${calendar.timeName(feature.time0)}: ${feature.hp0}/${feature.minHP}/${feature.maxHP}, increasing by ${feature.hpFlowRate}/ms)'),
+          'Health (total at ${calendar.dateName(feature.time0)} ${calendar.timeName(feature.time0)}: ${feature.hp0.displayName}/${feature.minHP.displayName}/${feature.maxHP.displayName}, increasing by ${feature.hpFlowRate}/ms)',
+        ),
         Text(
-            'Materials (total at ${calendar.dateName(feature.time0)} ${calendar.timeName(feature.time0)}: ${feature.quantity0}/${feature.minHP}/${feature.maxHP}, increasing by ${feature.quantityFlowRate}/ms)'),
+          'Materials (total at ${calendar.dateName(feature.time0)} ${calendar.timeName(feature.time0)}: ${feature.quantity0.displayName}/${feature.minHP.displayName}/${feature.maxHP.displayName}, increasing by ${feature.quantityFlowRate}/ms)',
+        ),
         ...feature.materials.map(
           (e) => Text(
             '  ${e.materialID == null ? 'unknown material' : 'M${e.materialID!.toRadixString(16).padLeft(8, '0')}'} (${e.materialDescription}) - ${e.componentName == null ? '' : '${e.componentName} '}(max ${e.requiredQuantity})',
@@ -675,9 +558,7 @@ class PlanetFeatureWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Planet seed: ${feature.seed}'),
-      ],
+      children: [Text('Planet seed: ${feature.seed}')],
     );
   }
 }
@@ -696,9 +577,7 @@ class PlotControlFeatureWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (feature.isColonyShip) Text('This is the colony ship.'),
-      ],
+      children: [if (feature.isColonyShip) Text('This is the colony ship.')],
     );
   }
 }
@@ -717,9 +596,7 @@ class StarFeatureWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SelectableText('ID: ${feature.starID.displayName}'),
-      ],
+      children: [SelectableText('ID: ${feature.starID.displayName}')],
     );
   }
 }
@@ -767,10 +644,18 @@ class SpaceSensorStatusFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '  Enclosing orbit: ${nearestOrbit == null ? feature.nearestOrbit == null ? 'no orbit reached' : '<nonexistent asset>' : nearestOrbit.name ?? 'an unnamed ${nearestOrbit.assetClass.name}'}',
+          '  Enclosing orbit: ${nearestOrbit == null
+              ? feature.nearestOrbit == null
+                    ? 'no orbit reached'
+                    : '<nonexistent asset>'
+              : nearestOrbit.name ?? 'an unnamed ${nearestOrbit.assetClass.name}'}',
         ),
         Text(
-          '  Top asset reached: ${topAsset == null ? feature.topAsset == null ? 'no top asset' : '<nonexistent asset>' : topAsset.name ?? 'an unnamed ${topAsset.assetClass.name}'}',
+          '  Top asset reached: ${topAsset == null
+              ? feature.topAsset == null
+                    ? 'no top asset'
+                    : '<nonexistent asset>'
+              : topAsset.name ?? 'an unnamed ${topAsset.assetClass.name}'}',
         ),
         Text('  Count of reached assets: ${feature.count}'),
       ],
@@ -816,7 +701,8 @@ class GridSensorStatusFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-            '  Top asset reached: ${topAsset == null ? '<nonexistent asset>' : topAsset.name ?? 'an unnamed ${topAsset.assetClass.name}'}'),
+          '  Top asset reached: ${topAsset == null ? '<nonexistent asset>' : topAsset.name ?? 'an unnamed ${topAsset.assetClass.name}'}',
+        ),
         Text('  Count of reached assets: ${feature.count}'),
       ],
     );
@@ -839,13 +725,14 @@ class PopulationFeatureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-            '${feature.population} people (${feature.jobs} with jobs, disabledReasoning: ${feature.disabledReasoning}) out of ${feature.maxPopulation} max)'),
+          '${feature.population} people (${feature.jobs} with jobs, disabledReasoning: ${feature.disabledReasoning}) out of ${feature.maxPopulation} max)',
+        ),
         Text('Gossip:'),
         ...feature.gossip.map(
           (e) => Text(
             '${e.message}: source ${e.source?.displayName ?? 'unknown'}, impactAnchor ${calendar.dateName(e.impactAnchor)} ${calendar.timeName(e.impactAnchor)} (${e.impactAnchor.displayName}), impact ${e.impact}, duration ${calendar.durationName(e.duration)}, peopleAnchor ${calendar.dateName(e.peopleAnchor)} ${calendar.timeName(e.peopleAnchor)} (${e.peopleAnchor.displayName}), people ${e.people}, spreadrate ${e.spreadrate}',
           ),
-        )
+        ),
       ],
     );
   }
@@ -890,9 +777,7 @@ class OrePileFeatureWidget extends StatelessWidget {
         Text(
           'Mass of pile last update (${calendar.dateName(feature.time0)} ${calendar.timeName(feature.time0)}): ${feature.mass0} kg (increasing by ${feature.massFlowRate} kg/ms)',
         ),
-        Text(
-          'Capacity: ${feature.capacity} kg',
-        ),
+        Text('Capacity: ${feature.capacity} kg'),
         Text(
           'Known materials: ${feature.materials.map((e) => 'M${e.toRadixString(16).padLeft(8, '0')}').join(', ')}',
         ),
@@ -962,9 +847,7 @@ class MaterialPileFeatureWidget extends StatelessWidget {
         Text(
           'Mass of pile last update (${calendar.dateName(feature.time0)} ${calendar.timeName(feature.time0)}): ${feature.mass0} kg (increasing by ${feature.massFlowRate} kg/ms)',
         ),
-        Text(
-          'Capacity: ${feature.capacity} kg',
-        ),
+        Text('Capacity: ${feature.capacity} kg'),
         Text(
           'Material: ${feature.material == null ? 'unknown material' : 'M${feature.material!.toRadixString(16).padLeft(8, '0')}'} (${feature.materialName})',
         ),
@@ -990,9 +873,7 @@ class MaterialStackFeatureWidget extends StatelessWidget {
         Text(
           'Quantity of stack last update (${calendar.dateName(feature.time0)} ${calendar.timeName(feature.time0)}): ${feature.quantity0} kg (increasing by ${feature.quantityFlowRate} per ms)',
         ),
-        Text(
-          'Capacity: ${feature.capacity} kg',
-        ),
+        Text('Capacity: ${feature.capacity} kg'),
         Text(
           'Material: ${feature.material == null ? 'unknown material' : 'M${feature.material!.toRadixString(16).padLeft(8, '0')}'} (${feature.materialName})',
         ),
@@ -1020,10 +901,8 @@ class BuilderFeatureWidget extends StatelessWidget {
         ),
         Text('Currently building:'),
         ...feature.structures.map(
-          (e) => Indent(
-            child: Text('${data.getAssetIdentifyingName(e)}'),
-          ),
-        )
+          (e) => Indent(child: Text('${data.getAssetIdentifyingName(e)}')),
+        ),
       ],
     );
   }
@@ -1064,13 +943,7 @@ class InternalSensorStatusFeatureWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Indent(
-      child: Column(
-        children: [
-          Text(
-            'Can see ${feature.count} assets.',
-          ),
-        ],
-      ),
+      child: Column(children: [Text('Can see ${feature.count} assets.')]),
     );
   }
 }
@@ -1087,13 +960,7 @@ class OnOffFeatureWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          'Enabled: ${feature.enabled}',
-        ),
-      ],
-    );
+    return Column(children: [Text('Enabled: ${feature.enabled}')]);
   }
 }
 
@@ -1109,13 +976,7 @@ class StaffingFeatureWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          'Staff: ${feature.staff}/${feature.jobs}',
-        ),
-      ],
-    );
+    return Column(children: [Text('Staff: ${feature.staff}/${feature.jobs}')]);
   }
 }
 
@@ -1134,15 +995,9 @@ class AssetPileFeatureWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Pile of assets',
-        ),
+        Text('Pile of assets'),
         ...feature.assets.map(
-          (e) => AssetWidget(
-            asset: e,
-            data: data,
-            collapseOrbits: false,
-          ),
+          (e) => AssetWidget(asset: e, data: data, collapseOrbits: false),
         ),
       ],
     );
@@ -1185,7 +1040,9 @@ class EmptySampleFeatureWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('This is an empty research sample container with diameter ${feature.size} meters'),
+        Text(
+          'This is an empty research sample container with diameter ${feature.size} meters',
+        ),
       ],
     );
   }
@@ -1205,7 +1062,9 @@ class MaterialSampleFeatureWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('This is a research sample container with diameter ${feature.size} meters, holding ${feature.isOre ? 'ore' : 'refined material'} ${feature.sample == null ? 'an unknown material' : 'M${feature.sample!.toRadixString(16).padLeft(8,'0')}'} with mass ${feature.mass}'),
+        Text(
+          'This is a research sample container with diameter ${feature.size} meters, holding ${feature.isOre ? 'ore' : 'refined material'} ${feature.sample == null ? 'an unknown material' : 'M${feature.sample!.toRadixString(16).padLeft(8, '0')}'} with mass ${feature.mass} kg.',
+        ),
       ],
     );
   }
@@ -1225,7 +1084,9 @@ class AssetSampleFeatureWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('This is a research sample container with diameter ${feature.size} meters, holding ${feature.sample.displayName} with mass ${feature.mass} (increasing by ${feature.massFlowRate})'),
+        Text(
+          'This is a research sample container with diameter ${feature.size} meters, holding ${feature.sample.displayName} with mass ${feature.mass} kg (increasing by ${feature.massFlowRate} kg/ms).',
+        ),
       ],
     );
   }
@@ -1259,22 +1120,19 @@ class AssetWidget extends StatelessWidget {
             collapseOrbits: collapseOrbits,
           ),
           if (orbit.orbitingChildren.isNotEmpty) ...[
-            Indent(
-              child: Text(
-                'Orbiting',
-              ),
-            ),
+            Indent(child: Text('Orbiting')),
             ...orbit.orbitingChildren.map(
               (e) => Indent(
                 child: Indent(
                   child: AssetWidget(
-                      asset: e.child,
-                      data: data,
-                      collapseOrbits: collapseOrbits),
+                    asset: e.child,
+                    data: data,
+                    collapseOrbits: collapseOrbits,
+                  ),
                 ),
               ),
             ),
-          ]
+          ],
         ],
       );
     } else {
@@ -1297,22 +1155,24 @@ class AssetWidget extends StatelessWidget {
                           data.getAssetIdentifyingName(this.asset),
                           style: TextTheme.of(context).headlineSmall,
                         ),
-                        SelectableText(
-                          'Asset ID: ${this.asset.displayName}',
-                        ),
+                        SelectableText('Asset ID: ${this.asset.displayName}'),
                         if (asset.name != null)
                           Text(
                             '${asset.assetClass.name}${asset.assetClass.id == null ? '' : ' (class ID ${asset.assetClass.id})'}',
                           )
                         else if (asset.assetClass.id != null)
-                          Text(
-                            'Class ID ${asset.assetClass.id}',
-                          ),
+                          Text('Class ID ${asset.assetClass.id}'),
                         Text(asset.assetClass.description),
                         Text(
-                            'Owner: ${asset.owner == 0 ? 'nobody' : asset.owner == data.dynastyID ? 'you' : asset.owner}'),
+                          'Owner: ${asset.owner == 0
+                              ? 'nobody'
+                              : asset.owner == data.dynastyID
+                              ? 'you'
+                              : asset.owner}',
+                        ),
                         SelectableText(
-                            'Mass last update (${calendar.dateName(asset.time0)} ${calendar.timeName(asset.time0)}): ${asset.mass0} kilograms (increasing by ${asset.massFlowRate} kilograms per millisecond)'),
+                          'Mass last update (${calendar.dateName(asset.time0)} ${calendar.timeName(asset.time0)}): ${asset.mass0} kilograms (increasing by ${asset.massFlowRate} kilograms per millisecond)',
+                        ),
                         SelectableText('Diameter: ${asset.size} meters'),
                       ],
                     ),
@@ -1324,7 +1184,9 @@ class AssetWidget extends StatelessWidget {
               decoration: BoxDecoration(
                 border: asset.owner == data.dynastyID
                     ? Border.all(
-                        color: Theme.of(context).colorScheme.primary, width: 5)
+                        color: Theme.of(context).colorScheme.primary,
+                        width: 5,
+                      )
                     : null,
               ),
               child: Row(
@@ -1345,10 +1207,8 @@ class AssetWidget extends StatelessWidget {
                     '${asset.name ?? asset.assetClass.name}',
                     style: asset.owner == null
                         ? DefaultTextStyle.of(context).style
-                        : TextStyle(
-                            color: getColorForDynastyID(asset.owner!),
-                          ),
-                  )
+                        : TextStyle(color: getColorForDynastyID(asset.owner!)),
+                  ),
                 ],
               ),
             ),
@@ -1357,7 +1217,7 @@ class AssetWidget extends StatelessWidget {
             (e) => Indent(
               child: renderFeature(e, data, this.asset.system, collapseOrbits),
             ),
-          )
+          ),
         ],
       );
     }
@@ -1402,7 +1262,7 @@ class _SystemViewState extends State<SystemView> {
                   setCookie('collapseOrbits', v.toString());
                 });
               },
-            )
+            ),
           ],
         ),
         Padding(

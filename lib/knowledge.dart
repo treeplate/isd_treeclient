@@ -30,7 +30,8 @@ class MaterialDialog extends StatelessWidget {
             Text(material.isFluid ? 'A fluid.' : 'A solid.'),
             if (material.isPressurized) Text('Pressurized.'),
             Text(
-                'Density: ${material.massPerCubicMeter} kilograms per cubic meter.')
+                'Density: ${material.massPerCubicMeter} kilograms per cubic meter.'),
+            if (material.isComponent) Text('Mass: ${material.massPerUnit} kilograms.')
           ],
         ),
       ),

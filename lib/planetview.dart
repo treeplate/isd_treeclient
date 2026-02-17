@@ -853,25 +853,25 @@ Widget describeFeature(
       throw StateError('surface on planet');
     case StructureFeature(
       materials: List<MaterialLineItem> materials,
-      maxHP: int maxHP,
-      minHP: int? minHP,
+      maxHP: Uint64 maxHP,
+      minHP: Uint64 minHP,
       builder: AssetID? builder,
     ):
       if (maxHP == 0) {
         return ContinuousBuilder(
           builder: (context) {
             return Text(
-              'This has ${feature.getQuantity(data.getTime(system, DateTime.timestamp())).toStringAsFixed(2)} units of material and ${feature.getHP(data.getTime(system, DateTime.timestamp())).toStringAsFixed(2)} units built.',
+              'This has ${feature.getQuantity(data.getTime(system, DateTime.timestamp())).displayName} units of material and ${feature.getHP(data.getTime(system, DateTime.timestamp())).displayName} units built.',
             );
           },
         );
       }
-      const int minLineItemHeight = 35;
+      const double minLineItemHeight = 32;
       final double minLineItemFraction =
           materials
               .reduce((a, b) => a.requiredQuantity < b.requiredQuantity ? a : b)
               .requiredQuantity /
-          maxHP;
+          maxHP.toDouble();
       final double totalHeight = minLineItemHeight / minLineItemFraction;
       final ThemeData theme = Theme.of(context);
       Asset asset = data.assets[assetID]!;
@@ -885,47 +885,65 @@ Widget describeFeature(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      ...materials.map((e) {
-                        return Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              color: Colors.grey,
-                              width: 10,
-                              height: totalHeight * e.requiredQuantity / maxHP,
-                            ),
-                            Container(
-                              height: totalHeight * e.requiredQuantity / maxHP,
-                              width: 10,
-                              decoration: BoxDecoration(
-                                border: BoxBorder.fromLTRB(
-                                  top: BorderSide(color: theme.dividerColor),
-                                  right: BorderSide(color: theme.dividerColor),
-                                  bottom: BorderSide(color: theme.dividerColor),
-                                ),
-                              ),
-                            ),
-                            Container(
-                              width: 10,
-                              decoration: BoxDecoration(
-                                border: BoxBorder.fromLTRB(
-                                  top: BorderSide(color: theme.dividerColor),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 5),
-                            if (e.componentName != null)
-                              Text('${e.componentName} - '),
-                            Text('${e.requiredQuantity} x '),
-                            e.materialID == null
-                                ? Text('${e.materialDescription}')
-                                : MaterialWidget(
-                                    material: data.getMaterial(
-                                      e.materialID!,
-                                      system,
+                      ...materials.map((final MaterialLineItem lineItem) {
+                        Material? material = lineItem.materialID == null
+                            ? null
+                            : data.getMaterial(
+                                lineItem.materialID!,
+                                assetID.system,
+                              );
+                        return SizedBox(
+                          height:
+                              totalHeight *
+                              lineItem.requiredQuantity /
+                              maxHP.toDouble(),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Container(width: 10, color: Colors.grey),
+                              Container(
+                                width: 10,
+                                decoration: BoxDecoration(
+                                  border: BoxBorder.fromLTRB(
+                                    top: BorderSide(color: theme.dividerColor),
+                                    right: BorderSide(
+                                      color: theme.dividerColor,
+                                    ),
+                                    bottom: BorderSide(
+                                      color: theme.dividerColor,
                                     ),
                                   ),
-                          ],
+                                ),
+                              ),
+                              Container(
+                                width: 10,
+                                height: 0,
+                                decoration: BoxDecoration(
+                                  border: BoxBorder.fromLTRB(
+                                    top: BorderSide(color: theme.dividerColor),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 5),
+                              if (lineItem.componentName != null)
+                                Text('${lineItem.componentName} - '),
+                              if (material == null || material.isComponent)
+                                Text('${lineItem.requiredQuantity} x ')
+                              else
+                                Text(
+                                  '${lineItem.requiredQuantity * material.massPerUnit} kg ',
+                                ),
+                              lineItem.materialID == null
+                                  ? Text('${lineItem.materialDescription}')
+                                  : MaterialWidget(
+                                      material: data.getMaterial(
+                                        lineItem.materialID!,
+                                        system,
+                                      ),
+                                    ),
+                            ],
+                          ),
                         );
                       }),
                     ],
@@ -935,24 +953,26 @@ Widget describeFeature(
                     width: 10,
                     height:
                         totalHeight *
-                        feature.getQuantity(
-                          data.getTime(system, DateTime.timestamp()),
-                        ) /
-                        maxHP,
+                        feature
+                            .getQuantity(
+                              data.getTime(system, DateTime.timestamp()),
+                            )
+                            .toDouble() /
+                        maxHP.toDouble(),
                   ),
                   Container(
                     color: Colors.green,
                     width: 10,
                     height:
                         totalHeight *
-                        feature.getHP(
-                          data.getTime(system, DateTime.timestamp()),
-                        ) /
-                        maxHP,
+                        feature
+                            .getHP(data.getTime(system, DateTime.timestamp()))
+                            .toDouble() /
+                        maxHP.toDouble(),
                   ),
                   if (asset.assetClass.id != null)
                     Positioned(
-                      top: totalHeight * minHP / maxHP,
+                      top: totalHeight * minHP.toDouble() / maxHP.toDouble(),
                       child: Container(
                         color: Colors.pink,
                         width: 10,
@@ -1075,14 +1095,26 @@ Widget describeFeature(
       );
     case MessageBoardFeature():
       continue nothing;
-    case MessageFeature():
-      throw StateError('message outside messageboard');
+    case MessageFeature(
+      subject: String subject,
+      sender: String? sender,
+      text: String body,
+    ):
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('There is a message${sender == null ? '' : ' from $sender'}.'),
+          Text(subject, style: Theme.of(context).textTheme.headlineSmall),
+          Text(body),
+        ],
+      );
     case RubblePileFeature(
-      remainingUnitCount: Uint64 remainingUnitCount,
+      remainingMass: double remainingMass,
       materials: Map<int, Uint64> materials,
     ):
       Asset asset = data.assets[assetID]!;
       return Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text('There is a pile of rubble with:'),
           ...materials.entries.map(
@@ -1096,8 +1128,8 @@ Widget describeFeature(
               ],
             ),
           ),
-          if (!remainingUnitCount.isZero)
-            Text('Unknown: ${remainingUnitCount.displayName} units'),
+          if (remainingMass != 0)
+            Text('Unknown: $remainingMass kg'),
           if (asset.assetClass.id != null &&
               (asset.owner == null || asset.owner == data.dynastyID))
             OutlinedButton(
@@ -1152,9 +1184,11 @@ Widget describeFeature(
       );
     case ResearchFeature(
       disabledReasoning: DisabledReasoning disabledReasoning,
+      topics: List<String> topics,
       topic: String topic,
       progress: ResearchProgress progress,
     ):
+      Asset asset = data.assets[assetID]!;
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1162,69 +1196,55 @@ Widget describeFeature(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '${disabledReasoning == 0 ? 'Researching' : 'Will research'}: ',
+                '${disabledReasoning == 0 ? 'Researching' : 'Will research'} ',
               ),
-              TextButton(
-                onPressed: () async {
-                  List<String> result = await server.send([
-                    'play',
-                    system.value.toString(),
-                    assetID.id.toString(),
-                    'get-topics',
-                  ]);
-                  if (result.first != 'T') {
-                    openErrorDialog('get-topics response: $result', context);
-                    return;
-                  }
-                  List<(String, bool)> topics = [];
-                  int i = 1;
-                  while (i < result.length) {
-                    topics.add((result[i], result[i + 1] == 'T'));
-                    i += 2;
-                  }
-                  showDialog(
-                    context: context,
-                    builder: (context) {
-                      return Dialog(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Pick new topic'),
-                            ...topics.map(
-                              (e) => OutlinedButton(
-                                onPressed: () async {
-                                  List<String> result = await server.send([
-                                    'play',
-                                    system.value.toString(),
-                                    assetID.id.toString(),
-                                    'set-topic',
-                                    e.$1,
-                                  ]);
-                                  if (result.length == 1 &&
-                                      result.single == 'T') {
-                                    if (context.mounted) {
-                                      Navigator.pop(context);
-                                    }
-                                  } else {
-                                    openErrorDialog(
-                                      'set-topic response: $result',
-                                      context,
-                                    );
-                                  }
-                                },
-                                child: Text(
-                                  '${e.$1}${e.$2 ? '' : '(obsolete)'}',
-                                ),
-                              ),
+              if (asset.owner == data.dynastyID)
+                DropdownButton<String>(
+                  value: topic,
+                  items:
+                      topics
+                          .map(
+                            (e) => DropdownMenuItem<String>(
+                              child: Text(e),
+                              value: e,
                             ),
-                          ],
+                          )
+                          .toList()
+                        ..add(
+                          DropdownMenuItem<String>(
+                            child: Text('Undirected research'),
+                            value: '',
+                          ),
+                        )
+                        ..addAll(
+                          (topics.contains(topic) || topic == '')
+                              ? []
+                              : [
+                                  DropdownMenuItem<String>(
+                                    child: Text('$topic (obsolete)'),
+                                    value: topic,
+                                    enabled: false,
+                                  ),
+                                ],
                         ),
+                  onChanged: (value) async {
+                    List<String> result = await server.send([
+                      'play',
+                      system.value.toString(),
+                      assetID.id.toString(),
+                      'set-topic',
+                      value!,
+                    ]);
+                    if (result.length != 1 || result.single != 'T') {
+                      openErrorDialog(
+                        'unexpected set-topic response: $result',
+                        context,
                       );
-                    },
-                  );
-                },
-                child: Text('$topic'),
-              ),
+                    }
+                  },
+                )
+              else
+                Text('$topic'),
               if (disabledReasoning != 0)
                 Text('(${disabledReasoning.asString})'),
             ],
@@ -1286,14 +1306,14 @@ Widget describeFeature(
                       return;
                     }
                     Uint64 time = Uint64.parse(result[1]);
-                    double totalQuantity = double.parse(result[2]);
+                    double totalMass = double.parse(result[2]); // kg
                     String analysisString = result[3];
-                    List<(MaterialID, Uint64)> materials = [];
+                    List<(MaterialID, double)> materials = [];
                     int i = 4;
                     while (i < result.length) {
                       materials.add((
                         int.parse(result[i]),
-                        Uint64.parse(result[i + 1]),
+                        double.parse(result[i + 1]),
                       ));
                       i += 2;
                     }
@@ -1307,12 +1327,12 @@ Widget describeFeature(
                               Text(
                                 '(${calendar.dateName(time)} ${calendar.timeName(time)})',
                               ),
-                              Text('Total units of material: $totalQuantity'),
+                              Text('Total mass of materials: $totalMass kg'),
                               ...materials.map(
                                 (e) => Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text('${e.$2.displayName} units of'),
+                                    Text('${e.$2} kg of'),
                                     MaterialWidget(
                                       material: data.getMaterial(e.$1, system),
                                     ),
@@ -1320,7 +1340,7 @@ Widget describeFeature(
                                 ),
                               ),
                               Text(
-                                '${(Uint64.fromDouble(totalQuantity) - materials.fold<Uint64>(Uint64.fromInt(0), (a, b) => a + b.$2)).displayName} unknown units',
+                                '${(totalMass - materials.fold<double>(0, (a, b) => a + b.$2))} kg unknown',
                               ),
                               if (analysisString != '')
                                 switch (analysisString) {
@@ -1579,7 +1599,7 @@ Widget describeFeature(
           ),
           if (sample == null)
             Text(
-              'It contains an unknown ${isOre ? 'ore' : 'material'} with mass $mass.',
+              'It contains an unknown ${isOre ? 'ore' : 'material'} with mass $mass kg.',
             )
           else
             Row(
@@ -1587,7 +1607,7 @@ Widget describeFeature(
               children: [
                 Text('It contains'),
                 MaterialWidget(material: data.getMaterial(sample, system)),
-                Text('(${isOre ? 'ore' : 'material'}) with mass $mass'),
+                Text('(${isOre ? 'ore' : 'material'}) with mass $mass kg.'),
               ],
             ),
           OutlinedButton(
