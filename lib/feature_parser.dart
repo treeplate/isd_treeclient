@@ -489,9 +489,45 @@ Feature parseFeature(
         default:
           throw UnimplementedError('fcSample mode $mode');
       }
+    case 0x22:
+      String energyName = reader.readString();
+      String energyDesc = reader.readString();
+      String energyUnits = reader.readString();
+      DisabledReasoning disabledReasoning = DisabledReasoning(
+        reader.readUint32(),
+      );
+      double designMax = reader.readFloat64();
+      double currentMax = reader.readFloat64();
+      double currentUsed = reader.readFloat64();
+      return GeneratorFeature(
+        energyName,
+        energyDesc,
+        energyUnits,
+        disabledReasoning,
+        designMax,
+        currentMax,
+        currentUsed,
+      );
+    case 0x23:
+      String energyName = reader.readString();
+      String energyDesc = reader.readString();
+      String energyUnits = reader.readString();
+      DisabledReasoning disabledReasoning = DisabledReasoning(
+        reader.readUint32(),
+      );
+      double designMax = reader.readFloat64();
+      double currentUsed = reader.readFloat64();
+      return EnergyConsumerFeature(
+        energyName,
+        energyDesc,
+        energyUnits,
+        disabledReasoning,
+        designMax,
+        currentUsed,
+      );
     default:
       throw UnimplementedError('Unknown featureID $featureCode');
   }
 }
 
-const kClientVersion = 0x21;
+const kClientVersion = 0x23;

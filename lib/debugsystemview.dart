@@ -130,6 +130,10 @@ Widget renderFeature(
       return MaterialSampleFeatureWidget(feature: feature, data: data);
     case AssetSampleFeature():
       return AssetSampleFeatureWidget(feature: feature, data: data);
+    case GeneratorFeature():
+      return GeneratorFeatureWidget(feature: feature, data: data);
+    case EnergyConsumerFeature():
+      return EnergyConsumerFeatureWidget(feature: feature, data: data);
   }
 }
 
@@ -1086,6 +1090,50 @@ class AssetSampleFeatureWidget extends StatelessWidget {
       children: [
         Text(
           'This is a research sample container with diameter ${feature.size} meters, holding ${feature.sample.displayName} with mass ${feature.mass} kg (increasing by ${feature.massFlowRate} kg/ms).',
+        ),
+      ],
+    );
+  }
+}
+
+class GeneratorFeatureWidget extends StatelessWidget {
+  const GeneratorFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+  final GeneratorFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Generating ${feature.currentMax} ${feature.energyUnits}/ms of ${feature.energyName} out of ${feature.designMax} ${feature.energyUnits}/ms max (disabled reasoning ${feature.disabledReasoning}, ${feature.currentUsed} ${feature.energyUnits}/ms currently being used).',
+        ),
+      ],
+    );
+  }
+}
+
+class EnergyConsumerFeatureWidget extends StatelessWidget {
+  const EnergyConsumerFeatureWidget({
+    super.key,
+    required this.feature,
+    required this.data,
+  });
+  final EnergyConsumerFeature feature;
+  final DataStructure data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Consuming ${feature.currentUsed} ${feature.energyUnits}/ms of ${feature.energyName} out of ${feature.designMax} ${feature.energyUnits}/ms ideal (disabled reasoning ${feature.disabledReasoning}).',
         ),
       ],
     );

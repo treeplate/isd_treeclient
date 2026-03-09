@@ -1128,8 +1128,7 @@ Widget describeFeature(
               ],
             ),
           ),
-          if (remainingMass != 0)
-            Text('Unknown: $remainingMass kg'),
+          if (remainingMass != 0) Text('Unknown: $remainingMass kg'),
           if (asset.assetClass.id != null &&
               (asset.owner == null || asset.owner == data.dynastyID))
             OutlinedButton(
@@ -1246,7 +1245,7 @@ Widget describeFeature(
               else
                 Text('$topic'),
               if (disabledReasoning != 0)
-                Text('(${disabledReasoning.asString})'),
+                Text('(${disabledReasoning == 0 ? 'enabled' : disabledReasoning.asString})'),
             ],
           ),
           if (progress != .active)
@@ -1424,15 +1423,16 @@ Widget describeFeature(
           return Row(
             children: [
               Text(
-                'Contents: ${getQuantity(data.getTime(system, DateTime.now())).toInt()} ',
+                'Contents: ${getQuantity(data.getTime(system, DateTime.now())).displayName} x ',
               ),
               material == null
                   ? Text(name)
                   : MaterialWidget(
                       material: data.getMaterial(material, system),
                     ),
-              Text('s / $capacity possible'),
+              Text(' / ${capacity.displayName} possible'),
             ],
+            mainAxisSize: MainAxisSize.min,
           );
         },
       );
@@ -1521,33 +1521,91 @@ Widget describeFeature(
         children: [
           Text('This is a factory.'),
           Text('Inputs:'),
-          ...inputs.map(
-            (e) => Row(
+          ...inputs.map((e) {
+            Material material = data.getMaterial(e.material, system);
+            return Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('${e.quantity}x'),
+                material.isComponent
+                    ? Text('${e.quantity}x')
+                    : Text('${e.quantity * material.massPerUnit} kg'),
                 MaterialWidget(material: data.getMaterial(e.material, system)),
+                material.isComponent
+                    ? Text(
+                        ' (${e.quantity * currentRate * 1000}/s, ${e.quantity * configuredRate * 1000}/s configured, ${e.quantity * maxRate * 1000}/s max)',
+                      )
+                    : Text(
+                        ' (${e.quantity * currentRate * material.massPerUnit * 1000}/s, ${e.quantity * configuredRate * material.massPerUnit * 1000}/s configured, ${e.quantity * maxRate * material.massPerUnit * 1000}/s max)',
+                      ),
               ],
-            ),
-          ),
+            );
+          }),
           Text('Outputs:'),
-          ...outputs.map(
-            (e) => Row(
+          ...outputs.map((e) {
+            Material material = data.getMaterial(e.material, system);
+            return Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('${e.quantity}x'),
+                material.isComponent
+                    ? Text('${e.quantity}x')
+                    : Text('${e.quantity * material.massPerUnit} kg'),
                 MaterialWidget(material: data.getMaterial(e.material, system)),
+                material.isComponent
+                    ? Text(
+                        ' (${e.quantity * currentRate * 1000}/s, ${e.quantity * configuredRate * 1000}/s configured, ${e.quantity * maxRate * 1000}/s max)',
+                      )
+                    : Text(
+                        ' (${e.quantity * currentRate * material.massPerUnit * 1000}/s, ${e.quantity * configuredRate * material.massPerUnit * 1000}/s configured, ${e.quantity * maxRate * material.massPerUnit * 1000}/s max)',
+                      ),
               ],
-            ),
-          ),
+            );
+          }),
           Text(
-            'Working at a rate of ${currentRate / 1000} iterations per second' +
+            'Working at a rate of ${currentRate * 1000} iterations per second' +
                 (disabledReasoning.flags == 0
                     ? '.'
-                    : ' (${disabledReasoning.asString})'),
+                    : ' (${disabledReasoning == 0 ? 'enabled' : disabledReasoning.asString})'),
           ),
           Text(
-            'The goal rate is ${configuredRate / 1000} iterations per second, and the max rate is ${maxRate / 1000} iterations per second.',
+            'The goal rate is ${configuredRate * 1000} iterations per second, and the max rate is ${maxRate * 1000} iterations per second.',
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Set speed: '),
+              Container(
+                width: 100,
+                child: TextField(
+                  controller: TextEditingController(
+                    text: '${configuredRate * 100 / maxRate}',
+                  ),
+                  onSubmitted: (value) async {
+                    double? valueDouble = double.tryParse(value);
+                    if (valueDouble == null) {
+                      return;
+                    }
+                    List<String> result = await server.send([
+                      'play',
+                      system.value.toString(),
+                      assetID.id.toString(),
+                      'set-rate',
+                      (valueDouble * maxRate / 100).toString(),
+                    ]);
+                    if (result.first == 'T') {
+                      if (result.length != 1) {
+                        openErrorDialog(
+                          'unexpected response to set-rate: $result',
+                          context,
+                        );
+                      }
+                    } else {
+                      openErrorDialog('set-rate failed: $result', context);
+                    }
+                  },
+                ),
+              ),
+              Text('%'),
+            ],
           ),
         ],
       );
@@ -1644,6 +1702,44 @@ Widget describeFeature(
       sample: AssetID sample,
     ):
       return Placeholder(child: Text('$size $mass $massFlowRate $sample'));
+    case GeneratorFeature(
+      energyName: String energyName,
+      energyDesc: String energyDesc,
+      energyUnits: String energyUnits,
+      disabledReasoning: DisabledReasoning disabledReasoning,
+      designMax: double designMax,
+      currentMax: double currentMax,
+      currentUsed: double currentUsed,
+    ):
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('Generating $energyName - $energyDesc'),
+          Text(
+            'Generating ${currentMax * 1000} $energyUnits/s out of ${designMax * 1000} $energyUnits/s max (${disabledReasoning == 0 ? 'enabled' : disabledReasoning.asString}).',
+          ),
+          Text(
+            '${currentUsed * 1000} $energyUnits/s are currently being used.',
+          ),
+        ],
+      );
+    case EnergyConsumerFeature(
+      energyName: String energyName,
+      energyDesc: String energyDesc,
+      energyUnits: String energyUnits,
+      disabledReasoning: DisabledReasoning disabledReasoning,
+      designMax: double designMax,
+      currentUsed: double currentUsed,
+    ):
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('Consuming $energyName - $energyDesc'),
+          Text(
+            'Consuming ${currentUsed * 1000} $energyUnits/s out of ${designMax * 1000} $energyUnits/s max (${disabledReasoning == 0 ? 'enabled' : disabledReasoning.asString}).',
+          ),
+        ],
+      );
   }
 }
 

@@ -314,6 +314,8 @@ class DataStructure with ChangeNotifier {
         case FactoryFeature():
         case EmptySampleFeature():
         case MaterialSampleFeature():
+        case GeneratorFeature():
+        case EnergyConsumerFeature():
       }
     }
   }
@@ -391,6 +393,8 @@ class DataStructure with ChangeNotifier {
         case FactoryFeature():
         case EmptySampleFeature():
         case MaterialSampleFeature():
+        case GeneratorFeature():
+        case EnergyConsumerFeature():
           break;
       }
     }

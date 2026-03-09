@@ -139,7 +139,10 @@ class StructureFeature extends Feature {
   final List<MaterialLineItem> materials;
 
   Uint64 get maxHP {
-    return materials.fold(Uint64.fromInt(0), (a, b) => a + Uint64.fromInt(b.requiredQuantity));
+    return materials.fold(
+      Uint64.fromInt(0),
+      (a, b) => a + Uint64.fromInt(b.requiredQuantity),
+    );
   }
 
   final AssetID? builder;
@@ -147,7 +150,8 @@ class StructureFeature extends Feature {
   final Uint64 quantity0;
   final double quantityFlowRate; // units/ms
   Uint64 getQuantity(Uint64 time) {
-    return quantity0 + Uint64.fromDouble(quantityFlowRate * ((time - time0).toDouble()));
+    return quantity0 +
+        Uint64.fromDouble(quantityFlowRate * ((time - time0).toDouble()));
   }
 
   final Uint64 time0;
@@ -583,6 +587,44 @@ class FactoryFeature extends Feature {
   );
 }
 
+class GeneratorFeature extends Feature {
+  final String energyName;
+  final String energyDesc;
+  final String energyUnits;
+  final DisabledReasoning disabledReasoning;
+  final double designMax;
+  final double currentMax;
+  final double currentUsed;
+
+  GeneratorFeature(
+    this.energyName,
+    this.energyDesc,
+    this.energyUnits,
+    this.disabledReasoning,
+    this.designMax,
+    this.currentMax,
+    this.currentUsed,
+  );
+}
+
+class EnergyConsumerFeature extends Feature {
+  final String energyName;
+  final String energyDesc;
+  final String energyUnits;
+  final DisabledReasoning disabledReasoning;
+  final double designMax;
+  final double currentUsed;
+
+  EnergyConsumerFeature(
+    this.energyName,
+    this.energyDesc,
+    this.energyUnits,
+    this.disabledReasoning,
+    this.designMax,
+    this.currentUsed,
+  );
+}
+
 typedef AssetClassID = int; // 32-bit signed, but can't be 0
 typedef MaterialID = int; // 32-bit signed, but can't be 0
 typedef DynastyID = int; // 32-bit unsigned, but can't be 0
@@ -598,7 +640,7 @@ String joinCommaAnd(List<String> args) {
 extension type DisabledReasoning(int flags) {
   String get asString {
     assert(flags >= 0);
-    if (flags >= 0x80) {
+    if (flags >= 0x100) {
       return 'invalid flags $flags';
     }
     List<String> problems = [];
@@ -622,6 +664,9 @@ extension type DisabledReasoning(int flags) {
     }
     if (flags & 0x40 == 0x40) {
       problems.add('target limited');
+    }
+    if (flags & 0x80 == 0x80) {
+      problems.add('not fully powered');
     }
     return joinCommaAnd(problems);
   }
