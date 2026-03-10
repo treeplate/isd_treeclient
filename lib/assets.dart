@@ -166,7 +166,9 @@ class StructureFeature extends Feature {
 
   final Uint64 minHP;
 
-  bool get mustKnowAssetClass => minHP != 0 || maxHP > quantity0;
+  String toString() => 'Structure: ${hp0.displayName}/${quantity0.displayName}/${minHP.displayName}/${maxHP.displayName}';
+
+  bool get mustKnowAssetClass => !minHP.isZero || maxHP > quantity0;
   StructureFeature(
     this.materials,
     this.builder,

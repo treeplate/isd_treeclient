@@ -857,7 +857,7 @@ Widget describeFeature(
       minHP: Uint64 minHP,
       builder: AssetID? builder,
     ):
-      if (maxHP == 0) {
+      if (maxHP.isZero) {
         return ContinuousBuilder(
           builder: (context) {
             return Text(
@@ -1245,7 +1245,9 @@ Widget describeFeature(
               else
                 Text('$topic'),
               if (disabledReasoning != 0)
-                Text('(${disabledReasoning == 0 ? 'enabled' : disabledReasoning.asString})'),
+                Text(
+                  '(${disabledReasoning == 0 ? 'enabled' : disabledReasoning.asString})',
+                ),
             ],
           ),
           if (progress != .active)
@@ -1610,37 +1612,39 @@ Widget describeFeature(
         ],
       );
     case EmptySampleFeature(size: double size):
+      Asset asset = data.assets[assetID]!;
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             'This is an empty research sample container with diameter $size meters.',
           ),
-          OutlinedButton(
-            onPressed: () async {
-              List<String> result = await server.send([
-                'play',
-                system.value.toString(),
-                assetID.id.toString(),
-                'sample-ore',
-              ]);
-              if (result.first == 'T') {
-                if (result.length != 2) {
-                  openErrorDialog(
-                    'unexpected response to sample-ore: $result',
-                    context,
-                  );
-                } else {
-                  if (result.first != 'T') {
-                    assert(result.first == 'F');
+          if (asset.assetClass.id != null)
+            OutlinedButton(
+              onPressed: () async {
+                List<String> result = await server.send([
+                  'play',
+                  system.value.toString(),
+                  assetID.id.toString(),
+                  'sample-ore',
+                ]);
+                if (result.first == 'T') {
+                  if (result.length != 2) {
+                    openErrorDialog(
+                      'unexpected response to sample-ore: $result',
+                      context,
+                    );
+                  } else {
+                    if (result.first != 'T') {
+                      assert(result.first == 'F');
+                    }
                   }
+                } else {
+                  openErrorDialog('sample-ore failed: $result', context);
                 }
-              } else {
-                openErrorDialog('sample-ore failed: $result', context);
-              }
-            },
-            child: Text('Sample ore'),
-          ),
+              },
+              child: Text('Sample ore'),
+            ),
         ],
       );
     case MaterialSampleFeature(
@@ -1649,6 +1653,7 @@ Widget describeFeature(
       mass: double mass,
       sample: MaterialID? sample,
     ):
+      Asset asset = data.assets[assetID]!;
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1668,31 +1673,32 @@ Widget describeFeature(
                 Text('(${isOre ? 'ore' : 'material'}) with mass $mass kg.'),
               ],
             ),
-          OutlinedButton(
-            onPressed: () async {
-              List<String> result = await server.send([
-                'play',
-                system.value.toString(),
-                assetID.id.toString(),
-                'clear-sample',
-              ]);
-              if (result.first == 'T') {
-                if (result.length != 2) {
-                  openErrorDialog(
-                    'unexpected response to clear-sample: $result',
-                    context,
-                  );
-                } else {
-                  if (result.first != 'T') {
-                    assert(result.first == 'F');
+          if (asset.assetClass.id != null)
+            OutlinedButton(
+              onPressed: () async {
+                List<String> result = await server.send([
+                  'play',
+                  system.value.toString(),
+                  assetID.id.toString(),
+                  'clear-sample',
+                ]);
+                if (result.first == 'T') {
+                  if (result.length != 2) {
+                    openErrorDialog(
+                      'unexpected response to clear-sample: $result',
+                      context,
+                    );
+                  } else {
+                    if (result.first != 'T') {
+                      assert(result.first == 'F');
+                    }
                   }
+                } else {
+                  openErrorDialog('clear-sample failed: $result', context);
                 }
-              } else {
-                openErrorDialog('clear-sample failed: $result', context);
-              }
-            },
-            child: Text('Clear sample'),
-          ),
+              },
+              child: Text('Clear sample'),
+            ),
         ],
       );
     case AssetSampleFeature(
