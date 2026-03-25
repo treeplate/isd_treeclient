@@ -247,13 +247,13 @@ class _BuildableWidgetState extends State<BuildableWidget> {
         Draggable<Buildable>(
           child: ISDIcon(
             icon: widget.buildable.assetClass.icon,
-            width: widget.buildable.size * widget.cellSize,
-            height: widget.buildable.size * widget.cellSize,
+            width: 32,
+            height: 32,
           ),
           feedback: ISDIcon(
             icon: widget.buildable.assetClass.icon,
-            width: widget.buildable.size * widget.cellSize,
-            height: widget.buildable.size * widget.cellSize,
+            width: 32,
+            height: 32,
             opacity: .5,
           ),
           data: widget.buildable,
