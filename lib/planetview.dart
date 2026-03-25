@@ -244,7 +244,7 @@ class _BuildableWidgetState extends State<BuildableWidget> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Draggable<Buildable>(
+        Draggable<AssetClass>(
           child: ISDIcon(
             icon: widget.buildable.assetClass.icon,
             width: 32,
@@ -256,7 +256,7 @@ class _BuildableWidgetState extends State<BuildableWidget> {
             height: 32,
             opacity: .5,
           ),
-          data: widget.buildable,
+          data: widget.buildable.assetClass,
         ),
         Text(widget.buildable.assetClass.name),
         Text(widget.buildable.assetClass.description),
@@ -292,11 +292,11 @@ class _GridWidgetState extends State<GridWidget> {
     return LayoutBuilder(
       builder: (context, constraints) {
         return SizedBox.expand(
-          child: DragTarget<Buildable>(
-            onWillAcceptWithDetails: (DragTargetDetails<Buildable> details) {
+          child: DragTarget<AssetClass>(
+            onWillAcceptWithDetails: (DragTargetDetails<AssetClass> details) {
               return true;
             },
-            onMove: (DragTargetDetails<Buildable> details) {
+            onMove: (DragTargetDetails<AssetClass> details) {
               Offset localPosition = (context.findRenderObject() as RenderBox)
                   .globalToLocal(details.offset);
               Offset scaledPosition = localPosition.scale(
@@ -308,10 +308,10 @@ class _GridWidgetState extends State<GridWidget> {
               setState(() {
                 draggedBuildable =
                     Offset(gridX.toDouble(), gridY.toDouble()) &
-                    Size.square(details.data.size.toDouble());
+                    Size.square(widget.gridFeature.buildables.singleWhere((e) => e.assetClass == details.data).size.toDouble());
               });
             },
-            onLeave: (Buildable? data) {
+            onLeave: (AssetClass? data) {
               draggedBuildable = null;
             },
             onAcceptWithDetails: (details) {
@@ -335,7 +335,7 @@ class _GridWidgetState extends State<GridWidget> {
             builder:
                 (
                   BuildContext context,
-                  List<Buildable?> candidateData,
+                  List<AssetClass?> candidateData,
                   List<dynamic> rejectedData,
                 ) {
                   return Stack(
@@ -520,18 +520,19 @@ class _GridWidgetState extends State<GridWidget> {
     AssetID gridAssetID,
     int gridX,
     int gridY,
-    Buildable buildable,
+    AssetClass buildable,
   ) {
-    if (gridX + buildable.size > grid.dimension ||
-        gridY + buildable.size > grid.dimension ||
+    int size = grid.buildables.singleWhere((e) => e.assetClass == buildable).size;
+    if (gridX + size > grid.dimension ||
+        gridY + size > grid.dimension ||
         gridX < 0 ||
         gridY < 0) {
       return;
     }
     for (Building building in grid.buildings) {
-      if (building.x < (gridX + buildable.size) &&
+      if (building.x < (gridX + size) &&
           building.x + building.size > gridX &&
-          building.y < (gridY + buildable.size) &&
+          building.y < (gridY + size) &&
           building.y + building.size > gridY) {
         Asset newGridAsset = widget.data.assets[building.asset]!;
         if (newGridAsset.features.whereType<GridFeature>().isEmpty) {
@@ -554,7 +555,7 @@ class _GridWidgetState extends State<GridWidget> {
           'build',
           gridX.toString(),
           gridY.toString(),
-          buildable.assetClass.id!.toString(),
+          buildable.id!.toString(),
         ])
         .then((List<String> response) {
           if (response[0] == 'T') {
