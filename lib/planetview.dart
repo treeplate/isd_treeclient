@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart' hide Material;
+import 'package:flutter/services.dart';
 import 'core.dart';
 import 'knowledge.dart';
 import 'ui-core.dart';
@@ -147,6 +149,8 @@ class PlanetView extends StatefulWidget {
 }
 
 class _PlanetViewState extends State<PlanetView> {
+  AssetClass? cursorBuildable;
+
   @override
   Widget build(BuildContext context) {
     if (widget.data.assets.isEmpty)
@@ -199,6 +203,7 @@ class _PlanetViewState extends State<PlanetView> {
                         data: widget.data,
                         server: widget.server,
                         gridAssetID: regionID,
+                        cursorBuildable: cursorBuildable,
                       ),
                     ),
                   ),
@@ -207,11 +212,22 @@ class _PlanetViewState extends State<PlanetView> {
               Expanded(
                 child: ListView(
                   children: [
+                    OutlinedButton(
+                      onPressed: () {
+                        setState(() {
+                          cursorBuildable = null;
+                        });
+                      },
+                      child: Text('Deselect'),
+                    ),
                     ...region.buildables.map(
                       (Buildable buildable) => Center(
                         child: BuildableWidget(
                           buildable,
                           regionSize / region.dimension,
+                          () => setState(() {
+                            cursorBuildable = buildable.assetClass;
+                          }),
                         ),
                       ),
                     ),
@@ -229,10 +245,16 @@ class _PlanetViewState extends State<PlanetView> {
 }
 
 class BuildableWidget extends StatefulWidget {
-  const BuildableWidget(this.buildable, this.cellSize, {super.key});
+  const BuildableWidget(
+    this.buildable,
+    this.cellSize,
+    this.onSelect, {
+    super.key,
+  });
 
   final Buildable buildable;
   final double cellSize;
+  final VoidCallback onSelect;
 
   @override
   State<BuildableWidget> createState() => _BuildableWidgetState();
@@ -244,19 +266,13 @@ class _BuildableWidgetState extends State<BuildableWidget> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Draggable<AssetClass>(
-          child: ISDIcon(
+        IconButton(
+          icon: ISDIcon(
             icon: widget.buildable.assetClass.icon,
             width: 32,
             height: 32,
           ),
-          feedback: ISDIcon(
-            icon: widget.buildable.assetClass.icon,
-            width: 32,
-            height: 32,
-            opacity: .5,
-          ),
-          data: widget.buildable.assetClass,
+          onPressed: widget.onSelect,
         ),
         Text(widget.buildable.assetClass.name),
         Text(widget.buildable.assetClass.description),
@@ -270,15 +286,17 @@ class GridWidget extends StatefulWidget {
   const GridWidget({
     super.key,
     required this.gridFeature,
-    required this.data,
     required this.gridAssetID,
+    required this.cursorBuildable,
+    required this.data,
     required this.server,
   });
 
   final GridFeature gridFeature;
+  final AssetID gridAssetID;
+  final AssetClass? cursorBuildable;
   final DataStructure data;
   final NetworkConnection server;
-  final AssetID gridAssetID;
 
   @override
   State<GridWidget> createState() => _GridWidgetState();
@@ -286,80 +304,118 @@ class GridWidget extends StatefulWidget {
 
 class _GridWidgetState extends State<GridWidget> {
   Rect? draggedBuildable;
+  bool mouseCapturedByChild = false;
+  MouseCaptureHandler? parentMouseCaptureHandler;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    parentMouseCaptureHandler = MouseCaptureHandler.of(context);
+  }
+
+  @override
+  void dispose() {
+    scheduleMicrotask(
+      () => parentMouseCaptureHandler?.onMouseCaptureChange(false),
+    );
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         return SizedBox.expand(
-          child: DragTarget<AssetClass>(
-            onWillAcceptWithDetails: (DragTargetDetails<AssetClass> details) {
-              return true;
+          child: MouseRegion(
+            onHover: (PointerHoverEvent event) =>
+                (PointerHoverEvent event, BoxConstraints constraints) {
+                  if (mouseCapturedByChild ||
+                      !widget.gridFeature.buildables.any(
+                        (e) => e.assetClass == widget.cursorBuildable,
+                      )) {
+                    return;
+                  }
+                  Offset localPosition = event.localPosition;
+                  Offset scaledPosition = localPosition.scale(
+                    widget.gridFeature.dimension / constraints.maxWidth,
+                    widget.gridFeature.dimension / constraints.maxHeight,
+                  );
+                  double gridX = scaledPosition.dx;
+                  double gridY = scaledPosition.dy;
+                  int size = widget.gridFeature.buildables
+                      .singleWhere(
+                        (e) => e.assetClass == widget.cursorBuildable,
+                      )
+                      .size;
+                  setState(() {
+                    draggedBuildable =
+                        Offset(
+                          (gridX - ((size - 1) / 2)).floorToDouble(),
+                          (gridY - ((size - 1) / 2)).floorToDouble(),
+                        ) &
+                        Size.square(size.toDouble());
+                  });
+                }(event, constraints),
+            opaque: false,
+            onEnter: (PointerEnterEvent event) {
+              parentMouseCaptureHandler?.onMouseCaptureChange(true);
             },
-            onMove: (DragTargetDetails<AssetClass> details) {
-              Offset localPosition = (context.findRenderObject() as RenderBox)
-                  .globalToLocal(details.offset);
-              Offset scaledPosition = localPosition.scale(
-                widget.gridFeature.dimension / constraints.maxWidth,
-                widget.gridFeature.dimension / constraints.maxHeight,
-              );
-              int gridX = scaledPosition.dx.floor();
-              int gridY = scaledPosition.dy.floor();
-              setState(() {
-                draggedBuildable =
-                    Offset(gridX.toDouble(), gridY.toDouble()) &
-                    Size.square(widget.gridFeature.buildables.singleWhere((e) => e.assetClass == details.data).size.toDouble());
-              });
-            },
-            onLeave: (AssetClass? data) {
+            onExit: (PointerExitEvent event) {
               draggedBuildable = null;
+              parentMouseCaptureHandler?.onMouseCaptureChange(false);
             },
-            onAcceptWithDetails: (details) {
-              draggedBuildable = null;
-              Offset localPosition = (context.findRenderObject() as RenderBox)
-                  .globalToLocal(details.offset);
-              Offset scaledPosition = localPosition.scale(
-                widget.gridFeature.dimension / constraints.maxWidth,
-                widget.gridFeature.dimension / constraints.maxHeight,
-              );
-              int gridX = scaledPosition.dx.floor();
-              int gridY = scaledPosition.dy.floor();
-              buildAt(
-                widget.gridFeature,
-                widget.gridAssetID,
-                gridX,
-                gridY,
-                details.data,
-              );
-            },
-            builder:
-                (
-                  BuildContext context,
-                  List<AssetClass?> candidateData,
-                  List<dynamic> rejectedData,
-                ) {
-                  return Stack(
-                    children: [
-                      for (Building building in widget.gridFeature.buildings)
-                        Positioned(
-                          left:
-                              building.x *
-                              constraints.maxWidth /
-                              widget.gridFeature.dimension,
-                          top:
-                              building.y *
-                              constraints.maxHeight /
-                              widget.gridFeature.dimension,
-                          child: Container(
-                            width:
-                                constraints.maxWidth *
-                                building.size /
+            child: GestureDetector(
+              behavior: draggedBuildable == null
+                  ? HitTestBehavior.deferToChild
+                  : HitTestBehavior.translucent,
+              onTapDown: (TapDownDetails details) {
+                if (mouseCapturedByChild || widget.cursorBuildable == null)
+                  return;
+                draggedBuildable = null;
+                Offset localPosition = details.localPosition;
+                Offset scaledPosition = localPosition.scale(
+                  widget.gridFeature.dimension / constraints.maxWidth,
+                  widget.gridFeature.dimension / constraints.maxHeight,
+                );
+                double gridX = scaledPosition.dx;
+                double gridY = scaledPosition.dy;
+                int size = widget.gridFeature.buildables
+                    .singleWhere((e) => e.assetClass == widget.cursorBuildable)
+                    .size;
+                buildAt(
+                  widget.gridFeature,
+                  widget.gridAssetID,
+                  (gridX - (size - 1) / 2).floor(),
+                  (gridY - (size - 1) / 2).floor(),
+                  widget.cursorBuildable!,
+                );
+              },
+              child: MouseCaptureHandler(
+                onMouseCaptureChange: (bool mouseCaptured) {
+                  if (mounted) {
+                    setState(() {
+                      if (mouseCaptured) {
+                        draggedBuildable = null;
+                      }
+                      mouseCapturedByChild = mouseCaptured;
+                    });
+                  }
+                },
+                child: Builder(
+                  builder: (BuildContext context) {
+                    return Stack(
+                      children: [
+                        for (Building building in widget.gridFeature.buildings)
+                          Positioned(
+                            left:
+                                building.x *
+                                constraints.maxWidth /
                                 widget.gridFeature.dimension,
-                            height:
-                                constraints.maxHeight *
-                                building.size /
+                            top:
+                                building.y *
+                                constraints.maxHeight /
                                 widget.gridFeature.dimension,
-                            child: AssetWidget(
+                            child: Container(
                               width:
                                   constraints.maxWidth *
                                   building.size /
@@ -368,65 +424,92 @@ class _GridWidgetState extends State<GridWidget> {
                                   constraints.maxHeight *
                                   building.size /
                                   widget.gridFeature.dimension,
-                              asset: building.asset,
-                              data: widget.data,
-                              server: widget.server,
+                              child: AssetWidget(
+                                width:
+                                    constraints.maxWidth *
+                                    building.size /
+                                    widget.gridFeature.dimension,
+                                height:
+                                    constraints.maxHeight *
+                                    building.size /
+                                    widget.gridFeature.dimension,
+                                asset: building.asset,
+                                data: widget.data,
+                                server: widget.server,
+                                cursorBuildable: widget.cursorBuildable,
+                              ),
                             ),
                           ),
-                        ),
-                      if (draggedBuildable != null) ...[
-                        Positioned(
-                          top:
-                              constraints.maxWidth *
-                              draggedBuildable!.top /
-                              widget.gridFeature.dimension,
-                          left:
-                              constraints.maxHeight *
-                              draggedBuildable!.left /
-                              widget.gridFeature.dimension,
-                          child: Container(
-                            decoration: BoxDecoration(border: BoxBorder.all()),
-                            width:
-                                constraints.maxWidth *
-                                draggedBuildable!.width /
-                                widget.gridFeature.dimension,
-                            height:
-                                constraints.maxHeight *
-                                draggedBuildable!.height /
-                                widget.gridFeature.dimension,
-                          ),
-                        ),
-                        ...getCollisions(
-                          widget.gridFeature,
-                          widget.gridAssetID,
-                          draggedBuildable!,
-                        ).map(
-                          (Rect rect) => Positioned(
+                        if (draggedBuildable != null) ...[
+                          Positioned(
                             top:
                                 constraints.maxWidth *
-                                rect.top /
+                                draggedBuildable!.top /
                                 widget.gridFeature.dimension,
                             left:
                                 constraints.maxHeight *
-                                rect.left /
+                                draggedBuildable!.left /
                                 widget.gridFeature.dimension,
-                            child: Container(
-                              color: Colors.red.withAlpha(128),
-                              width:
-                                  constraints.maxWidth *
-                                  rect.width /
-                                  widget.gridFeature.dimension,
-                              height:
-                                  constraints.maxHeight *
-                                  rect.height /
-                                  widget.gridFeature.dimension,
+                            child: IgnorePointer(
+                              child: ClipRect(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    border: BoxBorder.all(width: 1),
+                                  ),
+                                  child: ISDIcon(
+                                    icon: widget.cursorBuildable!.icon,
+                                    width:
+                                        constraints.maxWidth *
+                                        draggedBuildable!.width /
+                                        widget.gridFeature.dimension,
+                                    height:
+                                        constraints.maxHeight *
+                                        draggedBuildable!.height /
+                                        widget.gridFeature.dimension,
+                                    opacity: .5,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                          ...getCollisions(
+                            widget.gridFeature,
+                            widget.gridAssetID,
+                            draggedBuildable!,
+                          ).map(
+                            (Rect rect) => Positioned(
+                              top:
+                                  constraints.maxWidth *
+                                  rect.top /
+                                  widget.gridFeature.dimension,
+                              left:
+                                  constraints.maxHeight *
+                                  rect.left /
+                                  widget.gridFeature.dimension,
+                              child: IgnorePointer(
+                                child: Container(
+                                  color: Colors.red.withAlpha(128),
+                                  width:
+                                      constraints.maxWidth *
+                                          rect.width /
+                                          widget.gridFeature.dimension +
+                                      2,
+                                  height:
+                                      constraints.maxHeight *
+                                          rect.height /
+                                          widget.gridFeature.dimension +
+                                      2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
-                  );
-                },
+                    );
+                  },
+                ),
+              ),
+            ),
           ),
         );
       },
@@ -484,32 +567,16 @@ class _GridWidgetState extends State<GridWidget> {
           building.x + building.size > draggedBuildable.left &&
           building.y < draggedBuildable.bottom &&
           building.y + building.size > draggedBuildable.top) {
-        Asset newGridAsset = widget.data.assets[building.asset]!;
-        if (newGridAsset.features.whereType<GridFeature>().isEmpty) {
-          result.add(
-            draggedBuildable.intersect(
-              Rect.fromLTWH(
-                building.x.toDouble(),
-                building.y.toDouble(),
-                building.size.toDouble(),
-                building.size.toDouble(),
-              ),
+        result.add(
+          draggedBuildable.intersect(
+            Rect.fromLTWH(
+              building.x.toDouble(),
+              building.y.toDouble(),
+              building.size.toDouble(),
+              building.size.toDouble(),
             ),
-          );
-        } else {
-          result.addAll(
-            getCollisions(
-              newGridAsset.features.whereType<GridFeature>().single,
-              building.asset,
-              draggedBuildable.shift(
-                -Offset(building.x.toDouble(), building.y.toDouble()),
-              ),
-            ).map(
-              (e) =>
-                  e.shift(Offset(building.x.toDouble(), building.y.toDouble())),
-            ),
-          );
-        }
+          ),
+        );
       }
     }
     return result;
@@ -522,7 +589,9 @@ class _GridWidgetState extends State<GridWidget> {
     int gridY,
     AssetClass buildable,
   ) {
-    int size = grid.buildables.singleWhere((e) => e.assetClass == buildable).size;
+    int size = grid.buildables
+        .singleWhere((e) => e.assetClass == buildable)
+        .size;
     if (gridX + size > grid.dimension ||
         gridY + size > grid.dimension ||
         gridX < 0 ||
@@ -534,17 +603,7 @@ class _GridWidgetState extends State<GridWidget> {
           building.x + building.size > gridX &&
           building.y < (gridY + size) &&
           building.y + building.size > gridY) {
-        Asset newGridAsset = widget.data.assets[building.asset]!;
-        if (newGridAsset.features.whereType<GridFeature>().isEmpty) {
-          return;
-        }
-        return buildAt(
-          newGridAsset.features.whereType<GridFeature>().single,
-          building.asset,
-          gridX - building.x,
-          gridY - building.y,
-          buildable,
-        );
+        return;
       }
     }
     widget.server
@@ -578,6 +637,7 @@ class AssetWidget extends StatelessWidget {
     required this.data,
     required this.width,
     required this.height,
+    required this.cursorBuildable,
     required this.server,
   });
 
@@ -585,6 +645,7 @@ class AssetWidget extends StatelessWidget {
   final DataStructure data;
   final double width;
   final double height;
+  final AssetClass? cursorBuildable;
   final NetworkConnection server;
 
   @override
@@ -633,6 +694,7 @@ class AssetWidget extends StatelessWidget {
                         data: data,
                         width: width * data.assets[child]!.size / asset.size,
                         height: height * data.assets[child]!.size / asset.size,
+                        cursorBuildable: cursorBuildable,
                         server: server,
                       ),
                     ),
@@ -654,7 +716,7 @@ class AssetWidget extends StatelessWidget {
                   height: height,
                   opacity: .5,
                 ),
-                Container(
+                SizedBox(
                   width: width,
                   height: height,
                   child: GridWidget(
@@ -662,6 +724,7 @@ class AssetWidget extends StatelessWidget {
                     data: data,
                     gridAssetID: this.asset,
                     server: server,
+                    cursorBuildable: cursorBuildable,
                   ),
                 ),
               ],
@@ -1118,17 +1181,20 @@ Widget describeFeature(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text('There is a pile of rubble with:'),
-          ...materials.entries.map(
-            (e) => Row(
+          ...materials.entries.map((e) {
+            Material material = data.getMaterial(e.key, system);
+            return Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                MaterialWidget(material: data.getMaterial(e.key, system)),
+                MaterialWidget(material: material),
                 Text(
-                  '${e.value.displayName} unit${e.value.lsh == 1 ? '' : 's'}',
+                  material.isComponent
+                      ? '${e.value.displayName} unit${e.value.lsh == 1 ? '' : 's'}'
+                      : '${e.value.toDouble() * material.massPerUnit} kg',
                 ),
               ],
-            ),
-          ),
+            );
+          }),
           if (remainingMass != 0) Text('Unknown: $remainingMass kg'),
           if (asset.assetClass.id != null &&
               (asset.owner == null || asset.owner == data.dynastyID))
@@ -1500,15 +1566,17 @@ Widget describeFeature(
     case AssetPileFeature(assets: List<AssetID> assets):
       return Column(
         children: [
-          ...assets.map(
-            (asset) => AssetWidget(
+          ...assets.map((asset) {
+            // TODO: maybe have a list of buildables to select here for cursorBuildable?
+            return AssetWidget(
               asset: asset,
               data: data,
               width: 100,
               height: 100,
               server: server,
-            ),
-          ),
+              cursorBuildable: null,
+            );
+          }),
         ],
       );
     case FactoryFeature(
@@ -1800,4 +1868,22 @@ class AssetClassWidget extends StatelessWidget {
       ),
     );
   }
+}
+
+class MouseCaptureHandler extends InheritedWidget {
+  const MouseCaptureHandler({
+    super.key,
+    required super.child,
+    required this.onMouseCaptureChange,
+  });
+
+  final void Function(bool mouseCaptured) onMouseCaptureChange;
+
+  static MouseCaptureHandler? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<MouseCaptureHandler>();
+  }
+
+  @override
+  bool updateShouldNotify(MouseCaptureHandler oldWidget) =>
+      onMouseCaptureChange == oldWidget.onMouseCaptureChange;
 }
